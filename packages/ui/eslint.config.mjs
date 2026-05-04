@@ -1,4 +1,12 @@
-import { config } from "@repo/eslint-config/react-internal";
+import js from "@eslint/js";
 
-/** @type {import("eslint").Linter.Config} */
-export default config;
+export default [
+  {
+    ignores: ["dist/**", "node_modules/**"],
+  },
+  js.configs.recommended,
+  {
+    files: ["**/*.{ts,tsx}"],
+    rules: {},
+  },
+];
