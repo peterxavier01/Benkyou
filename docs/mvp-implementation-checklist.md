@@ -70,25 +70,25 @@ Decision record: see `docs/product-decisions.md`.
 
 ### Package Architecture & Extraction
 
-- [ ] Establish `packages/core` for framework-free product logic: URL parsing,
+- [x] Establish `packages/core` for framework-free product logic: URL parsing,
       course generation state, progress math, AI output validation, export
       formatting, and shared constants.
-- [ ] Establish `packages/types` for stable shared types and DTOs: courses,
+- [x] Establish `packages/types` for stable shared types and DTOs: courses,
       chapters, videos, generation jobs, notes, bookmarks, progress, settings,
       and API request/response shapes.
-- [ ] Keep `packages/ui` for reusable React UI: primitives, app shell pieces,
+- [x] Keep `packages/ui` for reusable React UI: primitives, app shell pieces,
       course cards, chapter lists, player panels, notes editor, dialogs, badges,
       and empty states.
-- [ ] Keep `packages/db` for Drizzle schema, migrations, relations, seed data,
+- [x] Keep `packages/db` for Drizzle schema, migrations, relations, seed data,
       and database helpers.
-- [ ] Keep `apps/web` thin: routes, layouts, TanStack Start server functions,
+- [x] Keep `apps/web` thin: routes, layouts, TanStack Start server functions,
       auth/session wiring, environment wiring, and page composition.
-- [ ] Move reusable UI out of `apps/web/src/components` into `packages/ui`.
-- [ ] Move reusable domain logic out of route files into `packages/core`.
-- [ ] Move reusable public contracts out of app files into `packages/types`.
-- [ ] Keep route-specific composition in `apps/web`; do not force one-off page
+- [x] Move reusable UI out of `apps/web/src/components` into `packages/ui`.
+- [x] Move reusable domain logic out of route files into `packages/core`.
+- [x] Move reusable public contracts out of app files into `packages/types`.
+- [x] Keep route-specific composition in `apps/web`; do not force one-off page
       layout code into packages unless it becomes reusable.
-- [ ] Design package APIs so the later hosted/private cloud version can reuse
+- [x] Design package APIs so the later hosted/private cloud version can reuse
       OSS core packages without duplicating product logic.
 
 ### Design Baseline

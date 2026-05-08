@@ -17,6 +17,9 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
+    "@benkyou/core": "workspace:*",
+    "@benkyou/types": "workspace:*",
+    "@benkyou/ui": "workspace:*",
     "@tailwindcss/vite": "^4.1.18",
     "@tanstack/react-devtools": "latest",
     "@tanstack/react-form": "latest",
