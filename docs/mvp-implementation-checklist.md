@@ -93,21 +93,21 @@ Decision record: see `docs/product-decisions.md`.
 
 ### Design Baseline
 
-- [ ] Translate `DESIGN.md` colors into Tailwind/theme tokens.
-- [ ] Confirm Inter font loading and fallback behavior.
-- [ ] Establish app shell primitives: sidebar, top bar, content panel, empty
+- [x] Translate `DESIGN.md` colors into Tailwind/theme tokens.
+- [x] Confirm Inter font loading and fallback behavior.
+- [x] Establish app shell primitives: sidebar, top bar, content panel, empty
       state, status badge, progress bar, tabs, modal, toast.
-- [ ] Keep border radii disciplined: 4px standard, 8px large surfaces.
-- [ ] Use lucide icons for navigation and action buttons.
-- [ ] Create responsive breakpoints for the player layout: desktop split view,
+- [x] Keep border radii disciplined: 4px standard, 8px large surfaces.
+- [x] Use Hugeicons for navigation and action buttons.
+- [x] Create responsive breakpoints for the player layout: desktop split view,
       tablet stacked view, mobile drawer-based chapters.
-- [ ] Define common loading, error, empty, and disabled states.
+- [x] Define common loading, error, empty, and disabled states.
 
 ### Done When
 
 - [ ] A developer can understand the product and run the app from README alone.
 - [ ] Starter branding no longer appears in the browser shell or home route.
-- [ ] The design tokens match the expert, organized, focused direction in
+- [x] The design tokens match the expert, organized, focused direction in
       `DESIGN.md`.
 
 ## Phase 1: Data Model & Persistence

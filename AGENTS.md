@@ -50,7 +50,7 @@
 - Follow `DESIGN.md`: expert, organized, focused, dense, minimal, border-led UI.
 - Use `packages/ui` and existing shadcn-style primitives before creating new
   local controls.
-- Use lucide icons for icon buttons and provide accessible labels.
+- Use Hugeicons for icon buttons and provide accessible labels.
 - Build real app screens, not marketing pages, unless the route is explicitly
   static/public.
 - Ensure mobile, tablet, and desktop states are designed for every app screen.
