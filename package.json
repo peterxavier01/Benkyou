@@ -15,18 +15,6 @@
     "typescript": "5.9.2"
   },
   "pnpm": {
-    "packageExtensions": {
-      "vite-plugin-neon-new@*": {
-        "peerDependencies": {
-          "vite": "^6.0.0 || ^7.0.0 || ^8.0.0"
-        }
-      }
-    },
-    "peerDependencyRules": {
-      "allowedVersions": {
-        "vite-plugin-neon-new>vite": "^8.0.0"
-      }
-    },
     "onlyBuiltDependencies": [
       "esbuild",
       "lightningcss"

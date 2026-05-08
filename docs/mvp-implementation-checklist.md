@@ -58,15 +58,15 @@ Decision record: see `docs/product-decisions.md`.
 
 ### Repo Baseline
 
-- [ ] Update root README from Turborepo starter text to Benkyou setup,
+- [x] Update root README from Turborepo starter text to Benkyou setup,
       development, and MVP overview.
-- [ ] Update `apps/web/README.md` with app-specific commands and env variables.
-- [ ] Rename starter page title from `TanStack Start Starter` to `Benkyou`.
-- [ ] Replace the placeholder home route with the new course entry flow.
-- [ ] Remove or quarantine starter `todos` schema from app DB schema.
-- [ ] Document required environment variables in `.env.example`.
-- [ ] Confirm package boundaries between `apps/web`, `packages/db`, and
-      `packages/ui`.
+- [x] Update `apps/web/README.md` with app-specific commands and env variables.
+- [x] Rename starter page title from `TanStack Start Starter` to `Benkyou`.
+- [x] Replace the placeholder home route with the new course entry flow.
+- [x] Remove app-local DB/schema logic; all DB ownership lives in `packages/db`.
+- [x] Document required environment variables in `.env.example`.
+- [x] Confirm package boundaries between `apps/web`, `packages/core`,
+      `packages/types`, `packages/db`, and `packages/ui`.
 
 ### Package Architecture & Extraction
 

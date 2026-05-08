@@ -19,6 +19,8 @@
 - Keep `apps/web` thin. Move reusable UI to `packages/ui`, domain logic to
   `packages/core`, public contracts to `packages/types`, and persistence to
   `packages/db`.
+- Never add schema files, Drizzle config, migrations, seed SQL, or database
+  client logic under `apps/web`.
 - Route files should compose screens, load data, and connect actions. They
   should not contain large components, schemas, parsers, or business rules.
 - Use TanStack Start patterns: `createServerFn` for server mutations/queries,
