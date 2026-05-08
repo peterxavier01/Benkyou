@@ -35,7 +35,14 @@ pnpm install
 cp apps/web/.env.example apps/web/.env.local
 ```
 
-Fill in the values in `apps/web/.env.local`.
+Fill in the values in `apps/web/.env.local`. For the first local run, set:
+
+- `DATABASE_URL`: Postgres connection string for the app database.
+- `BETTER_AUTH_SECRET`: secret used by Better Auth.
+- `BETTER_AUTH_URL`: local app URL, usually `http://localhost:3000`.
+
+AI provider values can stay blank until the real generation worker replaces the
+sample/mock path.
 
 ## Development
 
@@ -50,6 +57,8 @@ Run only the web app:
 ```sh
 pnpm --filter @benkyou/web dev
 ```
+
+Open `http://localhost:3000`.
 
 ## Checks
 

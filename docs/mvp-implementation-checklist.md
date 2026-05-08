@@ -105,8 +105,8 @@ Decision record: see `docs/product-decisions.md`.
 
 ### Done When
 
-- [ ] A developer can understand the product and run the app from README alone.
-- [ ] Starter branding no longer appears in the browser shell or home route.
+- [x] A developer can understand the product and run the app from README alone.
+- [x] Starter branding no longer appears in the browser shell or home route.
 - [x] The design tokens match the expert, organized, focused direction in
       `DESIGN.md`.
 
