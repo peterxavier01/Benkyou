@@ -197,7 +197,7 @@ function SignInPage() {
                 ) : null}
               </div>
 
-              <Button type="submit" className="w-full" disabled={isSubmitting}>
+              <Button type="submit" className="w-full cursor-pointer" disabled={isSubmitting}>
                 {isSubmitting ? "Working..." : copy.action}
               </Button>
             </form>
