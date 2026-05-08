@@ -20,6 +20,7 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
+    "@benkyou/auth": "workspace:*",
     "@benkyou/core": "workspace:*",
     "@benkyou/types": "workspace:*",
     "@benkyou/ui": "workspace:*",
@@ -33,7 +34,6 @@
     "@tanstack/react-router-ssr-query": "latest",
     "@tanstack/react-start": "latest",
     "@tanstack/router-plugin": "^1.132.0",
-    "better-auth": "^1.5.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "nitro": "npm:nitro-nightly@latest",

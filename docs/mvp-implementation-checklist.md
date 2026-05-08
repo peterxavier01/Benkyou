@@ -116,50 +116,50 @@ Goal: create the durable schema needed by the course creation and learning loop.
 
 ### Database Schema
 
-- [ ] Implement shared schema helpers: UUID id, created at, updated at, deleted
+- [x] Implement shared schema helpers: UUID id, created at, updated at, deleted
       at.
-- [ ] Implement enums: `video_provider`, `course_visibility`,
+- [x] Implement enums: `video_provider`, `course_visibility`,
       `generation_job_status`, `transcript_source`.
-- [ ] Implement `videos` for canonical external video metadata.
-- [ ] Implement `courses` for the user's course wrapper around one video.
-- [ ] Implement `course_chapters` for ordered chapter navigation.
-- [ ] Implement `course_generation_jobs` for async processing state.
-- [ ] Implement `chapter_notes` for per-chapter Markdown notes.
-- [ ] Implement `course_progress` for resume position and completion percent.
-- [ ] Implement `chapter_progress` for per-chapter completion.
-- [ ] Implement `bookmarks` for saved timestamps.
-- [ ] Add relations for all core entities.
-- [ ] Generate and commit Drizzle migrations.
-- [ ] Add seed data for one sample course with chapters, notes, progress, and
+- [x] Implement `videos` for canonical external video metadata.
+- [x] Implement `courses` for the user's course wrapper around one video.
+- [x] Implement `course_chapters` for ordered chapter navigation.
+- [x] Implement `course_generation_jobs` for async processing state.
+- [x] Implement `chapter_notes` for per-chapter Markdown notes.
+- [x] Implement `course_progress` for resume position and completion percent.
+- [x] Implement `chapter_progress` for per-chapter completion.
+- [x] Implement `bookmarks` for saved timestamps.
+- [x] Add relations for all core entities.
+- [x] Generate and commit Drizzle migrations.
+- [x] Add seed data for one sample course with chapters, notes, progress, and
       bookmarks.
 
 ### Data Access Logic
 
-- [ ] Add DB client conventions for server functions/routes.
-- [ ] Add course loader query: course, video, ordered chapters, progress, notes,
+- [x] Add DB client conventions for server functions/routes.
+- [x] Add course loader query: course, video, ordered chapters, progress, notes,
       bookmarks.
-- [ ] Add course library query with progress and latest generation status.
-- [ ] Add generation job query by id.
-- [ ] Add upsert logic for videos by provider and provider video id.
-- [ ] Add upsert logic for course progress by user/course.
-- [ ] Add upsert logic for chapter progress by user/chapter.
-- [ ] Add upsert logic for chapter notes by user/chapter.
-- [ ] Add create, update, and delete logic for bookmarks.
+- [x] Add course library query with progress and latest generation status.
+- [x] Add generation job query by id.
+- [x] Add upsert logic for videos by provider and provider video id.
+- [x] Add upsert logic for course progress by user/course.
+- [x] Add upsert logic for chapter progress by user/chapter.
+- [x] Add upsert logic for chapter notes by user/chapter.
+- [x] Add create, update, and delete logic for bookmarks.
 
 ### Local-First Logic
 
-- [ ] Define local storage keys for anonymous courses, progress, notes, and
+- [x] Define local storage keys for anonymous courses, progress, notes, and
       bookmarks if local-first is in MVP.
-- [ ] Add migration/versioning for local storage payloads.
-- [ ] Add sync prompt logic for local data after sign-in.
-- [ ] Decide conflict behavior between local and server notes.
+- [x] Add migration/versioning for local storage payloads.
+- [x] Add sync prompt logic for local data after sign-in.
+- [x] Decide conflict behavior between local and server notes.
 
 ### Done When
 
-- [ ] The database can represent every MVP screen without ad hoc placeholder
+- [x] The database can represent every MVP screen without ad hoc placeholder
       objects.
-- [ ] A seeded course renders from real schema data.
-- [ ] Progress, notes, and bookmarks can be saved and reloaded.
+- [x] A seeded course renders from real schema data.
+- [x] Progress, notes, and bookmarks can be saved and reloaded.
 
 ## Phase 2: Authentication & User State
 
@@ -168,30 +168,30 @@ unblocked.
 
 ### Auth Logic
 
-- [ ] Configure Better Auth with the production database adapter.
-- [ ] Confirm email/password flow or switch to magic link/OAuth if preferred.
-- [ ] Add server-side session helper for loaders and server functions.
-- [ ] Add current-user query.
-- [ ] Add sign-out action and redirect behavior.
-- [ ] Add route guards for account-only routes.
-- [ ] Keep app entry usable for anonymous/local users if local-first remains in
+- [x] Configure Better Auth with the production database adapter.
+- [x] Confirm email/password flow or switch to magic link/OAuth if preferred.
+- [x] Add server-side session helper for loaders and server functions.
+- [x] Add current-user query.
+- [x] Add sign-out action and redirect behavior.
+- [x] Add route guards for account-only routes.
+- [x] Keep app entry usable for anonymous/local users if local-first remains in
       scope.
 
 ### Auth UI
 
-- [ ] Build `/sign-in` page.
-- [ ] Add email/password or magic-link form validation.
-- [ ] Add OAuth buttons only for providers actually configured.
-- [ ] Add "Continue locally" action if anonymous use is supported.
-- [ ] Add signed-in user menu in app shell.
-- [ ] Add signed-out sign-in affordance in app shell.
-- [ ] Add auth loading and failure states.
+- [x] Build `/sign-in` page.
+- [x] Add email/password or magic-link form validation.
+- [x] Add OAuth buttons only for providers actually configured.
+- [x] Add "Continue locally" action if anonymous use is supported.
+- [x] Add signed-in user menu in app shell.
+- [x] Add signed-out sign-in affordance in app shell.
+- [x] Add auth loading and failure states.
 
 ### Done When
 
 - [ ] A signed-in user can create and reopen their own courses.
-- [ ] A signed-out user has clear next steps.
-- [ ] Auth errors are shown as recoverable UI, not dead ends.
+- [x] A signed-out user has clear next steps.
+- [x] Auth errors are shown as recoverable UI, not dead ends.
 
 ## Phase 3: New Course & Generation Pipeline
 

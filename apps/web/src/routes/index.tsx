@@ -14,7 +14,9 @@ import {
   Progress,
   StatusBadge,
 } from "@benkyou/ui";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+
+import BetterAuthHeader from "../integrations/better-auth/header-user";
 
 export const Route = createFileRoute("/")({ component: Home });
 
@@ -75,9 +77,7 @@ function Home() {
               </p>
             </div>
           </div>
-          <Button variant="outline" size="sm">
-            Sign in
-          </Button>
+          <BetterAuthHeader />
         </AppTopBar>
 
         <section className="mx-auto grid w-full max-w-7xl gap-4 p-3 sm:p-6 lg:grid-cols-[minmax(0,1fr)_360px]">
@@ -121,13 +121,16 @@ function Home() {
 
               <div className="mt-4 flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:gap-3">
                 <Button
+                  asChild
                   type="button"
                   variant="ghost"
                   size="sm"
                   className="h-8 justify-start px-0 text-primary hover:bg-transparent hover:text-primary/80"
                 >
-                  <HugeIcon name="playCircle" className="size-4" />
-                  Try sample course
+                  <Link to="/">
+                    <HugeIcon name="playCircle" className="size-4" />
+                    Try sample course
+                  </Link>
                 </Button>
                 <span className="text-muted-foreground">
                   Vimeo and Loom are planned, but disabled for the MVP.
