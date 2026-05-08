@@ -1,0 +1,624 @@
+# MVP Implementation Checklist
+
+This checklist turns the Benkyou MVP docs into an execution plan. It covers the
+features, product logic, UI states, data model, and verification needed to ship
+the first usable version: paste a YouTube URL, generate a structured course,
+watch with chapters, take notes, save bookmarks, and resume progress.
+
+## MVP Scope
+
+The MVP is a learning workspace, not a marketing site. The first screen should
+let a learner paste a video URL and start building a course.
+
+Included:
+
+- YouTube URL ingestion.
+- AI-generated chapter outline from transcript or sample fallback data.
+- Course generation status screen.
+- Course library.
+- Course player with chapter navigation.
+- Per-chapter Markdown notes.
+- Progress and resume position.
+- Bookmarks.
+- Basic account/sign-in flow for hosted sync readiness.
+- Static trust pages needed for launch.
+- Self-hostable database and deployment foundation.
+
+Deferred:
+
+- Collections and multi-video courses.
+- Creator marketplace and paid courses.
+- Quizzes, flashcards, certificates, and spaced repetition.
+- Teams, LMS, SSO, billing, and institutional analytics.
+- Vimeo and Loom ingestion beyond disabled UI labels.
+- Browser extension and public API.
+
+## Phase 0: Product Foundation
+
+Goal: replace starter defaults with a clear Benkyou baseline and remove
+ambiguity before feature work accelerates.
+
+### Product Decisions
+
+- [x] Confirm the MVP name is `Benkyou` across metadata, UI copy, manifest, and
+      README.
+- [x] Confirm the core promise: "Turn a video into a structured course."
+- [x] Decide whether anonymous/local-first use is required in the first coded
+      slice or whether MVP starts with sign-in-required persistence.
+- [x] Decide whether initial AI generation can ship with a sample/mock job path
+      while real transcript extraction is integrated.
+- [x] Define the supported input for launch: YouTube watch URLs, shortened
+      YouTube URLs, and embedded YouTube URLs.
+- [x] Define default completion logic: chapter complete at 90% watched or manual
+      completion.
+- [x] Define MVP export requirements: defer, Markdown-only, or notes plus
+      bookmarks.
+
+Decision record: see `docs/product-decisions.md`.
+
+### Repo Baseline
+
+- [ ] Update root README from Turborepo starter text to Benkyou setup,
+      development, and MVP overview.
+- [ ] Update `apps/web/README.md` with app-specific commands and env variables.
+- [ ] Rename starter page title from `TanStack Start Starter` to `Benkyou`.
+- [ ] Replace the placeholder home route with the new course entry flow.
+- [ ] Remove or quarantine starter `todos` schema from app DB schema.
+- [ ] Document required environment variables in `.env.example`.
+- [ ] Confirm package boundaries between `apps/web`, `packages/db`, and
+      `packages/ui`.
+
+### Package Architecture & Extraction
+
+- [ ] Establish `packages/core` for framework-free product logic: URL parsing,
+      course generation state, progress math, AI output validation, export
+      formatting, and shared constants.
+- [ ] Establish `packages/types` for stable shared types and DTOs: courses,
+      chapters, videos, generation jobs, notes, bookmarks, progress, settings,
+      and API request/response shapes.
+- [ ] Keep `packages/ui` for reusable React UI: primitives, app shell pieces,
+      course cards, chapter lists, player panels, notes editor, dialogs, badges,
+      and empty states.
+- [ ] Keep `packages/db` for Drizzle schema, migrations, relations, seed data,
+      and database helpers.
+- [ ] Keep `apps/web` thin: routes, layouts, TanStack Start server functions,
+      auth/session wiring, environment wiring, and page composition.
+- [ ] Move reusable UI out of `apps/web/src/components` into `packages/ui`.
+- [ ] Move reusable domain logic out of route files into `packages/core`.
+- [ ] Move reusable public contracts out of app files into `packages/types`.
+- [ ] Keep route-specific composition in `apps/web`; do not force one-off page
+      layout code into packages unless it becomes reusable.
+- [ ] Design package APIs so the later hosted/private cloud version can reuse
+      OSS core packages without duplicating product logic.
+
+### Design Baseline
+
+- [ ] Translate `DESIGN.md` colors into Tailwind/theme tokens.
+- [ ] Confirm Inter font loading and fallback behavior.
+- [ ] Establish app shell primitives: sidebar, top bar, content panel, empty
+      state, status badge, progress bar, tabs, modal, toast.
+- [ ] Keep border radii disciplined: 4px standard, 8px large surfaces.
+- [ ] Use lucide icons for navigation and action buttons.
+- [ ] Create responsive breakpoints for the player layout: desktop split view,
+      tablet stacked view, mobile drawer-based chapters.
+- [ ] Define common loading, error, empty, and disabled states.
+
+### Done When
+
+- [ ] A developer can understand the product and run the app from README alone.
+- [ ] Starter branding no longer appears in the browser shell or home route.
+- [ ] The design tokens match the expert, organized, focused direction in
+      `DESIGN.md`.
+
+## Phase 1: Data Model & Persistence
+
+Goal: create the durable schema needed by the course creation and learning loop.
+
+### Database Schema
+
+- [ ] Implement shared schema helpers: UUID id, created at, updated at, deleted
+      at.
+- [ ] Implement enums: `video_provider`, `course_visibility`,
+      `generation_job_status`, `transcript_source`.
+- [ ] Implement `videos` for canonical external video metadata.
+- [ ] Implement `courses` for the user's course wrapper around one video.
+- [ ] Implement `course_chapters` for ordered chapter navigation.
+- [ ] Implement `course_generation_jobs` for async processing state.
+- [ ] Implement `chapter_notes` for per-chapter Markdown notes.
+- [ ] Implement `course_progress` for resume position and completion percent.
+- [ ] Implement `chapter_progress` for per-chapter completion.
+- [ ] Implement `bookmarks` for saved timestamps.
+- [ ] Add relations for all core entities.
+- [ ] Generate and commit Drizzle migrations.
+- [ ] Add seed data for one sample course with chapters, notes, progress, and
+      bookmarks.
+
+### Data Access Logic
+
+- [ ] Add DB client conventions for server functions/routes.
+- [ ] Add course loader query: course, video, ordered chapters, progress, notes,
+      bookmarks.
+- [ ] Add course library query with progress and latest generation status.
+- [ ] Add generation job query by id.
+- [ ] Add upsert logic for videos by provider and provider video id.
+- [ ] Add upsert logic for course progress by user/course.
+- [ ] Add upsert logic for chapter progress by user/chapter.
+- [ ] Add upsert logic for chapter notes by user/chapter.
+- [ ] Add create, update, and delete logic for bookmarks.
+
+### Local-First Logic
+
+- [ ] Define local storage keys for anonymous courses, progress, notes, and
+      bookmarks if local-first is in MVP.
+- [ ] Add migration/versioning for local storage payloads.
+- [ ] Add sync prompt logic for local data after sign-in.
+- [ ] Decide conflict behavior between local and server notes.
+
+### Done When
+
+- [ ] The database can represent every MVP screen without ad hoc placeholder
+      objects.
+- [ ] A seeded course renders from real schema data.
+- [ ] Progress, notes, and bookmarks can be saved and reloaded.
+
+## Phase 2: Authentication & User State
+
+Goal: make hosted persistence possible while keeping the course workflow
+unblocked.
+
+### Auth Logic
+
+- [ ] Configure Better Auth with the production database adapter.
+- [ ] Confirm email/password flow or switch to magic link/OAuth if preferred.
+- [ ] Add server-side session helper for loaders and server functions.
+- [ ] Add current-user query.
+- [ ] Add sign-out action and redirect behavior.
+- [ ] Add route guards for account-only routes.
+- [ ] Keep app entry usable for anonymous/local users if local-first remains in
+      scope.
+
+### Auth UI
+
+- [ ] Build `/sign-in` page.
+- [ ] Add email/password or magic-link form validation.
+- [ ] Add OAuth buttons only for providers actually configured.
+- [ ] Add "Continue locally" action if anonymous use is supported.
+- [ ] Add signed-in user menu in app shell.
+- [ ] Add signed-out sign-in affordance in app shell.
+- [ ] Add auth loading and failure states.
+
+### Done When
+
+- [ ] A signed-in user can create and reopen their own courses.
+- [ ] A signed-out user has clear next steps.
+- [ ] Auth errors are shown as recoverable UI, not dead ends.
+
+## Phase 3: New Course & Generation Pipeline
+
+Goal: let a learner submit a YouTube URL and see course generation progress.
+
+### URL Input Logic
+
+- [ ] Parse supported YouTube URL formats.
+- [ ] Extract provider and provider video id.
+- [ ] Normalize to a canonical URL.
+- [ ] Reject malformed URLs with inline errors.
+- [ ] Reject unsupported providers with clear disabled messaging.
+- [ ] Prevent duplicate submissions while a job is being created.
+
+### Course Creation Logic
+
+- [ ] Create server function or API route for `createCourseFromUrl`.
+- [ ] Upsert video metadata.
+- [ ] Create course with sensible initial title and private visibility.
+- [ ] Create queued generation job.
+- [ ] Redirect to `/courses/new/:jobId`.
+- [ ] Handle duplicate video submissions for the same user.
+- [ ] Add "Try sample course" path that creates or opens seeded sample data.
+
+### Generation Worker
+
+- [ ] Decide execution model for MVP: inline async, scheduled worker, queue, or
+      manual development worker.
+- [ ] Claim queued jobs safely.
+- [ ] Fetch video metadata.
+- [ ] Fetch transcript or captions.
+- [ ] Handle transcript unavailable state.
+- [ ] Send transcript to AI provider for chapter JSON.
+- [ ] Validate AI output with Zod.
+- [ ] Insert ordered chapters.
+- [ ] Store summary/rationale/raw output where useful.
+- [ ] Mark job completed.
+- [ ] Store failure reason and retry eligibility on failure.
+- [ ] Add timeout and cancellation handling.
+
+### Generation Status UI
+
+- [ ] Build `/courses/new/:jobId`.
+- [ ] Show detected video preview.
+- [ ] Show status badge: queued, processing, completed, failed, cancelled.
+- [ ] Show generation timeline: metadata, transcript, chapters, player prep.
+- [ ] Poll or revalidate job status.
+- [ ] Enable "Open course" only when completed.
+- [ ] Enable retry when failed.
+- [ ] Enable "Use another URL" on unrecoverable errors.
+- [ ] Enable "Keep working in background" to go to `/courses`.
+
+### Done When
+
+- [ ] A valid YouTube URL creates a course and job.
+- [ ] The job screen accurately reflects the lifecycle.
+- [ ] Completed jobs open the course player with chapters.
+- [ ] Failed jobs explain what happened and offer a next action.
+
+## Phase 4: Course Library
+
+Goal: give learners a reliable place to resume, search, and manage courses.
+
+### Library Logic
+
+- [ ] Load current user's courses or local courses.
+- [ ] Include video thumbnail, source, progress, chapter count, last watched
+      time, and latest generation status.
+- [ ] Sort by last watched or creation date.
+- [ ] Filter by all, in progress, completed, processing, failed.
+- [ ] Search by course title and video/channel metadata.
+- [ ] Retry failed generation jobs.
+- [ ] Soft-delete courses.
+
+### Library UI
+
+- [ ] Build `/courses`.
+- [ ] Add compact app header with create course action.
+- [ ] Add filter tabs.
+- [ ] Add search input.
+- [ ] Add course rows/cards with progress bars.
+- [ ] Add processing and failed visual states.
+- [ ] Add empty state with "Create course" and "Try sample course".
+- [ ] Add responsive mobile list layout.
+
+### Done When
+
+- [ ] A learner can find and resume a course in two clicks.
+- [ ] Processing and failed courses are visible and recoverable.
+- [ ] Empty library state pushes users back into the course creation loop.
+
+## Phase 5: Course Player
+
+Goal: deliver the main learning experience: video, chapters, notes, bookmarks,
+and progress in one focused workspace.
+
+### Player Logic
+
+- [ ] Load course player data from course id.
+- [ ] Resolve selected chapter from URL, progress, or first chapter.
+- [ ] Embed YouTube player.
+- [ ] Seek to selected chapter start.
+- [ ] Update selected chapter based on playback time.
+- [ ] Track current playback time.
+- [ ] Persist course resume position on an interval and on pause/unload.
+- [ ] Persist chapter progress.
+- [ ] Mark chapter complete automatically based on completion threshold.
+- [ ] Support manual chapter complete/incomplete toggle.
+- [ ] Handle transcript/chapter gaps gracefully.
+- [ ] Handle private/deleted/missing course states.
+
+### Player UI
+
+- [ ] Build `/courses/:courseId`.
+- [ ] Add course header with title, source metadata, progress, and manage link.
+- [ ] Add video player region with stable aspect ratio.
+- [ ] Add chapter sidebar with: title, time range, completion state, active
+      state, progress.
+- [ ] Add tabs for Notes, Summary, and Bookmarks.
+- [ ] Add per-chapter summary display.
+- [ ] Add keyboard-accessible chapter selection.
+- [ ] Add mobile chapter drawer.
+- [ ] Add loading skeleton.
+- [ ] Add no-chapters fallback with retry/regenerate action.
+- [ ] Add save failure toast or inline recovery.
+
+### Done When
+
+- [ ] A learner can watch, jump chapters, leave, and resume.
+- [ ] The sidebar always reflects current chapter and completion state.
+- [ ] The player is usable on desktop, tablet, and mobile.
+
+## Phase 6: Notes
+
+Goal: make per-chapter notes useful and trustworthy.
+
+### Notes Logic
+
+- [ ] Load notes for the selected chapter.
+- [ ] Autosave Markdown after debounce.
+- [ ] Save immediately on chapter switch.
+- [ ] Save immediately before unload where possible.
+- [ ] Show saved, saving, and failed states.
+- [ ] Prevent overwriting newer notes with stale responses.
+- [ ] Add local draft fallback if server save fails.
+- [ ] Add basic Markdown preview if included in MVP.
+
+### Notes UI
+
+- [ ] Add dense textarea/editor in Notes tab.
+- [ ] Add note status indicator.
+- [ ] Add "copy Markdown" action for save recovery.
+- [ ] Add empty note placeholder.
+- [ ] Keep editor height responsive beside the video.
+- [ ] Add monospaced option only if it does not slow the MVP.
+
+### Done When
+
+- [ ] Notes follow the selected chapter.
+- [ ] Notes survive refresh and route navigation.
+- [ ] Save failures do not cause silent data loss.
+
+## Phase 7: Bookmarks
+
+Goal: let learners capture and revisit important timestamps.
+
+### Bookmark Logic
+
+- [ ] Create bookmark at current playback timestamp.
+- [ ] Infer chapter id from timestamp when possible.
+- [ ] Add optional bookmark title and note.
+- [ ] Edit bookmark title/note.
+- [ ] Delete bookmark.
+- [ ] Jump to bookmark timestamp from player.
+- [ ] Load all bookmarks for a course.
+- [ ] Load all bookmarks across courses for the library view.
+
+### Bookmark UI
+
+- [ ] Add "Add bookmark" action near player controls.
+- [ ] Add add/edit bookmark modal.
+- [ ] Add Bookmarks tab in course player.
+- [ ] Show timestamp, title, note, chapter, and jump action.
+- [ ] Build `/bookmarks`.
+- [ ] Add bookmarks search.
+- [ ] Add course filter.
+- [ ] Add empty and no-results states.
+
+### Done When
+
+- [ ] A learner can save a moment and return to it later.
+- [ ] Bookmarks work both inside a course and from the global library.
+
+## Phase 8: Course Management & Settings
+
+Goal: provide the minimum controls needed to correct generated content and
+manage learner data.
+
+### Course Management Logic
+
+- [ ] Load course metadata and chapters.
+- [ ] Update course title and description.
+- [ ] Keep visibility private for MVP, with disabled unlisted/public options if
+      needed.
+- [ ] Edit chapter title, summary, start time, and end time.
+- [ ] Validate chapter time ranges.
+- [ ] Regenerate chapters with confirmation.
+- [ ] Preserve notes/bookmarks where possible during regeneration.
+- [ ] Soft-delete course with confirmation.
+
+### Course Management UI
+
+- [ ] Build `/courses/:courseId/manage`.
+- [ ] Add editable metadata form.
+- [ ] Add source video details.
+- [ ] Add chapter table.
+- [ ] Add edit chapter modal.
+- [ ] Add regenerate confirmation modal.
+- [ ] Add delete confirmation modal.
+- [ ] Add save, saving, saved, and failed states.
+
+### Settings Logic
+
+- [ ] Build account profile loading.
+- [ ] Store learning preferences: playback speed, completion behavior, autoplay
+      next chapter.
+- [ ] Add data export endpoint if export is in MVP.
+- [ ] Add local data reset if local-first is included.
+
+### Settings UI
+
+- [ ] Build `/settings`.
+- [ ] Add profile summary.
+- [ ] Add learning preferences section.
+- [ ] Add data export section.
+- [ ] Add self-hosting link.
+- [ ] Build `/settings/profile`, `/settings/learning`, and `/settings/export`
+      only if separate routes are needed.
+
+### Done When
+
+- [ ] A learner can correct course metadata and generated chapters.
+- [ ] A learner can delete a course intentionally.
+- [ ] Settings covers account state, preferences, and data ownership basics.
+
+## Phase 9: Static, Legal, and Error Pages
+
+Goal: make the app feel complete and launch-ready.
+
+### Static Pages
+
+- [ ] Build `/about`.
+- [ ] Build `/self-hosting`.
+- [ ] Build `/privacy`.
+- [ ] Build `/terms`.
+- [ ] Add 404 handling.
+- [ ] Add app error boundary UI.
+
+### Static Page Content
+
+- [ ] About explains mission, open-source ethos, and learning focus.
+- [ ] Self-hosting includes requirements, Docker path, env vars, and database
+      setup.
+- [ ] Privacy explains stored data, local-first behavior, AI processing, and
+      external video provider handling.
+- [ ] Terms covers acceptable use, external video responsibility, and AI output
+      caveats.
+
+### Done When
+
+- [ ] Public visitors can understand trust and data handling.
+- [ ] Broken routes and app crashes recover to useful actions.
+
+## Phase 10: Quality, Accessibility, and Launch Hardening
+
+Goal: verify the MVP behaves like a serious learning tool before release.
+
+### Validation
+
+- [ ] Validate all forms with Zod or equivalent schema validation.
+- [ ] Sanitize or safely render Markdown.
+- [ ] Enforce authorization on course, notes, progress, and bookmark mutations.
+- [ ] Rate-limit course generation.
+- [ ] Validate AI chapter output before writing to the database.
+- [ ] Add defensive handling for missing thumbnails, titles, transcripts, and
+      durations.
+
+### Accessibility
+
+- [ ] Ensure keyboard navigation for forms, tabs, chapter list, dialogs, and
+      menus.
+- [ ] Add visible focus states.
+- [ ] Add accessible labels for icon buttons.
+- [ ] Ensure dialogs trap focus and restore focus on close.
+- [ ] Confirm color contrast for text, badges, progress bars, and errors.
+- [ ] Respect reduced motion preferences.
+
+### Responsive QA
+
+- [ ] Verify `/` at mobile, tablet, and desktop sizes.
+- [ ] Verify `/courses` at mobile, tablet, and desktop sizes.
+- [ ] Verify `/courses/:courseId` at mobile, tablet, and desktop sizes.
+- [ ] Verify notes and bookmark modals on small screens.
+- [ ] Confirm text never overlaps controls or overflows buttons.
+
+### Testing
+
+- [ ] Unit test YouTube URL parser.
+- [ ] Unit test chapter time range validation.
+- [ ] Unit test progress percentage calculation.
+- [ ] Unit test AI output validator.
+- [ ] Integration test course creation server function.
+- [ ] Integration test notes autosave.
+- [ ] Integration test bookmark create/edit/delete.
+- [ ] Integration test route guards.
+- [ ] Smoke test build with `pnpm build`.
+- [ ] Smoke test type checks with `pnpm check-types`.
+- [ ] Smoke test lint/check with `pnpm check`.
+
+### Observability
+
+- [ ] Log generation job failures with job id and provider error category.
+- [ ] Add user-safe error messages.
+- [ ] Track generation duration and failure rate.
+- [ ] Track autosave failures.
+- [ ] Add basic health check route if needed for deployment.
+
+### Launch
+
+- [ ] Add MIT license if open-source launch is in MVP.
+- [ ] Add deployment docs.
+- [ ] Add Docker or self-hosting deployment path.
+- [ ] Confirm production env variables.
+- [ ] Confirm database migrations run in production.
+- [ ] Confirm app manifest and icons.
+- [ ] Confirm robots policy.
+
+### Done When
+
+- [ ] The full happy path works from URL paste to generated course to resume.
+- [ ] The top failure paths are recoverable.
+- [ ] The app passes build, type check, lint/check, and responsive smoke tests.
+
+## Route Implementation Checklist
+
+- [ ] `/` - new course entry.
+- [ ] `/sign-in` - sign-in and local continuation.
+- [ ] `/sign-in/sent` - magic link confirmation if using magic links.
+- [ ] `/auth/callback` - auth callback if required by provider setup.
+- [ ] `/courses` - course library.
+- [ ] `/courses/new/:jobId` - generation status.
+- [ ] `/courses/:courseId` - course player.
+- [ ] `/courses/:courseId/focus` - distraction-free player if included in MVP.
+- [ ] `/courses/:courseId/manage` - course metadata and chapter management.
+- [ ] `/courses/:courseId/chapters/:chapterId` - chapter deep link.
+- [ ] `/courses/:courseId/bookmarks/:bookmarkId` - bookmark deep link.
+- [ ] `/bookmarks` - global bookmarks.
+- [ ] `/settings` - account, preferences, export.
+- [ ] `/about` - mission and project context.
+- [ ] `/self-hosting` - self-hosting guide.
+- [ ] `/privacy` - privacy page.
+- [ ] `/terms` - terms page.
+- [ ] `404` - unknown route recovery.
+- [ ] App error boundary - unrecoverable error recovery.
+
+## UI Component Checklist
+
+- [ ] App shell.
+- [ ] Sidebar navigation.
+- [ ] Top bar.
+- [ ] User menu.
+- [ ] URL input form.
+- [ ] Status badge.
+- [ ] Progress bar.
+- [ ] Course card or course row.
+- [ ] Search input.
+- [ ] Filter tabs.
+- [ ] Empty state.
+- [ ] Loading skeleton.
+- [ ] YouTube player wrapper.
+- [ ] Chapter sidebar item.
+- [ ] Chapter drawer.
+- [ ] Notes editor.
+- [ ] Summary panel.
+- [ ] Bookmark list.
+- [ ] Add/edit bookmark dialog.
+- [ ] Confirm dialog.
+- [ ] Toast or inline alert.
+- [ ] Settings form controls.
+- [ ] Error page layout.
+
+## API & Server Function Checklist
+
+- [ ] `createCourseFromUrl`.
+- [ ] `getGenerationJob`.
+- [ ] `retryGenerationJob`.
+- [ ] `getCourseLibrary`.
+- [ ] `getCoursePlayerData`.
+- [ ] `updateCourseMetadata`.
+- [ ] `updateChapter`.
+- [ ] `regenerateChapters`.
+- [ ] `deleteCourse`.
+- [ ] `upsertCourseProgress`.
+- [ ] `upsertChapterProgress`.
+- [ ] `upsertChapterNote`.
+- [ ] `createBookmark`.
+- [ ] `updateBookmark`.
+- [ ] `deleteBookmark`.
+- [ ] `getBookmarks`.
+- [ ] `updateLearningPreferences`.
+- [ ] `exportNotes` if included.
+
+## MVP Release Gate
+
+- [ ] Paste a valid YouTube URL.
+- [ ] Create a course and generation job.
+- [ ] Complete or simulate chapter generation.
+- [ ] Open generated course.
+- [ ] Play video and select chapters.
+- [ ] Save progress.
+- [ ] Refresh and resume.
+- [ ] Write chapter notes.
+- [ ] Refresh and recover notes.
+- [ ] Add, edit, jump to, and delete bookmark.
+- [ ] Find course in library.
+- [ ] Manage course title and chapter title.
+- [ ] Delete course.
+- [ ] Sign in and sign out.
+- [ ] View privacy, terms, and self-hosting pages.
+- [ ] Pass build, type check, lint/check, and smoke tests.
