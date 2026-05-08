@@ -18,7 +18,8 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "esbuild",
-      "lightningcss"
+      "lightningcss",
+      "sharp"
     ]
   },
   "packageManager": "pnpm@9.15.9",

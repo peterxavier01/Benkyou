@@ -5,17 +5,17 @@
   "tsx": true,
   "tailwind": {
     "config": "",
-    "css": "../../packages/ui/src/styles/globals.css",
+    "css": "src/styles/globals.css",
     "baseColor": "neutral",
     "cssVariables": true,
     "prefix": ""
   },
   "aliases": {
     "components": "#components",
-    "utils": "@benkyou/ui/lib/utils",
-    "ui": "@benkyou/ui/components",
+    "utils": "#lib/utils",
+    "ui": "#components",
     "lib": "#lib",
     "hooks": "#hooks"
   },
-  "iconLibrary": "lucide"
+  "iconLibrary": "hugeicons"
 }

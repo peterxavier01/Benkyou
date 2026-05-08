@@ -3,6 +3,9 @@
   "private": true,
   "type": "module",
   "imports": {
+    "#components/*": "./src/components/*.tsx",
+    "#hooks/*": "./src/hooks/*.ts",
+    "#lib/*": "./src/lib/*.ts",
     "#/*": "./src/*"
   },
   "scripts": {
