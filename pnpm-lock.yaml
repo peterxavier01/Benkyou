@@ -157,6 +157,9 @@ importers:
 
   packages/db:
     dependencies:
+      '@benkyou/types':
+        specifier: workspace:*
+        version: link:../types
       dotenv:
         specifier: ^16.4.5
         version: 16.6.1

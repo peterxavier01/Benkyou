@@ -12,6 +12,8 @@ export const DEFAULT_CHAPTER_COMPLETION_THRESHOLD = 0.9;
 
 export const DEFAULT_PROGRESS_SAVE_INTERVAL_MS = 15_000;
 
+export const LOCAL_STORAGE_PAYLOAD_VERSION = 1;
+
 export const LOCAL_STORAGE_KEYS = {
 	courses: "benkyou:courses:v1",
 	progress: "benkyou:progress:v1",

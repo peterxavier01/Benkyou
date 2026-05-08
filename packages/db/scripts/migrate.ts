@@ -3,8 +3,16 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { Pool } from "pg";
 
-config({ path: ".env" });
-config({ path: ".env.local", override: true });
+config({
+    path: [
+        "../../apps/web/.env.local",
+        "../../apps/web/.env",
+        "../../.env.local",
+        "../../.env",
+        ".env.local",
+        ".env",
+    ],
+});
 
 const databaseUrl = process.env.DATABASE_URL;
 

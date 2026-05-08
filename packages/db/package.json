@@ -7,14 +7,17 @@
     "db:generate": "drizzle-kit generate --config=drizzle.config.ts",
     "db:check": "drizzle-kit check --config=drizzle.config.ts",
     "db:migrate": "tsx scripts/migrate.ts",
+    "db:seed": "tsx scripts/seed.ts",
     "db:studio": "drizzle-kit studio --config=drizzle.config.ts",
-    "test": "vitest run --pool=threads --passWithNoTests"
+    "test": "tsx --test src/**/*.test.ts",
+    "check-types": "tsc --noEmit"
   },
   "exports": {
     ".": "./src/index.ts",
     "./schema": "./src/schema/index.ts"
   },
   "dependencies": {
+    "@benkyou/types": "workspace:*",
     "dotenv": "^16.4.5",
     "drizzle-orm": "^0.43.1",
     "pg": "^8.13.3",

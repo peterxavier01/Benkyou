@@ -28,10 +28,10 @@ export const videos = pgTable(
         createdAt: createdAtColumn(),
         updatedAt: updatedAtColumn(),
     },
-    (table) => ({
-        providerVideoIdx: uniqueIndex("videos_provider_video_idx").on(
+    (table) => [
+        uniqueIndex("videos_provider_video_idx").on(
             table.provider,
             table.providerVideoId,
         ),
-    }),
+    ],
 );

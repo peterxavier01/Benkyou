@@ -137,3 +137,28 @@ export interface CoursePlayerDataDTO {
 	notes: ChapterNoteDTO[];
 	bookmarks: BookmarkDTO[];
 }
+
+export interface LocalCoursesPayloadV1 {
+	version: 1;
+	courses: CoursePlayerDataDTO[];
+	updatedAt: string;
+}
+
+export interface LocalProgressPayloadV1 {
+	version: 1;
+	courseProgress: CourseProgressDTO[];
+	chapterProgress: ChapterProgressDTO[];
+	updatedAt: string;
+}
+
+export interface LocalNotesPayloadV1 {
+	version: 1;
+	notes: ChapterNoteDTO[];
+	updatedAt: string;
+}
+
+export interface LocalBookmarksPayloadV1 {
+	version: 1;
+	bookmarks: BookmarkDTO[];
+	updatedAt: string;
+}

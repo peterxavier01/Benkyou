@@ -21,7 +21,7 @@ export const generationJobStatusEnum = pgEnum("generation_job_status", [
 ]);
 
 export const transcriptSourceEnum = pgEnum("transcript_source", [
-    "captions",
-    "whisper",
+    "youtube_captions",
     "manual",
+    "sample",
 ]);
