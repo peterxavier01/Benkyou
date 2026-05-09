@@ -45,6 +45,16 @@
   components when props become noisy.
 - Keep tests close to the logic they protect when the repo pattern allows it.
 
+## Form Rules
+
+- Use TanStack Form for all app form logic, including field state, validation,
+  submission state, and submit handlers.
+- Keep form components outside route files. Routes may pass action callbacks,
+  redirect targets, or loaded data into form components, but should not own form
+  state or field rendering.
+- Reuse shared schemas from `packages/core`, `packages/types`, or feature
+  packages for validation instead of defining schemas in routes.
+
 ## UI Rules
 
 - Follow `DESIGN.md`: expert, organized, focused, dense, minimal, border-led UI.
