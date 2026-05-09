@@ -1,4 +1,4 @@
-import { HugeiconsIcon, type HugeiconsIconProps } from "@hugeicons/react"
+import { HugeiconsIcon, type HugeiconsIconProps } from "@hugeicons/react";
 import {
   ArrowRight01Icon,
   BookOpenCheckIcon,
@@ -9,7 +9,7 @@ import {
   ListViewIcon,
   PlayCircleIcon,
   Settings02Icon,
-} from "@hugeicons/core-free-icons"
+} from "@hugeicons/core-free-icons";
 
 const icons = {
   arrowRight: ArrowRight01Icon,
@@ -21,25 +21,26 @@ const icons = {
   list: ListViewIcon,
   playCircle: PlayCircleIcon,
   settings: Settings02Icon,
-} as const
+} as const;
 
-type HugeIconName = keyof typeof icons
+type HugeIconName = keyof typeof icons;
 
 function HugeIcon({
   name,
   strokeWidth = 2,
   ...props
 }: Omit<HugeiconsIconProps, "icon"> & {
-  name: HugeIconName
+  name: HugeIconName;
 }) {
   return (
     <HugeiconsIcon
       aria-hidden="true"
+      data-icon="inline"
       icon={icons[name]}
       strokeWidth={strokeWidth}
       {...props}
     />
-  )
+  );
 }
 
-export { HugeIcon, type HugeIconName }
+export { HugeIcon, type HugeIconName };

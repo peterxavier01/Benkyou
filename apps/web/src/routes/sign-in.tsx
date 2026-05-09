@@ -5,7 +5,7 @@ import {
   signInInputSchema,
   signUpInputSchema,
 } from "@benkyou/auth/schemas";
-import { CORE_PROMISE, PRODUCT_NAME } from "@benkyou/core";
+import { CORE_PROMISE } from "@benkyou/core";
 import {
   Button,
   ContentPanel,
@@ -23,6 +23,8 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import type { z } from "zod";
 
+import { AppHeader } from "#components/app-header";
+
 export const Route = createFileRoute("/sign-in")({
   validateSearch: (search: Record<string, unknown>) => ({
     redirect: typeof search.redirect === "string" ? search.redirect : "/",
@@ -33,6 +35,21 @@ export const Route = createFileRoute("/sign-in")({
 type AuthMode = "sign-in" | "sign-up";
 
 type FormErrors = Partial<Record<keyof SignUpInput | "form", string>>;
+
+const authBenefits = [
+  {
+    icon: "clock",
+    label: "Resume progress across sessions",
+  },
+  {
+    icon: "bookmark",
+    label: "Keep notes and bookmarks recoverable",
+  },
+  {
+    icon: "list",
+    label: "Sync generated course structure",
+  },
+] as const;
 
 function SignInPage() {
   const navigate = useNavigate();
@@ -50,11 +67,13 @@ function SignInPage() {
         ? {
             title: "Sign in",
             action: "Sign in",
+            description: "Resume your saved courses, notes, and bookmarks.",
             switchAction: "Create account",
           }
         : {
             title: "Create account",
             action: "Create account",
+            description: "Save your learning workspace for later sessions.",
             switchAction: "Sign in instead",
           },
     [mode],
@@ -96,45 +115,66 @@ function SignInPage() {
 
   return (
     <main className="min-h-dvh bg-background text-foreground">
-      <div className="mx-auto grid min-h-dvh w-full max-w-6xl gap-6 px-4 py-4 md:grid-cols-[minmax(0,1fr)_420px] md:px-6">
-        <section className="flex min-h-[280px] flex-col justify-between border-border border-b py-4 md:border-r md:border-b-0 md:pr-8">
-          <Link to="/" className="flex w-fit items-center gap-2 no-underline">
-            <div className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              <HugeIcon name="bookOpenCheck" className="size-4" />
-            </div>
-            <div>
-              <p className="font-semibold text-sm">{PRODUCT_NAME}</p>
-              <p className="text-muted-foreground text-xs">
-                Learning workspace
-              </p>
-            </div>
-          </Link>
-
-          <div className="max-w-xl py-8 md:py-0">
-            <StatusBadge tone="neutral">Hosted sync readiness</StatusBadge>
-            <h1 className="mt-4 max-w-lg font-semibold text-3xl leading-tight tracking-normal">
-              {CORE_PROMISE}
-            </h1>
-            <p className="mt-4 max-w-lg text-muted-foreground text-sm leading-6">
-              Sign in when you want courses, notes, progress, and bookmarks to
-              follow you across sessions.
-            </p>
-          </div>
-
-          <Button asChild variant="ghost" size="sm" className="w-fit px-0">
-            <Link to="/">
+      <AppHeader
+        subtitle="Learning workspace"
+        action={
+          <Button asChild variant="outline" size="sm">
+            <Link to="/" className="gap-2">
               <HugeIcon name="playCircle" className="size-4" />
               Continue locally
             </Link>
           </Button>
-        </section>
+        }
+      />
+
+      <div className="mx-auto grid w-full max-w-6xl gap-4 px-4 py-6 md:grid-cols-[minmax(0,1fr)_420px] md:px-6 lg:py-10">
+        <ContentPanel className="flex min-h-[420px] flex-col justify-between p-5 sm:p-7">
+          <div>
+            <div className="flex items-center gap-2">
+              <div className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
+                <HugeIcon name="bookOpenCheck" className="size-4" />
+              </div>
+              <div>
+                <p className="font-semibold text-sm">Hosted sync</p>
+                <p className="text-muted-foreground text-xs">
+                  Optional for local-first study
+                </p>
+              </div>
+            </div>
+
+            <StatusBadge tone="neutral" className="mt-8 px-2">
+              Account workspace
+            </StatusBadge>
+            <h1 className="mt-4 max-w-xl font-semibold text-2xl leading-tight tracking-normal sm:text-3xl">
+              {CORE_PROMISE}
+            </h1>
+            <p className="mt-4 max-w-xl text-muted-foreground text-sm leading-6">
+              Use Benkyou locally right away. Sign in when you want your study
+              state to follow you across sessions.
+            </p>
+          </div>
+
+          <ul className="mt-8 space-y-2.5 text-sm">
+            {authBenefits.map((benefit) => (
+              <li
+                key={benefit.label}
+                className="flex items-center gap-2 rounded-md border border-border bg-muted/30 px-3 py-2"
+              >
+                <span className="flex size-6 items-center justify-center rounded-md bg-primary/10 text-primary">
+                  <HugeIcon name={benefit.icon} className="size-3.5" />
+                </span>
+                <span className="text-muted-foreground">{benefit.label}</span>
+              </li>
+            ))}
+          </ul>
+        </ContentPanel>
 
         <section className="flex items-center">
           <ContentPanel className="w-full p-5">
             <div className="mb-5">
               <h2 className="font-semibold text-xl">{copy.title}</h2>
               <p className="mt-1 text-muted-foreground text-sm">
-                Email and password are enabled for the MVP.
+                {copy.description}
               </p>
             </div>
 
@@ -197,7 +237,11 @@ function SignInPage() {
                 ) : null}
               </div>
 
-              <Button type="submit" className="w-full cursor-pointer" disabled={isSubmitting}>
+              <Button
+                type="submit"
+                className="w-full cursor-pointer"
+                disabled={isSubmitting}
+              >
                 {isSubmitting ? "Working..." : copy.action}
               </Button>
             </form>
