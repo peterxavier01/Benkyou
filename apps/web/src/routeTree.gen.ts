@@ -12,6 +12,8 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CoursesIndexRouteImport } from './routes/courses/index'
+import { Route as CoursesCourseIdRouteImport } from './routes/courses/$courseId'
 import { Route as CoursesNewJobIdRouteImport } from './routes/courses/new/$jobId'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
@@ -30,6 +32,16 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CoursesIndexRoute = CoursesIndexRouteImport.update({
+  id: '/courses/',
+  path: '/courses/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CoursesCourseIdRoute = CoursesCourseIdRouteImport.update({
+  id: '/courses/$courseId',
+  path: '/courses/$courseId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CoursesNewJobIdRoute = CoursesNewJobIdRouteImport.update({
   id: '/courses/new/$jobId',
   path: '/courses/new/$jobId',
@@ -45,6 +57,8 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/settings': typeof SettingsRoute
   '/sign-in': typeof SignInRoute
+  '/courses/$courseId': typeof CoursesCourseIdRoute
+  '/courses/': typeof CoursesIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/courses/new/$jobId': typeof CoursesNewJobIdRoute
 }
@@ -52,6 +66,8 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/settings': typeof SettingsRoute
   '/sign-in': typeof SignInRoute
+  '/courses/$courseId': typeof CoursesCourseIdRoute
+  '/courses': typeof CoursesIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/courses/new/$jobId': typeof CoursesNewJobIdRoute
 }
@@ -60,6 +76,8 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/settings': typeof SettingsRoute
   '/sign-in': typeof SignInRoute
+  '/courses/$courseId': typeof CoursesCourseIdRoute
+  '/courses/': typeof CoursesIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/courses/new/$jobId': typeof CoursesNewJobIdRoute
 }
@@ -69,15 +87,26 @@ export interface FileRouteTypes {
     | '/'
     | '/settings'
     | '/sign-in'
+    | '/courses/$courseId'
+    | '/courses/'
     | '/api/auth/$'
     | '/courses/new/$jobId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/settings' | '/sign-in' | '/api/auth/$' | '/courses/new/$jobId'
+  to:
+    | '/'
+    | '/settings'
+    | '/sign-in'
+    | '/courses/$courseId'
+    | '/courses'
+    | '/api/auth/$'
+    | '/courses/new/$jobId'
   id:
     | '__root__'
     | '/'
     | '/settings'
     | '/sign-in'
+    | '/courses/$courseId'
+    | '/courses/'
     | '/api/auth/$'
     | '/courses/new/$jobId'
   fileRoutesById: FileRoutesById
@@ -86,6 +115,8 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SettingsRoute: typeof SettingsRoute
   SignInRoute: typeof SignInRoute
+  CoursesCourseIdRoute: typeof CoursesCourseIdRoute
+  CoursesIndexRoute: typeof CoursesIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   CoursesNewJobIdRoute: typeof CoursesNewJobIdRoute
 }
@@ -113,6 +144,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/courses/': {
+      id: '/courses/'
+      path: '/courses'
+      fullPath: '/courses/'
+      preLoaderRoute: typeof CoursesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/courses/$courseId': {
+      id: '/courses/$courseId'
+      path: '/courses/$courseId'
+      fullPath: '/courses/$courseId'
+      preLoaderRoute: typeof CoursesCourseIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/courses/new/$jobId': {
       id: '/courses/new/$jobId'
       path: '/courses/new/$jobId'
@@ -134,6 +179,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SettingsRoute: SettingsRoute,
   SignInRoute: SignInRoute,
+  CoursesCourseIdRoute: CoursesCourseIdRoute,
+  CoursesIndexRoute: CoursesIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   CoursesNewJobIdRoute: CoursesNewJobIdRoute,
 }

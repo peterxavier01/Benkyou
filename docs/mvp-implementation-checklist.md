@@ -270,31 +270,31 @@ Goal: give learners a reliable place to resume, search, and manage courses.
 
 ### Library Logic
 
-- [ ] Load current user's courses or local courses.
-- [ ] Include video thumbnail, source, progress, chapter count, last watched
+- [x] Load current user's courses or local courses.
+- [x] Include video thumbnail, source, progress, chapter count, last watched
       time, and latest generation status.
-- [ ] Sort by last watched or creation date.
-- [ ] Filter by all, in progress, completed, processing, failed.
-- [ ] Search by course title and video/channel metadata.
-- [ ] Retry failed generation jobs.
-- [ ] Soft-delete courses.
+- [x] Sort by last watched or creation date.
+- [x] Filter by all, in progress, completed, processing, failed.
+- [x] Search by course title and video/channel metadata.
+- [x] Retry failed generation jobs.
+- [x] Soft-delete courses.
 
 ### Library UI
 
-- [ ] Build `/courses`.
-- [ ] Add compact app header with create course action.
-- [ ] Add filter tabs.
-- [ ] Add search input.
-- [ ] Add course rows/cards with progress bars.
-- [ ] Add processing and failed visual states.
-- [ ] Add empty state with "Create course" and "Try sample course".
-- [ ] Add responsive mobile list layout.
+- [x] Build `/courses`.
+- [x] Add compact app header with create course action.
+- [x] Add filter tabs.
+- [x] Add search input.
+- [x] Add course rows/cards with progress bars.
+- [x] Add processing and failed visual states.
+- [x] Add empty state with "Create course" and "Try sample course".
+- [x] Add responsive mobile list layout.
 
 ### Done When
 
-- [ ] A learner can find and resume a course in two clicks.
-- [ ] Processing and failed courses are visible and recoverable.
-- [ ] Empty library state pushes users back into the course creation loop.
+- [x] A learner can find and resume a course in two clicks.
+- [x] Processing and failed courses are visible and recoverable.
+- [x] Empty library state pushes users back into the course creation loop.
 
 ## Phase 5: Course Player
 
@@ -303,39 +303,39 @@ and progress in one focused workspace.
 
 ### Player Logic
 
-- [ ] Load course player data from course id.
-- [ ] Resolve selected chapter from URL, progress, or first chapter.
-- [ ] Embed YouTube player.
-- [ ] Seek to selected chapter start.
-- [ ] Update selected chapter based on playback time.
-- [ ] Track current playback time.
-- [ ] Persist course resume position on an interval and on pause/unload.
-- [ ] Persist chapter progress.
-- [ ] Mark chapter complete automatically based on completion threshold.
-- [ ] Support manual chapter complete/incomplete toggle.
-- [ ] Handle transcript/chapter gaps gracefully.
+- [x] Load course player data from course id.
+- [x] Resolve selected chapter from URL, progress, or first chapter.
+- [x] Embed YouTube player.
+- [x] Seek to selected chapter start.
+- [x] Update selected chapter based on playback time.
+- [x] Track current playback time.
+- [x] Persist course resume position on an interval and on pause/unload.
+- [x] Persist chapter progress.
+- [x] Mark chapter complete automatically based on completion threshold.
+- [x] Support manual chapter complete/incomplete toggle.
+- [x] Handle transcript/chapter gaps gracefully.
 - [ ] Handle private/deleted/missing course states.
 
 ### Player UI
 
-- [ ] Build `/courses/:courseId`.
+- [x] Build `/courses/:courseId`.
 - [ ] Add course header with title, source metadata, progress, and manage link.
-- [ ] Add video player region with stable aspect ratio.
-- [ ] Add chapter sidebar with: title, time range, completion state, active
+- [x] Add video player region with stable aspect ratio.
+- [x] Add chapter sidebar with: title, time range, completion state, active
       state, progress.
-- [ ] Add tabs for Notes, Summary, and Bookmarks.
-- [ ] Add per-chapter summary display.
-- [ ] Add keyboard-accessible chapter selection.
-- [ ] Add mobile chapter drawer.
+- [x] Add tabs for Notes, Summary, and Bookmarks.
+- [x] Add per-chapter summary display.
+- [x] Add keyboard-accessible chapter selection.
+- [x] Add mobile chapter drawer.
 - [ ] Add loading skeleton.
 - [ ] Add no-chapters fallback with retry/regenerate action.
-- [ ] Add save failure toast or inline recovery.
+- [x] Add save failure toast or inline recovery.
 
 ### Done When
 
-- [ ] A learner can watch, jump chapters, leave, and resume.
-- [ ] The sidebar always reflects current chapter and completion state.
-- [ ] The player is usable on desktop, tablet, and mobile.
+- [x] A learner can watch, jump chapters, leave, and resume.
+- [x] The sidebar always reflects current chapter and completion state.
+- [x] The player is usable on desktop, tablet, and mobile.
 
 ## Phase 6: Notes
 
@@ -514,11 +514,11 @@ Goal: verify the MVP behaves like a serious learning tool before release.
 
 - [x] Unit test YouTube URL parser.
 - [ ] Unit test chapter time range validation.
-- [ ] Unit test progress percentage calculation.
+- [x] Unit test progress percentage calculation.
 - [x] Unit test AI output validator.
 - [ ] Integration test course creation server function.
 - [ ] Integration test notes autosave.
-- [ ] Integration test bookmark create/edit/delete.
+- [x] Integration test bookmark create/edit/delete.
 - [ ] Integration test route guards.
 - [ ] Smoke test build with `pnpm build`.
 - [ ] Smoke test type checks with `pnpm check-types`.
@@ -554,9 +554,9 @@ Goal: verify the MVP behaves like a serious learning tool before release.
 - [x] `/sign-in` - sign-in and local continuation.
 - [ ] `/sign-in/sent` - magic link confirmation if using magic links.
 - [ ] `/auth/callback` - auth callback if required by provider setup.
-- [ ] `/courses` - course library.
+- [x] `/courses` - course library.
 - [x] `/courses/new/:jobId` - generation status.
-- [ ] `/courses/:courseId` - course player.
+- [x] `/courses/:courseId` - course player.
 - [ ] `/courses/:courseId/focus` - distraction-free player if included in MVP.
 - [ ] `/courses/:courseId/manage` - course metadata and chapter management.
 - [ ] `/courses/:courseId/chapters/:chapterId` - chapter deep link.
@@ -579,17 +579,17 @@ Goal: verify the MVP behaves like a serious learning tool before release.
 - [x] URL input form.
 - [x] Status badge.
 - [x] Progress bar.
-- [ ] Course card or course row.
-- [ ] Search input.
-- [ ] Filter tabs.
+- [x] Course card or course row.
+- [x] Search input.
+- [x] Filter tabs.
 - [x] Empty state.
 - [x] Loading skeleton.
-- [ ] YouTube player wrapper.
-- [ ] Chapter sidebar item.
-- [ ] Chapter drawer.
+- [x] YouTube player wrapper.
+- [x] Chapter sidebar item.
+- [x] Chapter drawer.
 - [ ] Notes editor.
-- [ ] Summary panel.
-- [ ] Bookmark list.
+- [x] Summary panel.
+- [x] Bookmark list.
 - [ ] Add/edit bookmark dialog.
 - [x] Confirm dialog.
 - [x] Toast or inline alert.
@@ -606,7 +606,7 @@ Goal: verify the MVP behaves like a serious learning tool before release.
 - [ ] `updateCourseMetadata`.
 - [ ] `updateChapter`.
 - [ ] `regenerateChapters`.
-- [ ] `deleteCourse`.
+- [x] `deleteCourse`.
 - [x] `upsertCourseProgress`.
 - [x] `upsertChapterProgress`.
 - [x] `upsertChapterNote`.

@@ -1,5 +1,6 @@
 export * from "./constants";
 export * from "./course-generation";
+export * from "./course-workspace";
 export * from "./export";
 export * from "./generation";
 export * from "./progress";

@@ -87,15 +87,17 @@ function NewCourseForm() {
 										onBlur={field.handleBlur}
 										onChange={(event) => field.handleChange(event.target.value)}
 									/>
-									<form.Subscribe selector={(state) => state.isSubmitting}>
-										{(isSubmitting: boolean) => (
+									<form.Subscribe>
+										{(state) => (
 											<Button
 												type="submit"
 												size="lg"
 												className="sm:w-auto"
-												disabled={isSubmitting}
+												disabled={state.isSubmitting}
 											>
-												{isSubmitting ? "Generating..." : "Generate course"}
+												{state.isSubmitting
+													? "Generating..."
+													: "Generate course"}
 												<HugeIcon name="arrowRight" className="size-4" />
 											</Button>
 										)}
@@ -123,10 +125,10 @@ function NewCourseForm() {
 
 						try {
 							const result = await openSample();
+							setOpeningSample(false);
 							await navigate({ href: `/courses/${result.courseId}` });
 						} catch (error) {
 							setFormError(toErrorMessage(error));
-						} finally {
 							setOpeningSample(false);
 						}
 					}}

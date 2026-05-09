@@ -162,14 +162,14 @@ function AuthForm({ redirectTo }: AuthFormProps) {
 					)}
 				</form.Field>
 
-				<form.Subscribe selector={(state) => state.isSubmitting}>
-					{(isSubmitting: boolean) => (
+				<form.Subscribe>
+					{(state) => (
 						<Button
 							type="submit"
 							className="w-full cursor-pointer"
-							disabled={isSubmitting}
+							disabled={state.isSubmitting}
 						>
-							{isSubmitting ? "Working..." : copy.action}
+							{state.isSubmitting ? "Working..." : copy.action}
 						</Button>
 					)}
 				</form.Subscribe>

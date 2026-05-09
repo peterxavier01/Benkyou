@@ -436,6 +436,26 @@ export async function getCoursePlayerData(
 	};
 }
 
+export async function getCourseByChapter(
+	chapterId: string,
+	userId: UserId,
+): Promise<CourseDTO | null> {
+	const [row] = await db
+		.select({ course: courses })
+		.from(courseChapters)
+		.innerJoin(courses, eq(courseChapters.courseId, courses.id))
+		.where(
+			and(
+				eq(courseChapters.id, chapterId),
+				userMatches(courses.ownerId, userId),
+				isNull(courses.deletedAt),
+			),
+		)
+		.limit(1);
+
+	return row ? mapCourse(row.course) : null;
+}
+
 export async function getCourseLibrary(
 	userId: UserId,
 ): Promise<CourseLibraryItemDTO[]> {
@@ -699,6 +719,26 @@ export async function getSampleCourse(): Promise<CourseDTO | null> {
 		.limit(1);
 
 	return row ? mapCourse(row.course) : null;
+}
+
+export async function softDeleteCourse(
+	courseId: string,
+	userId: UserId,
+): Promise<boolean> {
+	const deletedAt = new Date();
+	const rows = await db
+		.update(courses)
+		.set({ deletedAt, updatedAt: deletedAt })
+		.where(
+			and(
+				eq(courses.id, courseId),
+				userMatches(courses.ownerId, userId),
+				isNull(courses.deletedAt),
+			),
+		)
+		.returning({ id: courses.id });
+
+	return rows.length > 0;
 }
 
 export async function upsertCourseProgress(

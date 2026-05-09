@@ -171,12 +171,23 @@ export interface OpenSampleCourseResponseV1 {
 	courseId: string;
 }
 
+export type CourseLibraryFilterV1 =
+	| "all"
+	| "in-progress"
+	| "completed"
+	| "processing"
+	| "failed";
+
 export interface CourseLibraryItemDTO {
 	course: CourseDTO;
 	video: VideoDTO;
 	chapterCount: number;
 	progress: CourseProgressDTO | null;
 	latestGenerationJob: CourseGenerationJobDTO | null;
+}
+
+export interface GetCourseLibraryResponseV1 {
+	items: CourseLibraryItemDTO[];
 }
 
 export interface CoursePlayerDataDTO {
@@ -187,6 +198,42 @@ export interface CoursePlayerDataDTO {
 	chapterProgress: ChapterProgressDTO[];
 	notes: ChapterNoteDTO[];
 	bookmarks: BookmarkDTO[];
+}
+
+export interface GetCoursePlayerDataRequestV1 {
+	courseId: string;
+}
+
+export interface GetCoursePlayerDataResponseV1 {
+	data: CoursePlayerDataDTO;
+}
+
+export interface UpsertCourseProgressRequestV1 {
+	courseId: string;
+	resumeSeconds: number;
+	completionPercent: number;
+}
+
+export interface UpsertCourseProgressResponseV1 {
+	progress: CourseProgressDTO;
+}
+
+export interface UpsertChapterProgressRequestV1 {
+	chapterId: string;
+	watchedSeconds: number;
+	completed: boolean;
+}
+
+export interface UpsertChapterProgressResponseV1 {
+	progress: ChapterProgressDTO;
+}
+
+export interface DeleteCourseRequestV1 {
+	courseId: string;
+}
+
+export interface DeleteCourseResponseV1 {
+	deleted: boolean;
 }
 
 export interface LocalCoursesPayloadV1 {
