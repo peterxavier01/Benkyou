@@ -100,7 +100,7 @@ function Home() {
                 </div>
               </form>
 
-              <div className="mt-4 flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:gap-3">
+              <div className="mt-4">
                 <Button
                   asChild
                   type="button"
@@ -113,9 +113,6 @@ function Home() {
                     Try sample course
                   </Link>
                 </Button>
-                <span className="text-muted-foreground">
-                  Vimeo and Loom are planned, but disabled for the MVP.
-                </span>
               </div>
             </div>
           </ContentPanel>
