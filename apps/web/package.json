@@ -20,8 +20,10 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
+    "@benkyou/ai": "workspace:*",
     "@benkyou/auth": "workspace:*",
     "@benkyou/core": "workspace:*",
+    "@benkyou/db": "workspace:*",
     "@benkyou/types": "workspace:*",
     "@benkyou/ui": "workspace:*",
     "@tailwindcss/vite": "^4.1.18",

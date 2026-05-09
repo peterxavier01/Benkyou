@@ -1,33 +1,33 @@
 {
-  "name": "@benkyou/root",
-  "private": true,
-  "scripts": {
-    "build": "turbo run build",
-    "dev": "turbo run dev",
-    "lint": "turbo run lint",
-    "format": "turbo run format",
-    "check": "turbo run check",
-    "check-types": "turbo run check-types",
-    "dev:web": "pnpm --filter @benkyou/web dev"
-  },
-  "devDependencies": {
-    "prettier": "^3.7.4",
-    "turbo": "^2.9.8",
-    "typescript": "5.9.2"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild",
-      "lightningcss",
-      "sharp",
-      "msw"
-    ],
-    "overrides": {
-      "zod@^3": "3.25.75"
-    }
-  },
-  "packageManager": "pnpm@10.33.4",
-  "engines": {
-    "node": ">=20.19"
-  }
+	"name": "@benkyou/root",
+	"private": true,
+	"scripts": {
+		"build": "turbo run build",
+		"dev": "turbo run dev",
+		"lint": "turbo run lint",
+		"format": "turbo run format",
+		"check": "turbo run check",
+		"check-types": "turbo run check-types",
+		"dev:web": "pnpm --filter @benkyou/web dev"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.4.5",
+		"turbo": "^2.9.8",
+		"typescript": "5.9.2"
+	},
+	"pnpm": {
+		"onlyBuiltDependencies": [
+			"esbuild",
+			"lightningcss",
+			"sharp",
+			"msw"
+		],
+		"overrides": {
+			"zod@^3": "3.25.75"
+		}
+	},
+	"packageManager": "pnpm@10.33.4",
+	"engines": {
+		"node": ">=20.19"
+	}
 }

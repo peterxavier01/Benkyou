@@ -111,13 +111,64 @@ export interface ParsedVideoUrl {
 	canonicalUrl: string;
 }
 
-export interface CreateCourseFromUrlRequest {
+export interface CreateCourseFromUrlRequestV1 {
 	url: string;
 }
 
-export interface CreateCourseFromUrlResponse {
+export interface CreateCourseFromUrlResponseV1 {
 	courseId: string;
 	generationJobId: string;
+	reusedExistingCourse: boolean;
+}
+
+export type GenerationTimelineStepKeyV1 =
+	| "metadata"
+	| "transcript"
+	| "chapters"
+	| "player";
+
+export type GenerationTimelineStepStatusV1 =
+	| "pending"
+	| "processing"
+	| "completed"
+	| "failed";
+
+export interface GenerationTimelineStepV1 {
+	key: GenerationTimelineStepKeyV1;
+	label: string;
+	status: GenerationTimelineStepStatusV1;
+	description: string;
+}
+
+export interface GenerationJobDetailV1 {
+	job: CourseGenerationJobDTO;
+	course: CourseDTO;
+	video: VideoDTO;
+	chapterCount: number;
+	timeline: GenerationTimelineStepV1[];
+	canRetry: boolean;
+	canOpenCourse: boolean;
+}
+
+export interface ProcessGenerationJobRequestV1 {
+	generationJobId: string;
+}
+
+export interface ProcessGenerationJobResponseV1 {
+	detail: GenerationJobDetailV1;
+}
+
+export interface RetryGenerationJobRequestV1 {
+	generationJobId: string;
+}
+
+export interface RetryGenerationJobResponseV1 {
+	courseId: string;
+	generationJobId: string;
+}
+
+export interface OpenSampleCourseResponseV1 {
+	courseId: string;
 }
 
 export interface CourseLibraryItemDTO {

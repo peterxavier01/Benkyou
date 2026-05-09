@@ -58,6 +58,19 @@ export function parseVideoUrl(input: string): ParseVideoUrlResult {
 	};
 }
 
+export function getParseVideoUrlErrorMessage(error: ParseVideoUrlError) {
+	switch (error) {
+		case "empty":
+			return "Enter a YouTube URL.";
+		case "invalid_url":
+			return "Enter a valid URL.";
+		case "unsupported_provider":
+			return "Only YouTube URLs are supported right now.";
+		case "missing_video_id":
+			return "That YouTube URL is missing a video id.";
+	}
+}
+
 export function extractYouTubeVideoId(url: URL) {
 	const hostname = url.hostname.toLowerCase();
 

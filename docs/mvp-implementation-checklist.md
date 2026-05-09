@@ -197,59 +197,72 @@ unblocked.
 
 Goal: let a learner submit a YouTube URL and see course generation progress.
 
+### Contract Versioning
+
+- [x] Define Phase 3 request/response DTOs in `packages/types` as explicit v1
+      contracts, such as `CreateCourseFromUrlRequestV1`,
+      `CreateCourseFromUrlResponseV1`, `GenerationJobDetailV1`,
+      `RetryGenerationJobRequestV1`, and `RetryGenerationJobResponseV1`.
+- [x] Use the v1 DTOs from TanStack Start server functions and UI callers
+      instead of route-local or feature-local wire shapes.
+- [x] Keep v1 contract semantics stable after implementation; introduce v2 types
+      for breaking wire-shape or meaning changes.
+- [ ] If public HTTP API routes are added later, expose Phase 3 endpoints under
+      `/api/v1/...` and reuse the same v1 DTOs.
+
 ### URL Input Logic
 
-- [ ] Parse supported YouTube URL formats.
-- [ ] Extract provider and provider video id.
-- [ ] Normalize to a canonical URL.
-- [ ] Reject malformed URLs with inline errors.
-- [ ] Reject unsupported providers with clear disabled messaging.
-- [ ] Prevent duplicate submissions while a job is being created.
+- [x] Parse supported YouTube URL formats.
+- [x] Extract provider and provider video id.
+- [x] Normalize to a canonical URL.
+- [x] Reject malformed URLs with inline errors.
+- [x] Reject unsupported providers with clear disabled messaging.
+- [x] Prevent duplicate submissions while a job is being created.
 
 ### Course Creation Logic
 
-- [ ] Create server function or API route for `createCourseFromUrl`.
-- [ ] Upsert video metadata.
-- [ ] Create course with sensible initial title and private visibility.
-- [ ] Create queued generation job.
-- [ ] Redirect to `/courses/new/:jobId`.
-- [ ] Handle duplicate video submissions for the same user.
-- [ ] Add "Try sample course" path that creates or opens seeded sample data.
+- [x] Create server function or API route for `createCourseFromUrl`.
+- [x] Upsert video metadata.
+- [x] Create course with sensible initial title and private visibility.
+- [x] Create queued generation job.
+- [x] Redirect to `/courses/new/:jobId`.
+- [x] Handle duplicate video submissions for the same user.
+- [x] Add "Try sample course" path that creates or opens seeded sample data.
 
 ### Generation Worker
 
-- [ ] Decide execution model for MVP: inline async, scheduled worker, queue, or
+- [x] Decide execution model for MVP: inline async, scheduled worker, queue, or
       manual development worker.
-- [ ] Claim queued jobs safely.
-- [ ] Fetch video metadata.
-- [ ] Fetch transcript or captions.
-- [ ] Handle transcript unavailable state.
-- [ ] Send transcript to AI provider for chapter JSON.
-- [ ] Validate AI output with Zod.
-- [ ] Insert ordered chapters.
-- [ ] Store summary/rationale/raw output where useful.
-- [ ] Mark job completed.
-- [ ] Store failure reason and retry eligibility on failure.
+- [x] Claim queued jobs safely.
+- [x] Fetch video metadata.
+- [x] Fetch transcript or captions.
+- [x] Handle transcript unavailable state.
+- [x] Send transcript to AI provider for chapter JSON.
+- [x] Validate AI output with Zod.
+- [x] Insert ordered chapters.
+- [x] Store summary/rationale/raw output where useful.
+- [x] Mark job completed.
+- [x] Store failure reason and retry eligibility on failure.
 - [ ] Add timeout and cancellation handling.
 
 ### Generation Status UI
 
-- [ ] Build `/courses/new/:jobId`.
-- [ ] Show detected video preview.
-- [ ] Show status badge: queued, processing, completed, failed, cancelled.
-- [ ] Show generation timeline: metadata, transcript, chapters, player prep.
-- [ ] Poll or revalidate job status.
-- [ ] Enable "Open course" only when completed.
-- [ ] Enable retry when failed.
-- [ ] Enable "Use another URL" on unrecoverable errors.
-- [ ] Enable "Keep working in background" to go to `/courses`.
+- [x] Build `/courses/new/:jobId`.
+- [x] Show detected video preview.
+- [x] Show status badge: queued, processing, completed, failed, cancelled.
+- [x] Show generation timeline: metadata, transcript, chapters, player prep.
+- [x] Poll or revalidate job status.
+- [x] Enable "Open course" only when completed.
+- [x] Enable retry when failed.
+- [x] Enable "Use another URL" on unrecoverable errors.
+- [x] Enable "Keep working in background" to go to `/courses`.
 
 ### Done When
 
-- [ ] A valid YouTube URL creates a course and job.
-- [ ] The job screen accurately reflects the lifecycle.
+- [x] A valid YouTube URL creates a course and job.
+- [x] The job screen accurately reflects the lifecycle.
 - [ ] Completed jobs open the course player with chapters.
-- [ ] Failed jobs explain what happened and offer a next action.
+- [x] Failed jobs explain what happened and offer a next action.
 
 ## Phase 4: Course Library
 
@@ -499,10 +512,10 @@ Goal: verify the MVP behaves like a serious learning tool before release.
 
 ### Testing
 
-- [ ] Unit test YouTube URL parser.
+- [x] Unit test YouTube URL parser.
 - [ ] Unit test chapter time range validation.
 - [ ] Unit test progress percentage calculation.
-- [ ] Unit test AI output validator.
+- [x] Unit test AI output validator.
 - [ ] Integration test course creation server function.
 - [ ] Integration test notes autosave.
 - [ ] Integration test bookmark create/edit/delete.
@@ -537,12 +550,12 @@ Goal: verify the MVP behaves like a serious learning tool before release.
 
 ## Route Implementation Checklist
 
-- [ ] `/` - new course entry.
-- [ ] `/sign-in` - sign-in and local continuation.
+- [x] `/` - new course entry.
+- [x] `/sign-in` - sign-in and local continuation.
 - [ ] `/sign-in/sent` - magic link confirmation if using magic links.
 - [ ] `/auth/callback` - auth callback if required by provider setup.
 - [ ] `/courses` - course library.
-- [ ] `/courses/new/:jobId` - generation status.
+- [x] `/courses/new/:jobId` - generation status.
 - [ ] `/courses/:courseId` - course player.
 - [ ] `/courses/:courseId/focus` - distraction-free player if included in MVP.
 - [ ] `/courses/:courseId/manage` - course metadata and chapter management.
@@ -559,18 +572,18 @@ Goal: verify the MVP behaves like a serious learning tool before release.
 
 ## UI Component Checklist
 
-- [ ] App shell.
-- [ ] Sidebar navigation.
-- [ ] Top bar.
-- [ ] User menu.
-- [ ] URL input form.
-- [ ] Status badge.
-- [ ] Progress bar.
+- [x] App shell.
+- [x] Sidebar navigation.
+- [x] Top bar.
+- [x] User menu.
+- [x] URL input form.
+- [x] Status badge.
+- [x] Progress bar.
 - [ ] Course card or course row.
 - [ ] Search input.
 - [ ] Filter tabs.
-- [ ] Empty state.
-- [ ] Loading skeleton.
+- [x] Empty state.
+- [x] Loading skeleton.
 - [ ] YouTube player wrapper.
 - [ ] Chapter sidebar item.
 - [ ] Chapter drawer.
@@ -578,28 +591,28 @@ Goal: verify the MVP behaves like a serious learning tool before release.
 - [ ] Summary panel.
 - [ ] Bookmark list.
 - [ ] Add/edit bookmark dialog.
-- [ ] Confirm dialog.
-- [ ] Toast or inline alert.
+- [x] Confirm dialog.
+- [x] Toast or inline alert.
 - [ ] Settings form controls.
 - [ ] Error page layout.
 
 ## API & Server Function Checklist
 
-- [ ] `createCourseFromUrl`.
-- [ ] `getGenerationJob`.
-- [ ] `retryGenerationJob`.
-- [ ] `getCourseLibrary`.
-- [ ] `getCoursePlayerData`.
+- [x] `createCourseFromUrl`.
+- [x] `getGenerationJob`.
+- [x] `retryGenerationJob`.
+- [x] `getCourseLibrary`.
+- [x] `getCoursePlayerData`.
 - [ ] `updateCourseMetadata`.
 - [ ] `updateChapter`.
 - [ ] `regenerateChapters`.
 - [ ] `deleteCourse`.
-- [ ] `upsertCourseProgress`.
-- [ ] `upsertChapterProgress`.
-- [ ] `upsertChapterNote`.
-- [ ] `createBookmark`.
-- [ ] `updateBookmark`.
-- [ ] `deleteBookmark`.
+- [x] `upsertCourseProgress`.
+- [x] `upsertChapterProgress`.
+- [x] `upsertChapterNote`.
+- [x] `createBookmark`.
+- [x] `updateBookmark`.
+- [x] `deleteBookmark`.
 - [ ] `getBookmarks`.
 - [ ] `updateLearningPreferences`.
 - [ ] `exportNotes` if included.

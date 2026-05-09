@@ -32,6 +32,20 @@
 - Keep secrets server-side. Do not expose provider keys, DB URLs, auth secrets,
   or private hosted/cloud logic to client bundles.
 
+## Contract Versioning Rules
+
+- Treat `packages/types` as the stable public contract surface for DTOs,
+  request/response types, enums, and API/server-function wire shapes.
+- Version externally meaningful contracts from the first shipped shape. Use
+  suffixes such as `CreateCourseFromUrlRequestV1`,
+  `CreateCourseFromUrlResponseV1`, and `GenerationJobDetailV1`.
+- Do not silently change the meaning of a published `V1` type. Add a new version
+  when removing fields, renaming fields, changing requiredness, or changing
+  response semantics.
+- TanStack Start server functions may use the same versioned DTOs before public
+  HTTP API routes exist. If public routes are added, expose them under
+  `/api/v1/...` and reuse the same `packages/types` contracts.
+
 ## File & Component Rules
 
 - Prefer small files with one clear responsibility.
