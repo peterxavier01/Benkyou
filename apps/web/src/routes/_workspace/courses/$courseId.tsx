@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { CoursePlayerScreen } from "../../features/courses/components/course-player-screen";
-import { getCoursePlayerData } from "../../features/courses/course-workspace.functions";
+import { CoursePlayerScreen } from "#/features/courses/components/course-player-screen";
+import { getCoursePlayerData } from "#/features/courses/course-workspace.functions";
 
-export const Route = createFileRoute("/courses/$courseId")({
+export const Route = createFileRoute("/_workspace/courses/$courseId")({
 	validateSearch: (search: Record<string, unknown>) => ({
 		chapter: typeof search.chapter === "string" ? search.chapter : undefined,
 	}),

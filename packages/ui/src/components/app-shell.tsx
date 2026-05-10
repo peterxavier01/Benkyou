@@ -61,7 +61,7 @@ function AppSidebarNavItem({
   return (
     <a
       data-slot="app-sidebar-nav-item"
-      data-active={active}
+      data-active={active ? "true" : undefined}
       className={cn(
         "relative flex h-8 items-center gap-2 rounded-md px-2 text-sm font-medium text-sidebar-foreground/75 no-underline outline-none transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground data-active:before:absolute data-active:before:inset-y-1 data-active:before:left-0 data-active:before:w-[3px] data-active:before:rounded-full data-active:before:bg-sidebar-primary [&_svg]:size-4 [&_svg]:shrink-0",
         className

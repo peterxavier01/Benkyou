@@ -1,7 +1,7 @@
 import type { CourseLibraryFilterV1 } from "@benkyou/types";
 import { createFileRoute } from "@tanstack/react-router";
-import { CourseLibraryScreen } from "../../features/courses/components/course-library-screen";
-import { getCourseLibrary } from "../../features/courses/course-workspace.functions";
+import { CourseLibraryScreen } from "#/features/courses/components/course-library-screen";
+import { getCourseLibrary } from "#/features/courses/course-workspace.functions";
 
 const filters = new Set<CourseLibraryFilterV1>([
 	"all",
@@ -11,7 +11,7 @@ const filters = new Set<CourseLibraryFilterV1>([
 	"failed",
 ]);
 
-export const Route = createFileRoute("/courses/")({
+export const Route = createFileRoute("/_workspace/courses/")({
 	validateSearch: (search: Record<string, unknown>) => ({
 		q: typeof search.q === "string" ? search.q : "",
 		filter:

@@ -1,7 +1,6 @@
-import { PRODUCT_NAME } from "@benkyou/core";
-import { cn, HugeIcon } from "@benkyou/ui";
-import { Link } from "@tanstack/react-router";
+import { cn } from "@benkyou/ui";
 import type { ReactNode } from "react";
+import { BrandLogo } from "./brand-logo";
 
 type AppHeaderProps = {
 	action?: ReactNode;
@@ -23,19 +22,7 @@ function AppHeader({
 }
 
 function AppHeaderBrand({ subtitle }: { subtitle: string }) {
-	return (
-		<Link to="/" className="flex min-w-0 items-center gap-2 no-underline">
-			<div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground">
-				<HugeIcon name="bookOpenCheck" className="size-4" />
-			</div>
-			<div className="min-w-0">
-				<p className="truncate font-semibold text-sm">{PRODUCT_NAME}</p>
-				<p className="hidden text-muted-foreground text-xs sm:block">
-					{subtitle}
-				</p>
-			</div>
-		</Link>
-	);
+	return <BrandLogo to="/" subtitle={subtitle} />;
 }
 
 function HeaderActionLink({

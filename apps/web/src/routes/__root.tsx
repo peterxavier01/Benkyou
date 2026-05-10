@@ -9,6 +9,7 @@ import {
 	Scripts,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
+import { BrandLogo } from "#components/brand-logo";
 import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
 import appCss from "../styles.css?url";
 
@@ -55,9 +56,7 @@ function NotFoundScreen() {
 							<HugeIcon name="alertCircle" className="size-5" />
 						</div>
 						<div className="min-w-0 flex-1">
-							<p className="font-semibold text-primary text-sm">
-								{PRODUCT_NAME}
-							</p>
+							<BrandLogo subtitle={null} />
 							<h1 className="mt-2 font-semibold text-2xl tracking-normal">
 								Page not found
 							</h1>

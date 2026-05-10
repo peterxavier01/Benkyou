@@ -1,4 +1,3 @@
-import { PRODUCT_NAME } from "@benkyou/core";
 import type {
 	CourseLibraryFilterV1,
 	CourseLibraryItemDTO,
@@ -6,12 +5,6 @@ import type {
 	GetCourseLibraryResponseV1,
 } from "@benkyou/types";
 import {
-	AppMain,
-	AppShell,
-	AppSidebar,
-	AppSidebarHeader,
-	AppSidebarNav,
-	AppSidebarNavItem,
 	Button,
 	ContentPanel,
 	HugeIcon,
@@ -42,7 +35,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo } from "react";
-import { AppHeader } from "#components/app-header";
+import { WorkspacePage } from "#components/workspace-layout";
 import BetterAuthHeader from "../../../integrations/better-auth/header-user";
 import {
 	openSampleCourse,
@@ -113,156 +106,116 @@ function CourseLibraryScreen({
 	);
 
 	return (
-		<AppShell>
-			<AppSidebar>
-				<AppSidebarHeader>
-					<div className="flex items-center gap-2">
-						<div className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
-							<HugeIcon name="bookOpenCheck" className="size-4" />
-						</div>
-						<div>
-							<p className="font-semibold text-sm">{PRODUCT_NAME}</p>
-							<p className="text-muted-foreground text-xs">
-								Learning workspace
-							</p>
-						</div>
+		<WorkspacePage
+			title="Courses"
+			description="Resume generated courses and recover jobs in progress."
+			action={
+				<div className="flex items-center gap-2">
+					<Button asChild size="sm">
+						<Link to="/">Create course</Link>
+					</Button>
+					<BetterAuthHeader />
+				</div>
+			}
+		>
+			<ContentPanel className="p-4 sm:p-5">
+				<div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+					<div>
+						<h1 className="font-semibold text-2xl tracking-normal">Courses</h1>
+						<p className="mt-1 text-muted-foreground text-sm">
+							Resume generated courses and recover jobs in progress.
+						</p>
 					</div>
-				</AppSidebarHeader>
-				<AppSidebarNav aria-label="Primary navigation">
-					<AppSidebarNavItem href="/">
-						<HugeIcon name="home" />
-						Home
-					</AppSidebarNavItem>
-					<AppSidebarNavItem href="/courses" active>
-						<HugeIcon name="library" />
-						Courses
-					</AppSidebarNavItem>
-					<AppSidebarNavItem href="/bookmarks">
-						<HugeIcon name="bookmark" />
-						Bookmarks
-					</AppSidebarNavItem>
-					<AppSidebarNavItem href="/settings">
-						<HugeIcon name="settings" />
-						Settings
-					</AppSidebarNavItem>
-				</AppSidebarNav>
-			</AppSidebar>
+					<div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+						<label
+							htmlFor="course-library-search"
+							className="relative block min-w-0 sm:w-72"
+						>
+							<span className="sr-only">Search courses</span>
+							<HugeIcon
+								name="search"
+								className="-translate-y-1/2 absolute top-1/2 left-3 size-4 text-muted-foreground"
+							/>
+							<Input
+								id="course-library-search"
+								value={search.q}
+								placeholder="Search title or channel"
+								className="pl-9"
+								onChange={(event) =>
+									void navigate({
+										to: "/courses",
+										search: {
+											...search,
+											q: event.target.value,
+										},
+										replace: true,
+									})
+								}
+							/>
+						</label>
+					</div>
+				</div>
 
-			<AppMain>
-				<AppHeader
-					action={
-						<div className="flex items-center gap-2">
-							<Button asChild size="sm">
-								<Link to="/">Create course</Link>
-							</Button>
-							<BetterAuthHeader />
-						</div>
-					}
+				<div className="mt-4 flex flex-wrap gap-2">
+					{Object.entries(filterLabels).map(([filter, label]) => (
+						<Button
+							key={filter}
+							type="button"
+							size="sm"
+							variant={search.filter === filter ? "default" : "outline"}
+							onClick={() =>
+								void navigate({
+									to: "/courses",
+									search: {
+										...search,
+										filter: filter as CourseLibraryFilterV1,
+									},
+									replace: true,
+								})
+							}
+						>
+							{label}
+						</Button>
+					))}
+				</div>
+			</ContentPanel>
+
+			{libraryQuery.data.items.length === 0 ? (
+				<EmptyState
+					openingSample={sampleMutation.isPending}
+					onOpenSample={() => sampleMutation.mutate()}
 				/>
-
-				<section className="mx-auto grid w-full max-w-7xl gap-4 p-3 sm:p-6">
-					<ContentPanel className="p-4 sm:p-5">
-						<div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-							<div>
-								<h1 className="font-semibold text-2xl tracking-normal">
-									Courses
-								</h1>
-								<p className="mt-1 text-muted-foreground text-sm">
-									Resume generated courses and recover jobs in progress.
-								</p>
-							</div>
-							<div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-								<label
-									htmlFor="course-library-search"
-									className="relative block min-w-0 sm:w-72"
-								>
-									<span className="sr-only">Search courses</span>
-									<HugeIcon
-										name="search"
-										className="-translate-y-1/2 absolute top-1/2 left-3 size-4 text-muted-foreground"
-									/>
-									<Input
-										id="course-library-search"
-										value={search.q}
-										placeholder="Search title or channel"
-										className="pl-9"
-										onChange={(event) =>
-											void navigate({
-												to: "/courses",
-												search: {
-													...search,
-													q: event.target.value,
-												},
-												replace: true,
-											})
-										}
-									/>
-								</label>
-							</div>
-						</div>
-
-						<div className="mt-4 flex flex-wrap gap-2">
-							{Object.entries(filterLabels).map(([filter, label]) => (
-								<Button
-									key={filter}
-									type="button"
-									size="sm"
-									variant={search.filter === filter ? "default" : "outline"}
-									onClick={() =>
-										void navigate({
-											to: "/courses",
-											search: {
-												...search,
-												filter: filter as CourseLibraryFilterV1,
-											},
-											replace: true,
-										})
-									}
-								>
-									{label}
-								</Button>
-							))}
-						</div>
-					</ContentPanel>
-
-					{libraryQuery.data.items.length === 0 ? (
-						<EmptyState
-							openingSample={sampleMutation.isPending}
-							onOpenSample={() => sampleMutation.mutate()}
-						/>
+			) : (
+				<div className="grid gap-3">
+					{filteredItems.length === 0 ? (
+						<ContentPanel className="p-8">
+							<Empty>
+								<EmptyHeader>
+									<EmptyMedia variant="icon">
+										<HugeIcon name="search" />
+									</EmptyMedia>
+									<EmptyTitle>No matching courses</EmptyTitle>
+									<EmptyDescription>
+										Adjust the search or filter to see more courses.
+									</EmptyDescription>
+								</EmptyHeader>
+							</Empty>
+						</ContentPanel>
 					) : (
-						<div className="grid gap-3">
-							{filteredItems.length === 0 ? (
-								<ContentPanel className="p-8">
-									<Empty>
-										<EmptyHeader>
-											<EmptyMedia variant="icon">
-												<HugeIcon name="search" />
-											</EmptyMedia>
-											<EmptyTitle>No matching courses</EmptyTitle>
-											<EmptyDescription>
-												Adjust the search or filter to see more courses.
-											</EmptyDescription>
-										</EmptyHeader>
-									</Empty>
-								</ContentPanel>
-							) : (
-								filteredItems.map((item) => (
-									<CourseRow
-										key={item.course.id}
-										item={item}
-										deleting={deleteMutation.isPending}
-										retrying={retryMutation.isPending}
-										onRetry={(jobId) => retryMutation.mutate(jobId)}
-										onDelete={(courseId) => deleteMutation.mutate(courseId)}
-									/>
-								))
-							)}
-						</div>
+						filteredItems.map((item) => (
+							<CourseRow
+								key={item.course.id}
+								item={item}
+								deleting={deleteMutation.isPending}
+								retrying={retryMutation.isPending}
+								onRetry={(jobId) => retryMutation.mutate(jobId)}
+								onDelete={(courseId) => deleteMutation.mutate(courseId)}
+							/>
+						))
 					)}
-				</section>
-			</AppMain>
-		</AppShell>
+				</div>
+			)}
+		</WorkspacePage>
 	);
 }
 

@@ -10,21 +10,21 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SignInRouteImport } from './routes/sign-in'
-import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as WorkspaceRouteImport } from './routes/_workspace'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as CoursesIndexRouteImport } from './routes/courses/index'
-import { Route as CoursesCourseIdRouteImport } from './routes/courses/$courseId'
-import { Route as CoursesNewJobIdRouteImport } from './routes/courses/new/$jobId'
+import { Route as WorkspaceSettingsRouteImport } from './routes/_workspace/settings'
+import { Route as WorkspaceCoursesIndexRouteImport } from './routes/_workspace/courses/index'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as WorkspaceCoursesCourseIdRouteImport } from './routes/_workspace/courses/$courseId'
+import { Route as WorkspaceCoursesNewJobIdRouteImport } from './routes/_workspace/courses/new/$jobId'
 
 const SignInRoute = SignInRouteImport.update({
   id: '/sign-in',
   path: '/sign-in',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SettingsRoute = SettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
+const WorkspaceRoute = WorkspaceRouteImport.update({
+  id: '/_workspace',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -32,93 +32,99 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const CoursesIndexRoute = CoursesIndexRouteImport.update({
+const WorkspaceSettingsRoute = WorkspaceSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => WorkspaceRoute,
+} as any)
+const WorkspaceCoursesIndexRoute = WorkspaceCoursesIndexRouteImport.update({
   id: '/courses/',
   path: '/courses/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CoursesCourseIdRoute = CoursesCourseIdRouteImport.update({
-  id: '/courses/$courseId',
-  path: '/courses/$courseId',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CoursesNewJobIdRoute = CoursesNewJobIdRouteImport.update({
-  id: '/courses/new/$jobId',
-  path: '/courses/new/$jobId',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => WorkspaceRoute,
 } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WorkspaceCoursesCourseIdRoute =
+  WorkspaceCoursesCourseIdRouteImport.update({
+    id: '/courses/$courseId',
+    path: '/courses/$courseId',
+    getParentRoute: () => WorkspaceRoute,
+  } as any)
+const WorkspaceCoursesNewJobIdRoute =
+  WorkspaceCoursesNewJobIdRouteImport.update({
+    id: '/courses/new/$jobId',
+    path: '/courses/new/$jobId',
+    getParentRoute: () => WorkspaceRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/settings': typeof SettingsRoute
   '/sign-in': typeof SignInRoute
-  '/courses/$courseId': typeof CoursesCourseIdRoute
-  '/courses/': typeof CoursesIndexRoute
+  '/settings': typeof WorkspaceSettingsRoute
+  '/courses/$courseId': typeof WorkspaceCoursesCourseIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
-  '/courses/new/$jobId': typeof CoursesNewJobIdRoute
+  '/courses/': typeof WorkspaceCoursesIndexRoute
+  '/courses/new/$jobId': typeof WorkspaceCoursesNewJobIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/settings': typeof SettingsRoute
   '/sign-in': typeof SignInRoute
-  '/courses/$courseId': typeof CoursesCourseIdRoute
-  '/courses': typeof CoursesIndexRoute
+  '/settings': typeof WorkspaceSettingsRoute
+  '/courses/$courseId': typeof WorkspaceCoursesCourseIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
-  '/courses/new/$jobId': typeof CoursesNewJobIdRoute
+  '/courses': typeof WorkspaceCoursesIndexRoute
+  '/courses/new/$jobId': typeof WorkspaceCoursesNewJobIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/settings': typeof SettingsRoute
+  '/_workspace': typeof WorkspaceRouteWithChildren
   '/sign-in': typeof SignInRoute
-  '/courses/$courseId': typeof CoursesCourseIdRoute
-  '/courses/': typeof CoursesIndexRoute
+  '/_workspace/settings': typeof WorkspaceSettingsRoute
+  '/_workspace/courses/$courseId': typeof WorkspaceCoursesCourseIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
-  '/courses/new/$jobId': typeof CoursesNewJobIdRoute
+  '/_workspace/courses/': typeof WorkspaceCoursesIndexRoute
+  '/_workspace/courses/new/$jobId': typeof WorkspaceCoursesNewJobIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/settings'
     | '/sign-in'
+    | '/settings'
     | '/courses/$courseId'
-    | '/courses/'
     | '/api/auth/$'
+    | '/courses/'
     | '/courses/new/$jobId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/settings'
     | '/sign-in'
+    | '/settings'
     | '/courses/$courseId'
-    | '/courses'
     | '/api/auth/$'
+    | '/courses'
     | '/courses/new/$jobId'
   id:
     | '__root__'
     | '/'
-    | '/settings'
+    | '/_workspace'
     | '/sign-in'
-    | '/courses/$courseId'
-    | '/courses/'
+    | '/_workspace/settings'
+    | '/_workspace/courses/$courseId'
     | '/api/auth/$'
-    | '/courses/new/$jobId'
+    | '/_workspace/courses/'
+    | '/_workspace/courses/new/$jobId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  SettingsRoute: typeof SettingsRoute
+  WorkspaceRoute: typeof WorkspaceRouteWithChildren
   SignInRoute: typeof SignInRoute
-  CoursesCourseIdRoute: typeof CoursesCourseIdRoute
-  CoursesIndexRoute: typeof CoursesIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
-  CoursesNewJobIdRoute: typeof CoursesNewJobIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -130,11 +136,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignInRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/settings': {
-      id: '/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof SettingsRouteImport
+    '/_workspace': {
+      id: '/_workspace'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof WorkspaceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -144,26 +150,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/courses/': {
-      id: '/courses/'
+    '/_workspace/settings': {
+      id: '/_workspace/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof WorkspaceSettingsRouteImport
+      parentRoute: typeof WorkspaceRoute
+    }
+    '/_workspace/courses/': {
+      id: '/_workspace/courses/'
       path: '/courses'
       fullPath: '/courses/'
-      preLoaderRoute: typeof CoursesIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/courses/$courseId': {
-      id: '/courses/$courseId'
-      path: '/courses/$courseId'
-      fullPath: '/courses/$courseId'
-      preLoaderRoute: typeof CoursesCourseIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/courses/new/$jobId': {
-      id: '/courses/new/$jobId'
-      path: '/courses/new/$jobId'
-      fullPath: '/courses/new/$jobId'
-      preLoaderRoute: typeof CoursesNewJobIdRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof WorkspaceCoursesIndexRouteImport
+      parentRoute: typeof WorkspaceRoute
     }
     '/api/auth/$': {
       id: '/api/auth/$'
@@ -172,17 +171,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_workspace/courses/$courseId': {
+      id: '/_workspace/courses/$courseId'
+      path: '/courses/$courseId'
+      fullPath: '/courses/$courseId'
+      preLoaderRoute: typeof WorkspaceCoursesCourseIdRouteImport
+      parentRoute: typeof WorkspaceRoute
+    }
+    '/_workspace/courses/new/$jobId': {
+      id: '/_workspace/courses/new/$jobId'
+      path: '/courses/new/$jobId'
+      fullPath: '/courses/new/$jobId'
+      preLoaderRoute: typeof WorkspaceCoursesNewJobIdRouteImport
+      parentRoute: typeof WorkspaceRoute
+    }
   }
 }
 
+interface WorkspaceRouteChildren {
+  WorkspaceSettingsRoute: typeof WorkspaceSettingsRoute
+  WorkspaceCoursesCourseIdRoute: typeof WorkspaceCoursesCourseIdRoute
+  WorkspaceCoursesIndexRoute: typeof WorkspaceCoursesIndexRoute
+  WorkspaceCoursesNewJobIdRoute: typeof WorkspaceCoursesNewJobIdRoute
+}
+
+const WorkspaceRouteChildren: WorkspaceRouteChildren = {
+  WorkspaceSettingsRoute: WorkspaceSettingsRoute,
+  WorkspaceCoursesCourseIdRoute: WorkspaceCoursesCourseIdRoute,
+  WorkspaceCoursesIndexRoute: WorkspaceCoursesIndexRoute,
+  WorkspaceCoursesNewJobIdRoute: WorkspaceCoursesNewJobIdRoute,
+}
+
+const WorkspaceRouteWithChildren = WorkspaceRoute._addFileChildren(
+  WorkspaceRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  SettingsRoute: SettingsRoute,
+  WorkspaceRoute: WorkspaceRouteWithChildren,
   SignInRoute: SignInRoute,
-  CoursesCourseIdRoute: CoursesCourseIdRoute,
-  CoursesIndexRoute: CoursesIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
-  CoursesNewJobIdRoute: CoursesNewJobIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -59,7 +59,7 @@ function PlayerTabletStack({
     <section
       data-slot="player-tablet-stack"
       className={cn(
-        "grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(280px,360px)] lg:hidden",
+        "hidden gap-3 md:grid lg:hidden",
         className
       )}
       {...props}

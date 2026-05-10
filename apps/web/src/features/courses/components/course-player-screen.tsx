@@ -3,7 +3,6 @@ import {
 	DEFAULT_CHAPTER_COMPLETION_THRESHOLD,
 	DEFAULT_PROGRESS_SAVE_INTERVAL_MS,
 	isChapterCompleteByWatchTime,
-	PRODUCT_NAME,
 } from "@benkyou/core";
 import type {
 	BookmarkDTO,
@@ -12,12 +11,6 @@ import type {
 	CoursePlayerDataDTO,
 } from "@benkyou/types";
 import {
-	AppMain,
-	AppShell,
-	AppSidebar,
-	AppSidebarHeader,
-	AppSidebarNav,
-	AppSidebarNavItem,
 	Button,
 	ContentPanel,
 	Drawer,
@@ -49,7 +42,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AppHeader } from "#components/app-header";
+import { WorkspacePage } from "#components/workspace-layout";
 import BetterAuthHeader from "../../../integrations/better-auth/header-user";
 import {
 	getCoursePlayerData,
@@ -305,115 +298,43 @@ function CoursePlayerScreen({
 	}
 
 	return (
-		<AppShell>
-			<AppSidebar>
-				<AppSidebarHeader>
-					<div className="flex items-center gap-2">
-						<div className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
-							<HugeIcon name="bookOpenCheck" className="size-4" />
-						</div>
-						<div>
-							<p className="font-semibold text-sm">{PRODUCT_NAME}</p>
-							<p className="text-muted-foreground text-xs">
-								Learning workspace
-							</p>
-						</div>
-					</div>
-				</AppSidebarHeader>
-				<AppSidebarNav aria-label="Primary navigation">
-					<AppSidebarNavItem href="/">
-						<HugeIcon name="home" />
-						Home
-					</AppSidebarNavItem>
-					<AppSidebarNavItem href="/courses" active>
-						<HugeIcon name="library" />
-						Courses
-					</AppSidebarNavItem>
-					<AppSidebarNavItem href="/bookmarks">
-						<HugeIcon name="bookmark" />
-						Bookmarks
-					</AppSidebarNavItem>
-					<AppSidebarNavItem href="/settings">
-						<HugeIcon name="settings" />
-						Settings
-					</AppSidebarNavItem>
-				</AppSidebarNav>
-			</AppSidebar>
-
-			<AppMain>
-				<AppHeader
-					action={
-						<div className="flex items-center gap-2">
-							<Button asChild size="sm" variant="outline">
-								<a href="/courses">
-									<HugeIcon name="arrowLeft" className="size-4" />
-									Library
-								</a>
-							</Button>
-							<BetterAuthHeader />
-						</div>
-					}
-				/>
-
-				<PlayerWorkspace>
-					<PlayerPrimary>
-						<ContentPanel className="p-4">
-							<div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-								<div className="min-w-0">
-									<div className="flex flex-wrap items-center gap-2">
-										<StatusBadge tone="success">Ready</StatusBadge>
-										<span className="text-muted-foreground text-xs">
-											{data.chapters.length} chapters
-										</span>
-									</div>
-									<h1 className="mt-2 truncate font-semibold text-xl tracking-normal">
-										{data.course.title}
-									</h1>
-									<p className="mt-1 text-muted-foreground text-sm">
-										{data.video.channelTitle ?? "YouTube"} -{" "}
-										{formatTimestamp(currentSeconds)}
-									</p>
+		<WorkspacePage
+			title="Course player"
+			description={data.course.title}
+			maxWidth="full"
+			className="p-0 sm:p-0"
+			action={
+				<div className="flex items-center gap-2">
+					<Button asChild size="sm" variant="outline">
+						<Link to="/courses" search={{ q: "", filter: "all" }}>
+							<HugeIcon name="arrowLeft" className="size-4" />
+							Library
+						</Link>
+					</Button>
+					<BetterAuthHeader />
+				</div>
+			}
+		>
+			<PlayerWorkspace>
+				<PlayerPrimary>
+					<ContentPanel className="p-4">
+						<div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+							<div className="min-w-0">
+								<div className="flex flex-wrap items-center gap-2">
+									<StatusBadge tone="success">Ready</StatusBadge>
+									<span className="text-muted-foreground text-xs">
+										{data.chapters.length} chapters
+									</span>
 								</div>
-								<MobileChapterDrawer
-									chapters={data.chapters}
-									selectedChapterId={selectedChapter?.id ?? null}
-									watchedByChapter={watchedByChapter}
-									completedByChapter={completedByChapter}
-									durationSeconds={durationSeconds}
-									onSelect={selectChapter}
-									onToggleComplete={toggleChapterComplete}
-								/>
+								<h1 className="mt-2 truncate font-semibold text-xl tracking-normal">
+									{data.course.title}
+								</h1>
+								<p className="mt-1 text-muted-foreground text-sm">
+									{data.video.channelTitle ?? "YouTube"} -{" "}
+									{formatTimestamp(currentSeconds)}
+								</p>
 							</div>
-							<div className="mt-3">
-								<Progress
-									value={calculateProgressPercent(
-										currentSeconds,
-										durationSeconds,
-									)}
-								/>
-							</div>
-						</ContentPanel>
-
-						<PlayerVideoFrame>
-							<YouTubePlayer
-								providerVideoId={data.video.providerVideoId}
-								initialSeconds={data.progress?.resumeSeconds ?? 0}
-								seekToSeconds={seekToSeconds}
-								onReady={(duration) => {
-									if (duration > 0) {
-										setDurationSeconds(duration);
-									}
-								}}
-								onTimeUpdate={handleTimeUpdate}
-								onPauseOrEnd={(time, duration) => {
-									handleTimeUpdate(time, duration);
-									persistProgress();
-								}}
-							/>
-						</PlayerVideoFrame>
-
-						<PlayerTabletStack>
-							<ChapterPanel
+							<MobileChapterDrawer
 								chapters={data.chapters}
 								selectedChapterId={selectedChapter?.id ?? null}
 								watchedByChapter={watchedByChapter}
@@ -422,30 +343,36 @@ function CoursePlayerScreen({
 								onSelect={selectChapter}
 								onToggleComplete={toggleChapterComplete}
 							/>
-							<LearningTabs
-								chapter={selectedChapter}
-								noteMarkdown={selectedNote?.markdown ?? ""}
-								bookmarks={selectedBookmarks}
-							/>
-						</PlayerTabletStack>
-
-						<div className="lg:hidden">
-							<LearningTabs
-								chapter={selectedChapter}
-								noteMarkdown={selectedNote?.markdown ?? ""}
-								bookmarks={selectedBookmarks}
+						</div>
+						<div className="mt-3">
+							<Progress
+								value={calculateProgressPercent(
+									currentSeconds,
+									durationSeconds,
+								)}
 							/>
 						</div>
+					</ContentPanel>
 
-						{saveError ? (
-							<Alert variant="destructive">
-								<AlertTitle>Save failed</AlertTitle>
-								<AlertDescription>{saveError}</AlertDescription>
-							</Alert>
-						) : null}
-					</PlayerPrimary>
+					<PlayerVideoFrame>
+						<YouTubePlayer
+							providerVideoId={data.video.providerVideoId}
+							initialSeconds={data.progress?.resumeSeconds ?? 0}
+							seekToSeconds={seekToSeconds}
+							onReady={(duration) => {
+								if (duration > 0) {
+									setDurationSeconds(duration);
+								}
+							}}
+							onTimeUpdate={handleTimeUpdate}
+							onPauseOrEnd={(time, duration) => {
+								handleTimeUpdate(time, duration);
+								persistProgress();
+							}}
+						/>
+					</PlayerVideoFrame>
 
-					<PlayerAside>
+					<PlayerTabletStack>
 						<ChapterPanel
 							chapters={data.chapters}
 							selectedChapterId={selectedChapter?.id ?? null}
@@ -455,17 +382,35 @@ function CoursePlayerScreen({
 							onSelect={selectChapter}
 							onToggleComplete={toggleChapterComplete}
 						/>
-						<div className="border-t border-border p-3">
-							<LearningTabs
-								chapter={selectedChapter}
-								noteMarkdown={selectedNote?.markdown ?? ""}
-								bookmarks={selectedBookmarks}
-							/>
-						</div>
-					</PlayerAside>
-				</PlayerWorkspace>
-			</AppMain>
-		</AppShell>
+					</PlayerTabletStack>
+
+					<LearningTabs
+						chapter={selectedChapter}
+						noteMarkdown={selectedNote?.markdown ?? ""}
+						bookmarks={selectedBookmarks}
+					/>
+
+					{saveError ? (
+						<Alert variant="destructive">
+							<AlertTitle>Save failed</AlertTitle>
+							<AlertDescription>{saveError}</AlertDescription>
+						</Alert>
+					) : null}
+				</PlayerPrimary>
+
+				<PlayerAside>
+					<ChapterPanel
+						chapters={data.chapters}
+						selectedChapterId={selectedChapter?.id ?? null}
+						watchedByChapter={watchedByChapter}
+						completedByChapter={completedByChapter}
+						durationSeconds={durationSeconds}
+						onSelect={selectChapter}
+						onToggleComplete={toggleChapterComplete}
+					/>
+				</PlayerAside>
+			</PlayerWorkspace>
+		</WorkspacePage>
 	);
 }
 
@@ -547,29 +492,29 @@ function ChapterItem({
 					: "border-border bg-background hover:bg-muted/45"
 			}`}
 		>
-			<button
-				type="button"
-				className="block w-full text-left"
-				onClick={() => onSelect(chapter)}
-			>
-				<div className="flex items-start justify-between gap-2">
-					<div className="min-w-0">
-						<p className="line-clamp-2 font-medium text-sm">{chapter.title}</p>
-						<p className="mt-1 text-muted-foreground text-xs">
-							{formatTimestamp(chapter.startSeconds)}
-							{chapter.endSeconds
-								? ` - ${formatTimestamp(chapter.endSeconds)}`
-								: ""}
-						</p>
-					</div>
-					{completed ? (
-						<HugeIcon
-							name="checkmarkCircle"
-							className="mt-0.5 size-4 shrink-0 text-primary"
-						/>
-					) : null}
+			<div className="flex items-start justify-between gap-2">
+				<div className="min-w-0">
+					<button
+						type="button"
+						className="line-clamp-2 cursor-pointer text-left font-medium text-sm transition-colors hover:text-primary focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35"
+						onClick={() => onSelect(chapter)}
+					>
+						{chapter.title}
+					</button>
+					<p className="mt-1 text-muted-foreground text-xs">
+						{formatTimestamp(chapter.startSeconds)}
+						{chapter.endSeconds
+							? ` - ${formatTimestamp(chapter.endSeconds)}`
+							: ""}
+					</p>
 				</div>
-			</button>
+				{completed ? (
+					<HugeIcon
+						name="checkmarkCircle"
+						className="mt-0.5 size-4 shrink-0 text-primary"
+					/>
+				) : null}
+			</div>
 			<div className="mt-2">
 				<Progress value={completed ? 100 : percent} />
 			</div>
@@ -618,19 +563,28 @@ function LearningTabs({
 	bookmarks: BookmarkDTO[];
 }) {
 	return (
-		<ContentPanel className="p-3">
-			<Tabs defaultValue="summary">
-				<TabsList>
-					<TabsTrigger value="summary">Summary</TabsTrigger>
-					<TabsTrigger value="notes">Notes</TabsTrigger>
-					<TabsTrigger value="bookmarks">Bookmarks</TabsTrigger>
+		<ContentPanel className="min-w-0 overflow-hidden p-0">
+			<Tabs defaultValue="summary" className="flex-col gap-0">
+				<TabsList
+					variant="line"
+					className="h-10 w-full justify-start rounded-none border-border border-b px-3"
+				>
+					<TabsTrigger value="summary" className="h-9 px-2.5">
+						Summary
+					</TabsTrigger>
+					<TabsTrigger value="notes" className="h-9 px-2.5">
+						Notes
+					</TabsTrigger>
+					<TabsTrigger value="bookmarks" className="h-9 px-2.5">
+						Bookmarks
+					</TabsTrigger>
 				</TabsList>
-				<TabsContent value="summary" className="pt-2">
-					<p className="text-muted-foreground text-sm leading-6">
+				<TabsContent value="summary" className="p-4">
+					<p className="max-w-3xl text-muted-foreground text-sm leading-6">
 						{chapter?.summary ?? "No summary is available for this chapter."}
 					</p>
 				</TabsContent>
-				<TabsContent value="notes" className="pt-2">
+				<TabsContent value="notes" className="p-4">
 					<Textarea
 						readOnly
 						value={noteMarkdown}
@@ -638,7 +592,7 @@ function LearningTabs({
 						className="min-h-32 resize-none"
 					/>
 				</TabsContent>
-				<TabsContent value="bookmarks" className="pt-2">
+				<TabsContent value="bookmarks" className="p-4">
 					{bookmarks.length === 0 ? (
 						<p className="text-muted-foreground text-sm">
 							No bookmarks for this chapter yet.
@@ -674,31 +628,33 @@ function LearningTabs({
 
 function NoChaptersScreen({ data }: { data: CoursePlayerDataDTO }) {
 	return (
-		<AppShell>
-			<AppMain>
-				<AppHeader action={<BetterAuthHeader />} />
-				<section className="mx-auto w-full max-w-3xl p-3 sm:p-6">
-					<ContentPanel className="p-6">
-						<StatusBadge tone="warning">No chapters</StatusBadge>
-						<h1 className="mt-3 font-semibold text-2xl tracking-normal">
-							{data.course.title}
-						</h1>
-						<p className="mt-2 text-muted-foreground text-sm leading-6">
-							This course does not have generated chapters yet. Open the library
-							or generation job to recover it.
-						</p>
-						<div className="mt-4 flex gap-2">
-							<Button asChild>
-								<a href="/courses">Back to library</a>
-							</Button>
-							<Button asChild variant="outline">
-								<Link to="/">Use another URL</Link>
-							</Button>
-						</div>
-					</ContentPanel>
-				</section>
-			</AppMain>
-		</AppShell>
+		<WorkspacePage
+			title="Course player"
+			description="This course is missing generated chapters."
+			maxWidth="narrow"
+			action={<BetterAuthHeader />}
+		>
+			<ContentPanel className="p-6">
+				<StatusBadge tone="warning">No chapters</StatusBadge>
+				<h1 className="mt-3 font-semibold text-2xl tracking-normal">
+					{data.course.title}
+				</h1>
+				<p className="mt-2 text-muted-foreground text-sm leading-6">
+					This course does not have generated chapters yet. Open the library or
+					generation job to recover it.
+				</p>
+				<div className="mt-4 flex gap-2">
+					<Button asChild>
+						<Link to="/courses" search={{ q: "", filter: "all" }}>
+							Back to library
+						</Link>
+					</Button>
+					<Button asChild variant="outline">
+						<Link to="/">Use another URL</Link>
+					</Button>
+				</div>
+			</ContentPanel>
+		</WorkspacePage>
 	);
 }
 

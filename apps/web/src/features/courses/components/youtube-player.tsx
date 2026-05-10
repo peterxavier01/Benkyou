@@ -64,13 +64,26 @@ function YouTubePlayer({
 	const playerRef = useRef<YouTubePlayerInstance | null>(null);
 	const lastSeekRef = useRef<number | null>(null);
 	const callbacksRef = useRef({ onReady, onTimeUpdate, onPauseOrEnd });
+	const initialPlaybackRef = useRef({
+		providerVideoId,
+		seconds: initialSeconds,
+	});
 	const validVideoId = isValidYouTubeVideoId(providerVideoId);
+
+	if (initialPlaybackRef.current.providerVideoId !== providerVideoId) {
+		initialPlaybackRef.current = { providerVideoId, seconds: initialSeconds };
+		lastSeekRef.current = null;
+	}
 
 	callbacksRef.current = { onReady, onTimeUpdate, onPauseOrEnd };
 
 	useEffect(() => {
 		let disposed = false;
 		let intervalId: number | undefined;
+		const startSeconds = Math.max(
+			0,
+			Math.floor(initialPlaybackRef.current.seconds),
+		);
 
 		async function createPlayer() {
 			if (!validVideoId) {
@@ -90,13 +103,13 @@ function YouTubePlayer({
 						rel: 0,
 						modestbranding: 1,
 						playsinline: 1,
-						start: Math.max(0, Math.floor(initialSeconds)),
+						start: startSeconds,
 					},
 					events: {
 						onReady: (event) => {
 							const duration = safeDuration(event.target);
-							if (initialSeconds > 0) {
-								event.target.seekTo(initialSeconds, true);
+							if (startSeconds > 0) {
+								event.target.seekTo(startSeconds, true);
 							}
 							callbacksRef.current.onReady(duration);
 						},
@@ -140,7 +153,7 @@ function YouTubePlayer({
 			playerRef.current?.destroy();
 			playerRef.current = null;
 		};
-	}, [providerVideoId, initialSeconds, validVideoId]);
+	}, [providerVideoId, validVideoId]);
 
 	useEffect(() => {
 		if (seekToSeconds === null || lastSeekRef.current === seekToSeconds) {

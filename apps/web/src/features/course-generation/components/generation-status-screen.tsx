@@ -1,20 +1,8 @@
-import { PRODUCT_NAME } from "@benkyou/core";
 import type {
 	GenerationJobDetailV1,
 	GenerationJobStatus,
 } from "@benkyou/types";
-import {
-	AppMain,
-	AppShell,
-	AppSidebar,
-	AppSidebarHeader,
-	AppSidebarNav,
-	AppSidebarNavItem,
-	Button,
-	ContentPanel,
-	HugeIcon,
-	StatusBadge,
-} from "@benkyou/ui";
+import { Button, ContentPanel, HugeIcon, StatusBadge } from "@benkyou/ui";
 import {
 	Alert,
 	AlertDescription,
@@ -25,7 +13,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useRef } from "react";
 
-import { AppHeader } from "#components/app-header";
+import { WorkspacePage } from "#components/workspace-layout";
 import BetterAuthHeader from "../../../integrations/better-auth/header-user";
 import {
 	getGenerationJob,
@@ -83,151 +71,122 @@ function GenerationStatusScreen({
 	const terminal = isTerminalStatus(detail.job.status);
 
 	return (
-		<AppShell>
-			<AppSidebar>
-				<AppSidebarHeader>
-					<div className="flex items-center gap-2">
-						<div className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
-							<HugeIcon name="bookOpenCheck" className="size-4" />
+		<WorkspacePage
+			title="Generation"
+			description="Convert this video into a structured course."
+			className="lg:grid-cols-[minmax(0,1fr)_360px]"
+			action={<BetterAuthHeader />}
+		>
+			<ContentPanel className="p-4 sm:p-6">
+				<div className="flex flex-col gap-5 sm:flex-row sm:items-start">
+					<VideoPreview detail={detail} />
+					<div className="min-w-0 flex-1">
+						<div className="flex flex-wrap items-center gap-2">
+							<StatusBadge tone={getBadgeTone(detail.job.status)}>
+								{formatStatus(detail.job.status)}
+							</StatusBadge>
+							{jobQuery.isFetching && !terminal ? (
+								<span className="text-muted-foreground text-xs">
+									Refreshing
+								</span>
+							) : null}
 						</div>
-						<div>
-							<p className="font-semibold text-sm">{PRODUCT_NAME}</p>
-							<p className="text-muted-foreground text-xs">
-								Learning workspace
-							</p>
-						</div>
-					</div>
-				</AppSidebarHeader>
-				<AppSidebarNav aria-label="Primary navigation">
-					<AppSidebarNavItem href="/">
-						<HugeIcon name="home" />
-						Home
-					</AppSidebarNavItem>
-					<AppSidebarNavItem href="/courses">
-						<HugeIcon name="library" />
-						Courses
-					</AppSidebarNavItem>
-					<AppSidebarNavItem href="/bookmarks">
-						<HugeIcon name="bookmark" />
-						Bookmarks
-					</AppSidebarNavItem>
-					<AppSidebarNavItem href="/settings">
-						<HugeIcon name="settings" />
-						Settings
-					</AppSidebarNavItem>
-				</AppSidebarNav>
-			</AppSidebar>
+						<h1 className="mt-3 font-semibold text-2xl leading-tight tracking-normal">
+							{detail.course.title}
+						</h1>
+						<p className="mt-2 max-w-2xl text-muted-foreground text-sm leading-6">
+							{getStatusCopy(detail.job.status)}
+						</p>
 
-			<AppMain>
-				<AppHeader action={<BetterAuthHeader />} />
+						{detail.job.status === "failed" ? (
+							<Alert variant="destructive" className="mt-4">
+								<AlertTitle>Generation failed</AlertTitle>
+								<AlertDescription>
+									{detail.job.failureReason ??
+										"Benkyou could not generate this course."}
+								</AlertDescription>
+							</Alert>
+						) : null}
 
-				<section className="mx-auto grid w-full max-w-7xl gap-4 p-3 sm:p-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-					<ContentPanel className="p-4 sm:p-6">
-						<div className="flex flex-col gap-5 sm:flex-row sm:items-start">
-							<VideoPreview detail={detail} />
-							<div className="min-w-0 flex-1">
-								<div className="flex flex-wrap items-center gap-2">
-									<StatusBadge tone={getBadgeTone(detail.job.status)}>
-										{formatStatus(detail.job.status)}
-									</StatusBadge>
-									{jobQuery.isFetching && !terminal ? (
-										<span className="text-muted-foreground text-xs">
-											Refreshing
-										</span>
-									) : null}
-								</div>
-								<h1 className="mt-3 font-semibold text-2xl leading-tight tracking-normal">
-									{detail.course.title}
-								</h1>
-								<p className="mt-2 max-w-2xl text-muted-foreground text-sm leading-6">
-									{getStatusCopy(detail.job.status)}
-								</p>
-
-								{detail.job.status === "failed" ? (
-									<Alert variant="destructive" className="mt-4">
-										<AlertTitle>Generation failed</AlertTitle>
-										<AlertDescription>
-											{detail.job.failureReason ??
-												"Benkyou could not generate this course."}
-										</AlertDescription>
-									</Alert>
-								) : null}
-
-								<div className="mt-5 flex flex-wrap gap-2">
-									{detail.canOpenCourse ? (
-										<Button asChild>
-											<a href={`/courses/${detail.course.id}`}>
-												Open course
-												<HugeIcon name="arrowRight" className="size-4" />
-											</a>
-										</Button>
-									) : null}
-									{detail.canRetry ? (
-										<Button
-											type="button"
-											variant="outline"
-											disabled={retryMutation.isPending}
-											onClick={() => retryMutation.mutate()}
-										>
-											<HugeIcon name="refresh" className="size-4" />
-											{retryMutation.isPending ? "Retrying..." : "Retry"}
-										</Button>
-									) : null}
-									<Button asChild type="button" variant="outline">
-										<Link to="/">Use another URL</Link>
-									</Button>
-									<Button asChild type="button" variant="ghost">
-										<a href="/courses">Keep working in background</a>
-									</Button>
-								</div>
-
-								{processMutation.isError ? (
-									<p className="mt-3 text-destructive text-sm">
-										{processMutation.error instanceof Error
-											? processMutation.error.message
-											: "Could not start generation."}
-									</p>
-								) : null}
-							</div>
-						</div>
-					</ContentPanel>
-
-					<ContentPanel className="p-5">
-						<div className="flex items-center justify-between gap-3">
-							<h2 className="font-semibold text-base">Timeline</h2>
-							<span className="text-muted-foreground text-xs">
-								{detail.chapterCount} chapters
-							</span>
-						</div>
-						<ol className="mt-4 space-y-3">
-							{detail.timeline.map((step) => (
-								<li
-									key={step.key}
-									className="rounded-md border border-border bg-muted/25 p-3"
+						<div className="mt-5 flex flex-wrap gap-2">
+							{detail.canOpenCourse ? (
+								<Button asChild>
+									<Link
+										to="/courses/$courseId"
+										params={{ courseId: detail.course.id }}
+										search={{ chapter: undefined }}
+									>
+										Open course
+										<HugeIcon name="arrowRight" className="size-4" />
+									</Link>
+								</Button>
+							) : null}
+							{detail.canRetry ? (
+								<Button
+									type="button"
+									variant="outline"
+									disabled={retryMutation.isPending}
+									onClick={() => retryMutation.mutate()}
 								>
-									<div className="flex items-start gap-3">
-										<span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md border border-border bg-background">
-											<TimelineIcon status={step.status} />
-										</span>
-										<div className="min-w-0">
-											<div className="flex flex-wrap items-center gap-2">
-												<p className="font-medium text-sm">{step.label}</p>
-												<StatusBadge tone={getTimelineTone(step.status)}>
-													{step.status}
-												</StatusBadge>
-											</div>
-											<p className="mt-1 text-muted-foreground text-xs leading-5">
-												{step.description}
-											</p>
-										</div>
+									<HugeIcon name="refresh" className="size-4" />
+									{retryMutation.isPending ? "Retrying..." : "Retry"}
+								</Button>
+							) : null}
+							<Button asChild type="button" variant="outline">
+								<Link to="/">Use another URL</Link>
+							</Button>
+							<Button asChild type="button" variant="ghost">
+								<Link to="/courses" search={{ q: "", filter: "all" }}>
+									Keep working in background
+								</Link>
+							</Button>
+						</div>
+
+						{processMutation.isError ? (
+							<p className="mt-3 text-destructive text-sm">
+								{processMutation.error instanceof Error
+									? processMutation.error.message
+									: "Could not start generation."}
+							</p>
+						) : null}
+					</div>
+				</div>
+			</ContentPanel>
+
+			<ContentPanel className="p-5">
+				<div className="flex items-center justify-between gap-3">
+					<h2 className="font-semibold text-base">Timeline</h2>
+					<span className="text-muted-foreground text-xs">
+						{detail.chapterCount} chapters
+					</span>
+				</div>
+				<ol className="mt-4 space-y-3">
+					{detail.timeline.map((step) => (
+						<li
+							key={step.key}
+							className="rounded-md border border-border bg-muted/25 p-3"
+						>
+							<div className="flex items-start gap-3">
+								<span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md border border-border bg-background">
+									<TimelineIcon status={step.status} />
+								</span>
+								<div className="min-w-0">
+									<div className="flex flex-wrap items-center gap-2">
+										<p className="font-medium text-sm">{step.label}</p>
+										<StatusBadge tone={getTimelineTone(step.status)}>
+											{step.status}
+										</StatusBadge>
 									</div>
-								</li>
-							))}
-						</ol>
-					</ContentPanel>
-				</section>
-			</AppMain>
-		</AppShell>
+									<p className="mt-1 text-muted-foreground text-xs leading-5">
+										{step.description}
+									</p>
+								</div>
+							</div>
+						</li>
+					))}
+				</ol>
+			</ContentPanel>
+		</WorkspacePage>
 	);
 }
 
