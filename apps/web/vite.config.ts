@@ -9,6 +9,7 @@ import { defineConfig } from "vite";
 const config = defineConfig({
 	server: {
 		port: 3000,
+		allowedHosts: ["mantis-magical-swift.ngrok-free.app"]
 	},
 	resolve: {
 		tsconfigPaths: true,
