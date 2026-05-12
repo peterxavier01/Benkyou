@@ -13,7 +13,8 @@ let a learner paste a video URL and start building a course.
 Included:
 
 - YouTube URL ingestion.
-- AI-generated chapter outline from transcript or sample fallback data.
+- Creator timestamps first, with AI-generated chapter fallback from transcript
+  data.
 - Course generation status screen.
 - Course library.
 - Course player with chapter navigation.
@@ -237,7 +238,13 @@ Goal: let a learner submit a YouTube URL and see course generation progress.
 - [x] Fetch video metadata.
 - [x] Fetch transcript or captions.
 - [x] Handle transcript unavailable state.
-- [x] Send transcript to AI provider for chapter JSON.
+- [x] Parse creator-provided YouTube timestamps before AI generation.
+- [x] Prefer creator timestamps when valid so normal timestamped videos do not
+      consume AI credits.
+- [x] Send transcript to AI provider for chapter JSON only when creator
+      timestamps are unavailable or unusable.
+- [x] Use duration-aware AI chapter policy, including coarse maps for 11+ hour
+      videos without creator timestamps.
 - [x] Validate AI output with Zod.
 - [x] Insert ordered chapters.
 - [x] Store summary/rationale/raw output where useful.

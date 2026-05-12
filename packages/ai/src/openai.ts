@@ -2,6 +2,9 @@ import {
 	type AiGeneratedCourseV1,
 	aiGeneratedCourseV1Schema,
 	DEFAULT_OPENAI_GENERATION_MODEL,
+	getChapterGenerationPolicy,
+	type ChapterGenerationPolicy,
+	validateGeneratedChapterRanges,
 } from "@benkyou/core";
 import OpenAI from "openai";
 
@@ -38,6 +41,9 @@ export interface GenerateChaptersInput {
 	videoTitle: string | null;
 	canonicalUrl?: string;
 	transcriptText: string;
+	durationSeconds?: number | null;
+	transcriptSegmentCount?: number;
+	policy?: ChapterGenerationPolicy;
 	model?: string;
 }
 
@@ -55,6 +61,12 @@ export async function generateCourseChapters(
 	}
 
 	const client = new OpenAI({ apiKey });
+	const policy =
+		input.policy ??
+		getChapterGenerationPolicy(
+			input.durationSeconds,
+			input.transcriptSegmentCount ?? 0,
+		);
 	const response = await client.responses.create({
 		model:
 			input.model ||
@@ -71,11 +83,22 @@ export async function generateCourseChapters(
 				content: [
 					`Video title: ${input.videoTitle || "Untitled YouTube video"}`,
 					input.canonicalUrl ? `Video URL: ${input.canonicalUrl}` : "",
+					input.durationSeconds
+						? `Video duration: ${input.durationSeconds} seconds`
+						: "Video duration: unknown",
 					"",
-					"Create 4 to 10 ordered chapters. Keep titles clear and summaries useful for study. Use transcript timestamps for startSeconds and endSeconds. The final chapter endSeconds may be null if the transcript does not provide a clean end.",
+					`Create a duration-aware course outline with about ${policy.targetChaptersLabel} chapters.`,
+					"Do not use a fixed chapter count.",
+					"Choose chapter boundaries from real transcript timestamps.",
+					"Prefer meaningful topic shifts over equal time slices.",
+					policy.isCoarseFallback
+						? "For this very long video, create a high-level course map, not dense subchapters."
+						: "",
+					"Never invent timestamps outside the transcript or duration range.",
+					"Keep titles clear and summaries useful for study. Use transcript timestamps for startSeconds and endSeconds. The final chapter endSeconds may be null if the transcript does not provide a clean end.",
 					"",
 					"Transcript:",
-					input.transcriptText.slice(0, 120_000),
+					input.transcriptText.slice(0, policy.transcriptCharacterLimit),
 				].join("\n"),
 			},
 		],
@@ -89,5 +112,15 @@ export async function generateCourseChapters(
 		},
 	});
 
-	return aiGeneratedCourseV1Schema.parse(JSON.parse(response.output_text));
+	const generated = aiGeneratedCourseV1Schema.parse(
+		JSON.parse(response.output_text),
+	);
+
+	if (
+		!validateGeneratedChapterRanges(generated.chapters, input.durationSeconds)
+	) {
+		throw new Error("AI generated chapter ranges were invalid.");
+	}
+
+	return generated;
 }

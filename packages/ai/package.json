@@ -8,6 +8,7 @@
 	},
 	"scripts": {
 		"check": "pnpm run check-types",
+		"test": "tsx --test src/**/*.test.ts",
 		"check-types": "tsc --noEmit"
 	},
 	"dependencies": {
@@ -19,6 +20,7 @@
 	},
 	"devDependencies": {
 		"@types/node": "^22.13.4",
+		"tsx": "^4.19.2",
 		"typescript": "5.9.2"
 	}
 }

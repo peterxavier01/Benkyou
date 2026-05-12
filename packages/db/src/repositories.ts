@@ -28,6 +28,11 @@ import {
 
 type UserId = string | null;
 
+export interface VideoGenerationContextDTO extends VideoDTO {
+	description: string | null;
+	rawMetadata: Record<string, unknown> | null;
+}
+
 export interface UpsertVideoInput {
 	sourceUrl: string;
 	canonicalUrl?: string | null;
@@ -45,7 +50,7 @@ export interface UpsertVideoInput {
 export interface GenerationJobWithContextDTO {
 	job: CourseGenerationJobDTO;
 	course: CourseDTO;
-	video: VideoDTO;
+	video: VideoGenerationContextDTO;
 }
 
 export interface GenerationJobDetailRecordDTO
@@ -129,6 +134,16 @@ function mapVideo(row: typeof videos.$inferSelect): VideoDTO {
 		durationSeconds: row.durationSeconds,
 		createdAt: toIso(row.createdAt) ?? "",
 		updatedAt: toIso(row.updatedAt) ?? "",
+	};
+}
+
+function mapVideoGenerationContext(
+	row: typeof videos.$inferSelect,
+): VideoGenerationContextDTO {
+	return {
+		...mapVideo(row),
+		description: row.description,
+		rawMetadata: row.rawMetadata ?? null,
 	};
 }
 
@@ -348,7 +363,7 @@ export async function createCourseFromUrlRecord(
 		return {
 			job: mapGenerationJob(jobRow),
 			course: mapCourse(courseRow),
-			video: mapVideo(videoRow),
+			video: mapVideoGenerationContext(videoRow),
 			reusedExistingCourse,
 		};
 	});
@@ -520,7 +535,7 @@ export async function getGenerationJob(
 	return {
 		job: mapGenerationJob(row.job),
 		course: mapCourse(row.course),
-		video: mapVideo(row.video),
+		video: mapVideoGenerationContext(row.video),
 	};
 }
 
@@ -647,7 +662,7 @@ export async function completeGenerationJob(
 		return {
 			job: mapGenerationJob(jobRow),
 			course: mapCourse(courseRow),
-			video: mapVideo(videoRow),
+			video: mapVideoGenerationContext(videoRow),
 			chapterCount: input.chapters.length,
 		};
 	});

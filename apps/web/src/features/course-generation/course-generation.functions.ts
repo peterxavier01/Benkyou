@@ -1,4 +1,5 @@
 import {
+	fetchYouTubeDataApiMetadata,
 	fetchYouTubeOEmbedMetadata,
 	fetchYouTubeTranscript,
 	generateCourseChapters,
@@ -7,8 +8,10 @@ import {
 import { getCurrentUserFromHeaders } from "@benkyou/auth/server";
 import {
 	createCourseFromUrlRequestV1Schema,
+	getChapterGenerationPolicy,
 	getParseVideoUrlErrorMessage,
 	parseVideoUrl,
+	parseYouTubeDescriptionChapters,
 	processGenerationJobRequestV1Schema,
 	retryGenerationJobRequestV1Schema,
 	toGenerationJobDetail,
@@ -41,7 +44,10 @@ export const createCourseFromUrl = createServerFn({ method: "POST" })
 			throw new Error(getParseVideoUrlErrorMessage(parsedUrl.error));
 		}
 
-		const metadata = await safeFetchMetadata(parsedUrl.value.canonicalUrl);
+		const metadata = await safeFetchMetadata(
+			parsedUrl.value.providerVideoId,
+			parsedUrl.value.canonicalUrl,
+		);
 		const ownerId = await getOptionalUserId();
 		const result = await createCourseFromUrlRecord({
 			ownerId,
@@ -56,7 +62,9 @@ export const createCourseFromUrl = createServerFn({ method: "POST" })
 			thumbnailUrl:
 				metadata?.thumbnailUrl ??
 				`https://img.youtube.com/vi/${parsedUrl.value.providerVideoId}/hqdefault.jpg`,
-			rawMetadata: metadata,
+			description: metadata?.description,
+			durationSeconds: metadata?.durationSeconds,
+			rawMetadata: metadata?.rawMetadata ?? metadata,
 		});
 
 		return {
@@ -98,11 +106,54 @@ export const processGenerationJob = createServerFn({ method: "POST" })
 				);
 			}
 
-			const transcriptText = transcriptSegmentsToText(transcriptSegments);
+			const durationSeconds = claimed.video.durationSeconds;
+			const policy = getChapterGenerationPolicy(
+				durationSeconds,
+				transcriptSegments.length,
+			);
+			const transcriptText = transcriptSegmentsToText(transcriptSegments, {
+				durationSeconds,
+				policy,
+			});
+			const creatorChapters = parseYouTubeDescriptionChapters(
+				claimed.video.description,
+				durationSeconds,
+			);
+
+			if (creatorChapters.length > 0) {
+				const completed = await completeGenerationJob({
+					jobId: claimed.job.id,
+					title: claimed.course.title,
+					description: claimed.course.description,
+					transcriptSource: "youtube_captions",
+					transcriptText,
+					rawOutput: {
+						chapterSource: "creator_timestamps",
+						chapterCount: creatorChapters.length,
+					},
+					chapters: creatorChapters.map((chapter, index) => ({
+						title: chapter.title,
+						summary: null,
+						orderIndex: index,
+						startSeconds: chapter.startSeconds,
+						endSeconds: chapter.endSeconds,
+					})),
+				});
+
+				if (!completed) {
+					throw new Error("Generation job disappeared before completion.");
+				}
+
+				return { detail: toGenerationJobDetail(completed) };
+			}
+
 			const generated = await generateCourseChapters({
 				videoTitle: claimed.video.title ?? claimed.course.title,
 				canonicalUrl: claimed.video.canonicalUrl,
 				transcriptText,
+				durationSeconds,
+				transcriptSegmentCount: transcriptSegments.length,
+				policy,
 			});
 			const completed = await completeGenerationJob({
 				jobId: claimed.job.id,
@@ -110,7 +161,13 @@ export const processGenerationJob = createServerFn({ method: "POST" })
 				description: generated.description,
 				transcriptSource: "youtube_captions",
 				transcriptText,
-				rawOutput: generated,
+				rawOutput: {
+					chapterSource: policy.isCoarseFallback
+						? "ai_coarse_fallback"
+						: "ai_generated",
+					policy,
+					generated,
+				},
 				chapters: generated.chapters.map((chapter, index) => ({
 					title: chapter.title,
 					summary: chapter.summary,
@@ -186,8 +243,15 @@ async function getExistingDetail(
 	return toGenerationJobDetail(detail);
 }
 
-async function safeFetchMetadata(canonicalUrl: string) {
+async function safeFetchMetadata(providerVideoId: string, canonicalUrl: string) {
 	try {
+		const dataApiMetadata =
+			await fetchYouTubeDataApiMetadata(providerVideoId);
+
+		if (dataApiMetadata) {
+			return dataApiMetadata;
+		}
+
 		return await fetchYouTubeOEmbedMetadata(canonicalUrl);
 	} catch {
 		return null;

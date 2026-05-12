@@ -10,9 +10,12 @@ import type {
 import {
 	aiGeneratedCourseV1Schema,
 	createCourseFromUrlRequestV1Schema,
+	getChapterGenerationPolicy,
+	parseYouTubeDescriptionChapters,
 	processGenerationJobRequestV1Schema,
 	retryGenerationJobRequestV1Schema,
 	toGenerationJobDetail,
+	validateGeneratedChapterRanges,
 } from "./course-generation";
 
 const baseJob = {
@@ -133,6 +136,107 @@ test("AI output schema rejects empty, untitled, and invalid ranges", () => {
 				},
 			],
 		}).success,
+		false,
+	);
+});
+
+test("description chapter parser accepts common YouTube timestamp formats", () => {
+	const chapters = parseYouTubeDescriptionChapters(
+		[
+			"00:00 Intro",
+			"1:23 Topic",
+			"01:02:03 Long section",
+			"01:10:00 - Wrap-up",
+		].join("\n"),
+		4_500,
+	);
+
+	assert.deepEqual(chapters, [
+		{ title: "Intro", startSeconds: 0, endSeconds: 83 },
+		{ title: "Topic", startSeconds: 83, endSeconds: 3_723 },
+		{ title: "Long section", startSeconds: 3_723, endSeconds: 4_200 },
+		{ title: "Wrap-up", startSeconds: 4_200, endSeconds: 4_500 },
+	]);
+});
+
+test("description chapter parser ignores invalid timestamp ranges", () => {
+	const chapters = parseYouTubeDescriptionChapters(
+		[
+			"00:00 Intro",
+			"00:00 Duplicate intro",
+			"05:00 Main topic",
+			"04:00 Out of order",
+			"12:00 Beyond duration",
+		].join("\n"),
+		600,
+	);
+
+	assert.deepEqual(chapters, [
+		{ title: "Intro", startSeconds: 0, endSeconds: 300 },
+		{ title: "Main topic", startSeconds: 300, endSeconds: 600 },
+	]);
+});
+
+test("description chapter parser rejects fewer than two valid chapters", () => {
+	assert.deepEqual(parseYouTubeDescriptionChapters("00:00 Only one", 60), []);
+	assert.deepEqual(
+		parseYouTubeDescriptionChapters("00:00 Intro\n99:00 Too late", 60),
+		[],
+	);
+});
+
+test("chapter generation policy follows duration-aware MVP defaults", () => {
+	assert.deepEqual(getChapterGenerationPolicy(9 * 60, 10), {
+		minChapters: 3,
+		maxChapters: 5,
+		targetChaptersLabel: "3-5",
+		isCoarseFallback: false,
+		transcriptMode: "full_window",
+		transcriptCharacterLimit: 120_000,
+	});
+	assert.equal(getChapterGenerationPolicy(20 * 60, 10).targetChaptersLabel, "5-8");
+	assert.equal(
+		getChapterGenerationPolicy(45 * 60, 10).targetChaptersLabel,
+		"8-12",
+	);
+	assert.equal(
+		getChapterGenerationPolicy(90 * 60, 10).targetChaptersLabel,
+		"12-18",
+	);
+	assert.equal(
+		getChapterGenerationPolicy(3 * 60 * 60, 10).targetChaptersLabel,
+		"18-35",
+	);
+
+	const longPolicy = getChapterGenerationPolicy(12 * 60 * 60, 10);
+	assert.equal(longPolicy.targetChaptersLabel, "12-25");
+	assert.equal(longPolicy.isCoarseFallback, true);
+	assert.equal(longPolicy.transcriptMode, "sampled_windows");
+});
+
+test("generated chapter ranges must be ordered and within duration", () => {
+	assert.equal(
+		validateGeneratedChapterRanges(
+			[
+				{ startSeconds: 0, endSeconds: 60 },
+				{ startSeconds: 60, endSeconds: null },
+			],
+			120,
+		),
+		true,
+	);
+	assert.equal(
+		validateGeneratedChapterRanges(
+			[
+				{ startSeconds: 0, endSeconds: 60 },
+				{ startSeconds: 30, endSeconds: 90 },
+			],
+			120,
+		),
+		false,
+	);
+	assert.equal(
+		validateGeneratedChapterRanges([{ startSeconds: 125, endSeconds: null }], 120),
 		false,
 	);
 });

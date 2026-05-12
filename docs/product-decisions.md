@@ -119,3 +119,23 @@ Implementation:
 - Export one Markdown file per course.
 - Include course title, source URL, chapters, notes, and bookmarks.
 - Put export formatting logic in `packages/core`.
+
+## 8. Free Generation Cost Policy
+
+Decision: course generation stays generous for normal videos and becomes coarse
+for extreme long videos when creator timestamps are unavailable.
+
+Rationale: creator-provided YouTube timestamps are the best source of chapter
+truth and should not spend AI credits. Videos without timestamps still receive
+useful generated structure, but 11+ hour videos need a high-level course map
+rather than dense chaptering to keep the "free forever" promise sustainable.
+
+Implementation:
+
+- Fetch official YouTube metadata when `YOUTUBE_API_KEY` is configured.
+- Parse creator timestamps from descriptions before calling OpenAI.
+- Use creator timestamps directly when at least two valid ordered chapters are
+  present.
+- Use duration-aware AI generation only as a fallback.
+- For 11+ hour fallback generation, sample transcript windows across the whole
+  video and request a coarse map.
