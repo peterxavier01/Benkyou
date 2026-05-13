@@ -185,6 +185,7 @@ function mapGenerationJob(
 		transcriptSource: row.transcriptSource,
 		failureReason: row.failureReason,
 		retryable: row.retryable,
+		startedAt: toIso(row.startedAt),
 		createdAt: toIso(row.createdAt) ?? "",
 		updatedAt: toIso(row.updatedAt) ?? "",
 		completedAt: toIso(row.completedAt),
@@ -440,6 +441,13 @@ export async function getCoursePlayerData(
 		)
 		.orderBy(bookmarks.timestampSeconds);
 
+	const [latestGenerationJobRow] = await db
+		.select()
+		.from(courseGenerationJobs)
+		.where(eq(courseGenerationJobs.courseId, courseId))
+		.orderBy(desc(courseGenerationJobs.createdAt))
+		.limit(1);
+
 	return {
 		course: mapCourse(courseRow.course),
 		video: mapVideo(courseRow.video),
@@ -448,6 +456,9 @@ export async function getCoursePlayerData(
 		chapterProgress: chapterProgressRows.map(mapChapterProgress),
 		notes: noteRows.map(mapNote),
 		bookmarks: bookmarkRows.map(mapBookmark),
+		latestGenerationJob: latestGenerationJobRow
+			? mapGenerationJob(latestGenerationJobRow)
+			: null,
 	};
 }
 
@@ -559,6 +570,88 @@ export async function getGenerationJobDetailRecord(
 	};
 }
 
+export async function timeoutGenerationJob(
+	jobId: string,
+	timeoutMs: number,
+	now = new Date(),
+): Promise<GenerationJobDetailRecordDTO | null> {
+	const [row] = await db
+		.select({ job: courseGenerationJobs, course: courses })
+		.from(courseGenerationJobs)
+		.innerJoin(courses, eq(courseGenerationJobs.courseId, courses.id))
+		.where(
+			and(
+				eq(courseGenerationJobs.id, jobId),
+				inArray(courseGenerationJobs.status, ["queued", "processing"]),
+				isNull(courses.deletedAt),
+			),
+		)
+		.limit(1);
+
+	if (!row) {
+		return null;
+	}
+
+	const timeoutAt = new Date(now.getTime() - timeoutMs);
+	const referenceDate =
+		row.job.status === "processing"
+			? (row.job.startedAt ?? row.job.updatedAt ?? row.job.createdAt)
+			: row.job.createdAt;
+
+	if (!referenceDate || referenceDate > timeoutAt) {
+		return null;
+	}
+
+	const [jobRow] = await db
+		.update(courseGenerationJobs)
+		.set({
+			status: "failed",
+			failureReason:
+				"Course generation timed out before chapters could be saved.",
+			retryable: true,
+			completedAt: now,
+			updatedAt: now,
+		})
+		.where(
+			and(
+				eq(courseGenerationJobs.id, jobId),
+				inArray(courseGenerationJobs.status, ["queued", "processing"]),
+			),
+		)
+		.returning();
+
+	return jobRow ? getGenerationJobDetailRecord(jobRow.id) : null;
+}
+
+export async function cancelGenerationJob(
+	jobId: string,
+	ownerId: UserId,
+): Promise<GenerationJobDetailRecordDTO | null> {
+	const now = new Date();
+	const [jobRow] = await db
+		.update(courseGenerationJobs)
+		.set({
+			status: "cancelled",
+			failureReason: "Course generation was cancelled.",
+			retryable: true,
+			completedAt: now,
+			updatedAt: now,
+		})
+		.from(courses)
+		.where(
+			and(
+				eq(courseGenerationJobs.id, jobId),
+				eq(courseGenerationJobs.courseId, courses.id),
+				userMatches(courses.ownerId, ownerId),
+				isNull(courses.deletedAt),
+				inArray(courseGenerationJobs.status, ["queued", "processing"]),
+			),
+		)
+		.returning();
+
+	return jobRow ? getGenerationJobDetailRecord(jobRow.id) : null;
+}
+
 export async function claimGenerationJob(
 	jobId: string,
 ): Promise<GenerationJobWithContextDTO | null> {
@@ -598,12 +691,37 @@ export async function completeGenerationJob(
 			.where(
 				and(
 					eq(courseGenerationJobs.id, input.jobId),
+					eq(courseGenerationJobs.status, "processing"),
 					isNull(courses.deletedAt),
 				),
 			)
 			.limit(1);
 
 		if (!row) {
+			return null;
+		}
+
+		const completedAt = new Date();
+		const [jobRow] = await tx
+			.update(courseGenerationJobs)
+			.set({
+				status: "completed",
+				transcriptSource: input.transcriptSource,
+				failureReason: null,
+				retryable: false,
+				rawOutput: input.rawOutput ?? undefined,
+				completedAt,
+				updatedAt: completedAt,
+			})
+			.where(
+				and(
+					eq(courseGenerationJobs.id, input.jobId),
+					eq(courseGenerationJobs.status, "processing"),
+				),
+			)
+			.returning();
+
+		if (!jobRow) {
 			return null;
 		}
 
@@ -624,7 +742,6 @@ export async function completeGenerationJob(
 			);
 		}
 
-		const completedAt = new Date();
 		const [courseRow] = await tx
 			.update(courses)
 			.set({
@@ -643,20 +760,6 @@ export async function completeGenerationJob(
 				updatedAt: completedAt,
 			})
 			.where(eq(videos.id, row.video.id))
-			.returning();
-
-		const [jobRow] = await tx
-			.update(courseGenerationJobs)
-			.set({
-				status: "completed",
-				transcriptSource: input.transcriptSource,
-				failureReason: null,
-				retryable: false,
-				rawOutput: input.rawOutput ?? undefined,
-				completedAt,
-				updatedAt: completedAt,
-			})
-			.where(eq(courseGenerationJobs.id, input.jobId))
 			.returning();
 
 		return {
@@ -681,7 +784,12 @@ export async function failGenerationJob(
 			completedAt: new Date(),
 			updatedAt: new Date(),
 		})
-		.where(eq(courseGenerationJobs.id, input.jobId))
+		.where(
+			and(
+				eq(courseGenerationJobs.id, input.jobId),
+				inArray(courseGenerationJobs.status, ["queued", "processing"]),
+			),
+		)
 		.returning();
 
 	return jobRow ? getGenerationJobDetailRecord(jobRow.id) : null;
@@ -698,7 +806,7 @@ export async function createRetryGenerationJob(
 		.where(
 			and(
 				eq(courseGenerationJobs.id, failedJobId),
-				eq(courseGenerationJobs.status, "failed"),
+				inArray(courseGenerationJobs.status, ["failed", "cancelled"]),
 				eq(courseGenerationJobs.retryable, true),
 				userMatches(courses.ownerId, ownerId),
 				isNull(courses.deletedAt),

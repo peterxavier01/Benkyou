@@ -55,6 +55,7 @@ export interface CourseGenerationJobDTO {
 	transcriptSource: TranscriptSource | null;
 	failureReason: string | null;
 	retryable: boolean;
+	startedAt: string | null;
 	createdAt: string;
 	updatedAt: string;
 	completedAt: string | null;
@@ -148,6 +149,7 @@ export interface GenerationJobDetailV1 {
 	timeline: GenerationTimelineStepV1[];
 	canRetry: boolean;
 	canOpenCourse: boolean;
+	canCancel: boolean;
 }
 
 export interface ProcessGenerationJobRequestV1 {
@@ -165,6 +167,14 @@ export interface RetryGenerationJobRequestV1 {
 export interface RetryGenerationJobResponseV1 {
 	courseId: string;
 	generationJobId: string;
+}
+
+export interface CancelGenerationJobRequestV1 {
+	generationJobId: string;
+}
+
+export interface CancelGenerationJobResponseV1 {
+	detail: GenerationJobDetailV1;
 }
 
 export interface OpenSampleCourseResponseV1 {
@@ -198,6 +208,7 @@ export interface CoursePlayerDataDTO {
 	chapterProgress: ChapterProgressDTO[];
 	notes: ChapterNoteDTO[];
 	bookmarks: BookmarkDTO[];
+	latestGenerationJob: CourseGenerationJobDTO | null;
 }
 
 export interface GetCoursePlayerDataRequestV1 {

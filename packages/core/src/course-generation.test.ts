@@ -9,7 +9,9 @@ import type {
 
 import {
 	aiGeneratedCourseV1Schema,
+	cancelGenerationJobRequestV1Schema,
 	createCourseFromUrlRequestV1Schema,
+	GENERATION_JOB_TIMEOUT_MS,
 	getChapterGenerationPolicy,
 	parseYouTubeDescriptionChapters,
 	processGenerationJobRequestV1Schema,
@@ -25,6 +27,7 @@ const baseJob = {
 	transcriptSource: null,
 	failureReason: null,
 	retryable: false,
+	startedAt: null,
 	createdAt: "2026-05-09T00:00:00.000Z",
 	updatedAt: "2026-05-09T00:00:00.000Z",
 	completedAt: null,
@@ -74,6 +77,13 @@ test("v1 request schemas accept valid payloads", () => {
 			generationJobId: baseJob.id,
 		},
 	);
+	assert.deepEqual(
+		cancelGenerationJobRequestV1Schema.parse({ generationJobId: baseJob.id }),
+		{
+			generationJobId: baseJob.id,
+		},
+	);
+	assert.equal(GENERATION_JOB_TIMEOUT_MS, 10 * 60 * 1000);
 });
 
 test("AI output schema accepts ordered chapters", () => {
@@ -194,7 +204,10 @@ test("chapter generation policy follows duration-aware MVP defaults", () => {
 		transcriptMode: "full_window",
 		transcriptCharacterLimit: 120_000,
 	});
-	assert.equal(getChapterGenerationPolicy(20 * 60, 10).targetChaptersLabel, "5-8");
+	assert.equal(
+		getChapterGenerationPolicy(20 * 60, 10).targetChaptersLabel,
+		"5-8",
+	);
 	assert.equal(
 		getChapterGenerationPolicy(45 * 60, 10).targetChaptersLabel,
 		"8-12",
@@ -236,7 +249,10 @@ test("generated chapter ranges must be ordered and within duration", () => {
 		false,
 	);
 	assert.equal(
-		validateGeneratedChapterRanges([{ startSeconds: 125, endSeconds: null }], 120),
+		validateGeneratedChapterRanges(
+			[{ startSeconds: 125, endSeconds: null }],
+			120,
+		),
 		false,
 	);
 });
@@ -265,10 +281,44 @@ test("generation detail derives retry and open-course states", () => {
 	});
 
 	assert.equal(completed.canOpenCourse, true);
+	assert.equal(completed.canCancel, false);
 	assert.equal(completed.timeline.at(-1)?.status, "completed");
 	assert.equal(failed.canRetry, true);
 	assert.equal(
 		failed.timeline.some((step) => step.status === "failed"),
+		true,
+	);
+});
+
+test("generation detail allows active cancellation and cancelled retries", () => {
+	const processing = toGenerationJobDetail({
+		job: {
+			...baseJob,
+			status: "processing",
+			startedAt: "2026-05-09T00:01:00.000Z",
+		},
+		course: baseCourse,
+		video: baseVideo,
+		chapterCount: 0,
+	});
+	const cancelled = toGenerationJobDetail({
+		job: {
+			...baseJob,
+			status: "cancelled",
+			retryable: true,
+			failureReason: "Course generation was cancelled.",
+		},
+		course: baseCourse,
+		video: baseVideo,
+		chapterCount: 0,
+	});
+
+	assert.equal(processing.canCancel, true);
+	assert.equal(processing.canRetry, false);
+	assert.equal(cancelled.canCancel, false);
+	assert.equal(cancelled.canRetry, true);
+	assert.equal(
+		cancelled.timeline.some((step) => step.status === "failed"),
 		true,
 	);
 });

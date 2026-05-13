@@ -44,6 +44,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { WorkspacePage } from "#components/workspace-layout";
 import BetterAuthHeader from "../../../integrations/better-auth/header-user";
+import { retryGenerationJob } from "../../course-generation/course-generation.functions";
 import {
 	getCoursePlayerData,
 	upsertChapterProgress,
@@ -67,6 +68,7 @@ function CoursePlayerScreen({
 	const getPlayerData = useServerFn(getCoursePlayerData);
 	const saveCourseProgress = useServerFn(upsertCourseProgress);
 	const saveChapterProgress = useServerFn(upsertChapterProgress);
+	const retryJob = useServerFn(retryGenerationJob);
 	const initialSelectedChapterId = useMemo(
 		() => resolveInitialChapterId(initialData, initialChapterId),
 		[initialData, initialChapterId],
@@ -161,6 +163,14 @@ function CoursePlayerScreen({
 		onError: () => setSaveError("Chapter progress could not be saved."),
 	});
 
+	const retryMutation = useMutation({
+		mutationFn: (generationJobId: string) =>
+			retryJob({ data: { generationJobId } }),
+		onSuccess: async (result) => {
+			await navigate({ href: `/courses/new/${result.generationJobId}` });
+		},
+	});
+
 	const persistProgress = useCallback(() => {
 		const latest = latestProgressRef.current;
 		const courseCompletion = calculateProgressPercent(
@@ -182,13 +192,21 @@ function CoursePlayerScreen({
 		}
 	}, [chapterProgressMutation, courseProgressMutation]);
 
-	latestProgressRef.current = {
+	useEffect(() => {
+		latestProgressRef.current = {
+			currentSeconds,
+			durationSeconds,
+			selectedChapterId: selectedChapter?.id ?? null,
+			watchedByChapter,
+			completedByChapter,
+		};
+	}, [
 		currentSeconds,
 		durationSeconds,
-		selectedChapterId: selectedChapter?.id ?? null,
+		selectedChapter?.id,
 		watchedByChapter,
 		completedByChapter,
-	};
+	]);
 
 	useEffect(() => {
 		const intervalId = window.setInterval(
@@ -294,7 +312,13 @@ function CoursePlayerScreen({
 	};
 
 	if (data.chapters.length === 0) {
-		return <NoChaptersScreen data={data} />;
+		return (
+			<NoChaptersScreen
+				data={data}
+				retrying={retryMutation.isPending}
+				onRetry={(generationJobId) => retryMutation.mutate(generationJobId)}
+			/>
+		);
 	}
 
 	return (
@@ -305,6 +329,12 @@ function CoursePlayerScreen({
 			className="p-0 sm:p-0"
 			action={
 				<div className="flex items-center gap-2">
+					<Button asChild size="sm" variant="outline">
+						<a href={`/courses/${courseId}/manage`}>
+							<HugeIcon name="settings" className="size-4" />
+							Manage
+						</a>
+					</Button>
 					<Button asChild size="sm" variant="outline">
 						<Link to="/courses" search={{ q: "", filter: "all" }}>
 							<HugeIcon name="arrowLeft" className="size-4" />
@@ -324,6 +354,12 @@ function CoursePlayerScreen({
 									<StatusBadge tone="success">Ready</StatusBadge>
 									<span className="text-muted-foreground text-xs">
 										{data.chapters.length} chapters
+									</span>
+									<span className="text-muted-foreground text-xs">
+										{Math.round(
+											calculateProgressPercent(currentSeconds, durationSeconds),
+										)}
+										% complete
 									</span>
 								</div>
 								<h1 className="mt-2 truncate font-semibold text-xl tracking-normal">
@@ -626,7 +662,21 @@ function LearningTabs({
 	);
 }
 
-function NoChaptersScreen({ data }: { data: CoursePlayerDataDTO }) {
+function NoChaptersScreen({
+	data,
+	onRetry,
+	retrying,
+}: {
+	data: CoursePlayerDataDTO;
+	onRetry: (generationJobId: string) => void;
+	retrying: boolean;
+}) {
+	const latestJob = data.latestGenerationJob;
+	const canOpenJob = Boolean(latestJob);
+	const canRetry =
+		Boolean(latestJob?.retryable) &&
+		(latestJob?.status === "failed" || latestJob?.status === "cancelled");
+
 	return (
 		<WorkspacePage
 			title="Course player"
@@ -640,10 +690,31 @@ function NoChaptersScreen({ data }: { data: CoursePlayerDataDTO }) {
 					{data.course.title}
 				</h1>
 				<p className="mt-2 text-muted-foreground text-sm leading-6">
-					This course does not have generated chapters yet. Open the library or
-					generation job to recover it.
+					This course does not have generated chapters yet. Recover the latest
+					generation job, retry it, or return to your library.
 				</p>
-				<div className="mt-4 flex gap-2">
+				<div className="mt-4 flex flex-wrap gap-2">
+					{canOpenJob ? (
+						<Button asChild>
+							<Link
+								to="/courses/new/$jobId"
+								params={{ jobId: latestJob?.id ?? "" }}
+							>
+								Open generation job
+							</Link>
+						</Button>
+					) : null}
+					{canRetry ? (
+						<Button
+							type="button"
+							variant="outline"
+							disabled={retrying}
+							onClick={() => onRetry(latestJob?.id ?? "")}
+						>
+							<HugeIcon name="refresh" className="size-4" />
+							{retrying ? "Retrying..." : "Retry generation"}
+						</Button>
+					) : null}
 					<Button asChild>
 						<Link to="/courses" search={{ q: "", filter: "all" }}>
 							Back to library

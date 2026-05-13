@@ -7,7 +7,9 @@ import {
 } from "@benkyou/ai";
 import { getCurrentUserFromHeaders } from "@benkyou/auth/server";
 import {
+	cancelGenerationJobRequestV1Schema,
 	createCourseFromUrlRequestV1Schema,
+	GENERATION_JOB_TIMEOUT_MS,
 	getChapterGenerationPolicy,
 	getParseVideoUrlErrorMessage,
 	parseVideoUrl,
@@ -17,6 +19,7 @@ import {
 	toGenerationJobDetail,
 } from "@benkyou/core";
 import {
+	cancelGenerationJob as cancelGenerationJobRecord,
 	claimGenerationJob,
 	completeGenerationJob,
 	createCourseFromUrlRecord,
@@ -24,8 +27,10 @@ import {
 	failGenerationJob,
 	getGenerationJobDetailRecord,
 	getSampleCourse,
+	timeoutGenerationJob,
 } from "@benkyou/db";
 import type {
+	CancelGenerationJobResponseV1,
 	CreateCourseFromUrlResponseV1,
 	GenerationJobDetailV1,
 	OpenSampleCourseResponseV1,
@@ -64,7 +69,7 @@ export const createCourseFromUrl = createServerFn({ method: "POST" })
 				`https://img.youtube.com/vi/${parsedUrl.value.providerVideoId}/hqdefault.jpg`,
 			description: metadata?.description,
 			durationSeconds: metadata?.durationSeconds,
-			rawMetadata: metadata?.rawMetadata ?? metadata,
+			rawMetadata: metadata?.rawMetadata,
 		});
 
 		return {
@@ -77,6 +82,7 @@ export const createCourseFromUrl = createServerFn({ method: "POST" })
 export const getGenerationJob = createServerFn({ method: "POST" })
 	.inputValidator((input) => processGenerationJobRequestV1Schema.parse(input))
 	.handler(async ({ data }): Promise<GenerationJobDetailV1> => {
+		await timeoutGenerationJob(data.generationJobId, GENERATION_JOB_TIMEOUT_MS);
 		const detail = await getGenerationJobDetailRecord(data.generationJobId);
 
 		if (!detail) {
@@ -89,6 +95,15 @@ export const getGenerationJob = createServerFn({ method: "POST" })
 export const processGenerationJob = createServerFn({ method: "POST" })
 	.inputValidator((input) => processGenerationJobRequestV1Schema.parse(input))
 	.handler(async ({ data }): Promise<ProcessGenerationJobResponseV1> => {
+		const timedOut = await timeoutGenerationJob(
+			data.generationJobId,
+			GENERATION_JOB_TIMEOUT_MS,
+		);
+
+		if (timedOut) {
+			return { detail: toGenerationJobDetail(timedOut) };
+		}
+
 		const claimed = await claimGenerationJob(data.generationJobId);
 
 		if (!claimed) {
@@ -106,7 +121,13 @@ export const processGenerationJob = createServerFn({ method: "POST" })
 				);
 			}
 
-			const durationSeconds = claimed.video.durationSeconds;
+			const lastTranscriptSegment = transcriptSegments.at(-1);
+			const transcriptEndSeconds = lastTranscriptSegment
+				? lastTranscriptSegment.startSeconds +
+					lastTranscriptSegment.durationSeconds
+				: null;
+			const durationSeconds =
+				claimed.video.durationSeconds ?? transcriptEndSeconds;
 			const policy = getChapterGenerationPolicy(
 				durationSeconds,
 				transcriptSegments.length,
@@ -219,6 +240,22 @@ export const retryGenerationJob = createServerFn({ method: "POST" })
 		};
 	});
 
+export const cancelGenerationJob = createServerFn({ method: "POST" })
+	.inputValidator((input) => cancelGenerationJobRequestV1Schema.parse(input))
+	.handler(async ({ data }): Promise<CancelGenerationJobResponseV1> => {
+		const ownerId = await getOptionalUserId();
+		const cancelled = await cancelGenerationJobRecord(
+			data.generationJobId,
+			ownerId,
+		);
+
+		if (!cancelled) {
+			throw new Error("This generation job cannot be cancelled.");
+		}
+
+		return { detail: toGenerationJobDetail(cancelled) };
+	});
+
 export const openSampleCourse = createServerFn({ method: "GET" }).handler(
 	async (): Promise<OpenSampleCourseResponseV1> => {
 		const sample = await getSampleCourse();
@@ -243,15 +280,24 @@ async function getExistingDetail(
 	return toGenerationJobDetail(detail);
 }
 
-async function safeFetchMetadata(providerVideoId: string, canonicalUrl: string) {
+async function safeFetchMetadata(
+	providerVideoId: string,
+	canonicalUrl: string,
+) {
+	let dataApiMetadata: Awaited<ReturnType<typeof fetchYouTubeDataApiMetadata>> =
+		null;
+
 	try {
-		const dataApiMetadata =
-			await fetchYouTubeDataApiMetadata(providerVideoId);
+		dataApiMetadata = await fetchYouTubeDataApiMetadata(providerVideoId);
+	} catch {
+		dataApiMetadata = null;
+	}
 
-		if (dataApiMetadata) {
-			return dataApiMetadata;
-		}
+	if (dataApiMetadata) {
+		return dataApiMetadata;
+	}
 
+	try {
 		return await fetchYouTubeOEmbedMetadata(canonicalUrl);
 	} catch {
 		return null;

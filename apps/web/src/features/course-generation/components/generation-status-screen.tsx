@@ -16,6 +16,7 @@ import { useEffect, useRef } from "react";
 import { WorkspacePage } from "#components/workspace-layout";
 import BetterAuthHeader from "../../../integrations/better-auth/header-user";
 import {
+	cancelGenerationJob,
 	getGenerationJob,
 	processGenerationJob,
 	retryGenerationJob,
@@ -35,6 +36,7 @@ function GenerationStatusScreen({
 	const getJob = useServerFn(getGenerationJob);
 	const processJob = useServerFn(processGenerationJob);
 	const retryJob = useServerFn(retryGenerationJob);
+	const cancelJob = useServerFn(cancelGenerationJob);
 	const triggeredProcessing = useRef(false);
 
 	const jobQuery = useQuery({
@@ -56,6 +58,13 @@ function GenerationStatusScreen({
 		mutationFn: () => retryJob({ data: { generationJobId: jobId } }),
 		onSuccess: async (result) => {
 			await navigate({ href: `/courses/new/${result.generationJobId}` });
+		},
+	});
+
+	const cancelMutation = useMutation({
+		mutationFn: () => cancelJob({ data: { generationJobId: jobId } }),
+		onSuccess: (result) => {
+			queryClient.setQueryData(["generation-job", jobId], result.detail);
 		},
 	});
 
@@ -132,6 +141,17 @@ function GenerationStatusScreen({
 									{retryMutation.isPending ? "Retrying..." : "Retry"}
 								</Button>
 							) : null}
+							{detail.canCancel ? (
+								<Button
+									type="button"
+									variant="outline"
+									disabled={cancelMutation.isPending}
+									onClick={() => cancelMutation.mutate()}
+								>
+									<HugeIcon name="pause" className="size-4" />
+									{cancelMutation.isPending ? "Cancelling..." : "Cancel"}
+								</Button>
+							) : null}
 							<Button asChild type="button" variant="outline">
 								<Link to="/">Use another URL</Link>
 							</Button>
@@ -147,6 +167,13 @@ function GenerationStatusScreen({
 								{processMutation.error instanceof Error
 									? processMutation.error.message
 									: "Could not start generation."}
+							</p>
+						) : null}
+						{cancelMutation.isError ? (
+							<p className="mt-3 text-destructive text-sm">
+								{cancelMutation.error instanceof Error
+									? cancelMutation.error.message
+									: "Could not cancel generation."}
 							</p>
 						) : null}
 					</div>
@@ -286,7 +313,7 @@ function getStatusCopy(status: GenerationJobStatus) {
 		return "The job stopped before chapters could be saved.";
 	}
 
-	return "This generation job was cancelled.";
+	return "This generation job was cancelled. You can retry it or use another URL.";
 }
 
 export { GenerationStatusScreen };

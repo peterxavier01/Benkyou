@@ -190,7 +190,7 @@ unblocked.
 
 ### Done When
 
-- [ ] A signed-in user can create and reopen their own courses.
+- [x] A signed-in user can create and reopen their own courses.
 - [x] A signed-out user has clear next steps.
 - [x] Auth errors are shown as recoverable UI, not dead ends.
 
@@ -250,7 +250,7 @@ Goal: let a learner submit a YouTube URL and see course generation progress.
 - [x] Store summary/rationale/raw output where useful.
 - [x] Mark job completed.
 - [x] Store failure reason and retry eligibility on failure.
-- [ ] Add timeout and cancellation handling.
+- [x] Add timeout and cancellation handling.
 
 ### Generation Status UI
 
@@ -321,12 +321,12 @@ and progress in one focused workspace.
 - [x] Mark chapter complete automatically based on completion threshold.
 - [x] Support manual chapter complete/incomplete toggle.
 - [x] Handle transcript/chapter gaps gracefully.
-- [ ] Handle private/deleted/missing course states.
+- [x] Handle private/deleted/missing course states.
 
 ### Player UI
 
 - [x] Build `/courses/:courseId`.
-- [ ] Add course header with title, source metadata, progress, and manage link.
+- [x] Add course header with title, source metadata, progress, and manage link.
 - [x] Add video player region with stable aspect ratio.
 - [x] Add chapter sidebar with: title, time range, completion state, active
       state, progress.
@@ -334,8 +334,8 @@ and progress in one focused workspace.
 - [x] Add per-chapter summary display.
 - [x] Add keyboard-accessible chapter selection.
 - [x] Add mobile chapter drawer.
-- [ ] Add loading skeleton.
-- [ ] Add no-chapters fallback with retry/regenerate action.
+- [x] Add loading skeleton.
+- [x] Add no-chapters fallback with retry/regenerate action.
 - [x] Add save failure toast or inline recovery.
 
 ### Done When

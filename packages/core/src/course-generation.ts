@@ -1,4 +1,5 @@
 import type {
+	CancelGenerationJobRequestV1,
 	CourseGenerationJobDTO,
 	GenerationJobDetailV1,
 	GenerationTimelineStepStatusV1,
@@ -9,6 +10,7 @@ import type {
 import { z } from "zod";
 
 export const DEFAULT_OPENAI_GENERATION_MODEL = "gpt-5-mini";
+export const GENERATION_JOB_TIMEOUT_MS = 10 * 60 * 1000;
 
 export const createCourseFromUrlRequestV1Schema = z.object({
 	url: z.string().trim().min(1, "Enter a YouTube URL."),
@@ -23,6 +25,9 @@ export const processGenerationJobRequestV1Schema =
 
 export const retryGenerationJobRequestV1Schema =
 	generationJobIdRequestV1Schema satisfies z.ZodType<RetryGenerationJobRequestV1>;
+
+export const cancelGenerationJobRequestV1Schema =
+	generationJobIdRequestV1Schema satisfies z.ZodType<CancelGenerationJobRequestV1>;
 
 export const aiGeneratedChapterV1Schema = z.object({
 	title: z.string().trim().min(1, "Chapter title is required."),
@@ -274,7 +279,7 @@ function parseDescriptionChapterLine(
 	line: string,
 ): Omit<ParsedCreatorChapter, "endSeconds"> | null {
 	const match = line.match(
-		/^\s*(?:[-*]\s*)?(?:\d+[.)]\s*)?(\d{1,2}:\d{2}(?::\d{2})?)\s*(?:[-–—|:]\s*)?(.+?)\s*$/,
+		/^\s*(?:[-*]\s*)?(?:\d+[.)]\s*)?(\d{1,2}:\d{2}(?::\d{2})?)\s*(?:[-|:]\s*)?(.+?)\s*$/,
 	);
 
 	if (!match) {
@@ -318,7 +323,7 @@ export function buildGenerationTimeline(
 ): GenerationTimelineStepV1[] {
 	const transcriptReady = Boolean(job.transcriptSource);
 	const completed = job.status === "completed";
-	const failed = job.status === "failed";
+	const failed = job.status === "failed" || job.status === "cancelled";
 	const processing = job.status === "processing";
 
 	return [
@@ -367,13 +372,22 @@ export function buildGenerationTimeline(
 }
 
 export function toGenerationJobDetail(
-	input: Omit<GenerationJobDetailV1, "timeline" | "canRetry" | "canOpenCourse">,
+	input: Omit<
+		GenerationJobDetailV1,
+		"timeline" | "canRetry" | "canOpenCourse" | "canCancel"
+	>,
 ): GenerationJobDetailV1 {
+	const active =
+		input.job.status === "queued" || input.job.status === "processing";
+
 	return {
 		...input,
 		timeline: buildGenerationTimeline(input.job, input.chapterCount),
-		canRetry: input.job.status === "failed" && input.job.retryable,
+		canRetry:
+			(input.job.status === "failed" || input.job.status === "cancelled") &&
+			input.job.retryable,
 		canOpenCourse: input.job.status === "completed" && input.chapterCount > 0,
+		canCancel: active,
 	};
 }
 

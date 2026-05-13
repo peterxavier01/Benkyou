@@ -306,7 +306,8 @@ function CourseRow({
 							<Button asChild size="sm" variant={action.variant}>
 								<Link to={action.href}>{action.label}</Link>
 							</Button>
-							{item.latestGenerationJob?.status === "failed" &&
+							{(item.latestGenerationJob?.status === "failed" ||
+								item.latestGenerationJob?.status === "cancelled") &&
 							item.latestGenerationJob.retryable ? (
 								<Button
 									type="button"

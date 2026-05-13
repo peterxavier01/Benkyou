@@ -1,5 +1,5 @@
-import { randomUUID } from "node:crypto";
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
 import test from "node:test";
 
 import { config } from "dotenv";
@@ -23,6 +23,7 @@ test("repository helpers upsert learning data into DTO-compatible course data", 
 	const schema = await import("./schema");
 	const database = (await import("./drizzle")).db;
 	let courseId: string | null = null;
+	const extraCourseIds: string[] = [];
 
 	try {
 		await database.execute(sql`select 1`);
@@ -60,6 +61,67 @@ test("repository helpers upsert learning data into DTO-compatible course data", 
 	assert.equal(updatedVideo.title, "Repository Test Video Updated");
 
 	try {
+		const cancellable = await modules.createCourseFromUrlRecord({
+			ownerId: "user-a",
+			provider: "youtube",
+			providerVideoId: `repository-cancel-${randomUUID()}`,
+			sourceUrl: "https://www.youtube.com/watch?v=repository-cancel",
+			canonicalUrl: "https://www.youtube.com/watch?v=repository-cancel",
+			title: "Repository Cancel Course",
+		});
+		extraCourseIds.push(cancellable.course.id);
+
+		assert.equal(
+			await modules.cancelGenerationJob(cancellable.job.id, "other-user"),
+			null,
+		);
+		const cancelled = await modules.cancelGenerationJob(
+			cancellable.job.id,
+			"user-a",
+		);
+		assert.equal(cancelled?.job.status, "cancelled");
+		assert.equal(cancelled?.job.retryable, true);
+
+		const retry = await modules.createRetryGenerationJob(
+			cancellable.job.id,
+			"user-a",
+		);
+		assert.equal(retry?.course.id, cancellable.course.id);
+
+		const timeoutCandidate = await modules.createCourseFromUrlRecord({
+			ownerId: "user-a",
+			provider: "youtube",
+			providerVideoId: `repository-timeout-${randomUUID()}`,
+			sourceUrl: "https://www.youtube.com/watch?v=repository-timeout",
+			canonicalUrl: "https://www.youtube.com/watch?v=repository-timeout",
+			title: "Repository Timeout Course",
+		});
+		extraCourseIds.push(timeoutCandidate.course.id);
+
+		assert.ok(await modules.claimGenerationJob(timeoutCandidate.job.id));
+		const timedOut = await modules.timeoutGenerationJob(
+			timeoutCandidate.job.id,
+			10 * 60 * 1000,
+			new Date(Date.now() + 11 * 60 * 1000),
+		);
+		assert.equal(timedOut?.job.status, "failed");
+		assert.equal(timedOut?.job.retryable, true);
+		assert.equal(
+			await modules.completeGenerationJob({
+				jobId: timeoutCandidate.job.id,
+				transcriptSource: "youtube_captions",
+				chapters: [
+					{
+						title: "Too late",
+						orderIndex: 0,
+						startSeconds: 0,
+						endSeconds: null,
+					},
+				],
+			}),
+			null,
+		);
+
 		const [course] = await database
 			.insert(schema.courses)
 			.values({
@@ -158,6 +220,12 @@ test("repository helpers upsert learning data into DTO-compatible course data", 
 				.update(schema.courses)
 				.set({ deletedAt: new Date(), updatedAt: new Date() })
 				.where(eq(schema.courses.id, courseId));
+		}
+		for (const id of extraCourseIds) {
+			await database
+				.update(schema.courses)
+				.set({ deletedAt: new Date(), updatedAt: new Date() })
+				.where(eq(schema.courses.id, id));
 		}
 	}
 });
