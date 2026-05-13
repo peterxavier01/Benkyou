@@ -9,14 +9,20 @@ import { defineConfig } from "vite";
 const config = defineConfig({
 	server: {
 		port: 3000,
-		allowedHosts: ["mantis-magical-swift.ngrok-free.app"]
+		allowedHosts: ["mantis-magical-swift.ngrok-free.app"],
 	},
 	resolve: {
+		alias: {
+			tslib: "tslib/tslib.es6.mjs",
+		},
 		tsconfigPaths: true,
 	},
 	plugins: [
 		devtools(),
-		nitro({ rollupConfig: { external: [/^@sentry\//] } }),
+		nitro({
+			rollupConfig: { external: [/^@sentry\//] },
+			traceDeps: ["tslib*"],
+		}),
 		tailwindcss(),
 		tanstackStart(),
 		viteReact(),

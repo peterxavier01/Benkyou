@@ -8,7 +8,9 @@
 		"format": "turbo run format",
 		"check": "turbo run check",
 		"check-types": "turbo run check-types",
-		"dev:web": "pnpm --filter @benkyou/web dev"
+		"dev:web": "pnpm --filter @benkyou/web dev",
+		"dev:build": "pnpm --filter @benkyou/web build",
+		"dev:start": "pnpm --filter @benkyou/web start"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.4.5",

@@ -10,6 +10,7 @@ import {
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { BrandLogo } from "#components/brand-logo";
+import { GlobalErrorScreen } from "#components/global-error-screen";
 import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
 import appCss from "../styles.css?url";
 
@@ -42,6 +43,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 			},
 		],
 	}),
+	errorComponent: GlobalErrorScreen,
 	notFoundComponent: NotFoundScreen,
 	shellComponent: RootDocument,
 });
