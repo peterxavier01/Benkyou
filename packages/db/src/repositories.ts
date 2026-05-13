@@ -936,6 +936,44 @@ export async function upsertChapterNote(
 	return mapNote(row);
 }
 
+export async function getChapterNote(
+	userId: UserId,
+	chapterId: string,
+): Promise<ChapterNoteDTO | null> {
+	const [row] = await db
+		.select()
+		.from(chapterNotes)
+		.where(
+			and(
+				eq(chapterNotes.chapterId, chapterId),
+				userMatches(chapterNotes.userId, userId),
+			),
+		)
+		.limit(1);
+
+	return row ? mapNote(row) : null;
+}
+
+export async function upsertChapterNoteIfCurrent({
+	userId,
+	chapterId,
+	markdown,
+	expectedUpdatedAt,
+}: {
+	userId: UserId;
+	chapterId: string;
+	markdown: string;
+	expectedUpdatedAt: string | null;
+}): Promise<ChapterNoteDTO | null> {
+	const current = await getChapterNote(userId, chapterId);
+
+	if ((current?.updatedAt ?? null) !== expectedUpdatedAt) {
+		return null;
+	}
+
+	return upsertChapterNote(userId, chapterId, markdown);
+}
+
 export async function createBookmark(
 	input: CreateBookmarkInput,
 ): Promise<BookmarkDTO> {

@@ -350,29 +350,29 @@ Goal: make per-chapter notes useful and trustworthy.
 
 ### Notes Logic
 
-- [ ] Load notes for the selected chapter.
-- [ ] Autosave Markdown after debounce.
-- [ ] Save immediately on chapter switch.
-- [ ] Save immediately before unload where possible.
-- [ ] Show saved, saving, and failed states.
-- [ ] Prevent overwriting newer notes with stale responses.
-- [ ] Add local draft fallback if server save fails.
-- [ ] Add basic Markdown preview if included in MVP.
+- [x] Load notes for the selected chapter.
+- [x] Autosave Markdown after debounce.
+- [x] Save immediately on chapter switch.
+- [x] Save immediately before unload where possible.
+- [x] Show saved, saving, and failed states.
+- [x] Prevent overwriting newer notes with stale responses.
+- [x] Add local draft fallback if server save fails.
+- [x] Add basic Markdown preview if included in MVP.
 
 ### Notes UI
 
-- [ ] Add dense textarea/editor in Notes tab.
-- [ ] Add note status indicator.
-- [ ] Add "copy Markdown" action for save recovery.
-- [ ] Add empty note placeholder.
-- [ ] Keep editor height responsive beside the video.
-- [ ] Add monospaced option only if it does not slow the MVP.
+- [x] Add dense textarea/editor in Notes tab.
+- [x] Add note status indicator.
+- [x] Add "copy Markdown" action for save recovery.
+- [x] Add empty note placeholder.
+- [x] Keep editor height responsive beside the video.
+- [x] Skip monospaced option for MVP to keep the notes workflow focused.
 
 ### Done When
 
-- [ ] Notes follow the selected chapter.
-- [ ] Notes survive refresh and route navigation.
-- [ ] Save failures do not cause silent data loss.
+- [x] Notes follow the selected chapter.
+- [x] Notes survive refresh and route navigation.
+- [x] Save failures do not cause silent data loss.
 
 ## Phase 7: Bookmarks
 

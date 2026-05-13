@@ -239,6 +239,16 @@ export interface UpsertChapterProgressResponseV1 {
 	progress: ChapterProgressDTO;
 }
 
+export interface UpsertChapterNoteRequestV1 {
+	chapterId: string;
+	markdown: string;
+	expectedUpdatedAt: string | null;
+}
+
+export interface UpsertChapterNoteResponseV1 {
+	note: ChapterNoteDTO;
+}
+
 export interface DeleteCourseRequestV1 {
 	courseId: string;
 }

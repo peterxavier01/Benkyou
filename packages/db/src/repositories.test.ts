@@ -163,7 +163,27 @@ test("repository helpers upsert learning data into DTO-compatible course data", 
 			watchedSeconds: 55,
 			completed: true,
 		});
-		await modules.upsertChapterNote(null, firstChapter.id, "A durable note.");
+		const initialNote = await modules.upsertChapterNote(
+			null,
+			firstChapter.id,
+			"A durable note.",
+		);
+		assert.equal(
+			await modules.upsertChapterNoteIfCurrent({
+				userId: null,
+				chapterId: firstChapter.id,
+				markdown: "A stale write.",
+				expectedUpdatedAt: null,
+			}),
+			null,
+		);
+		const currentNote = await modules.upsertChapterNoteIfCurrent({
+			userId: null,
+			chapterId: firstChapter.id,
+			markdown: "A durable note.",
+			expectedUpdatedAt: initialNote.updatedAt,
+		});
+		assert.equal(currentNote?.markdown, "A durable note.");
 
 		const bookmark = await modules.createBookmark({
 			userId: null,

@@ -31,7 +31,6 @@ import {
 	TabsContent,
 	TabsList,
 	TabsTrigger,
-	Textarea,
 } from "@benkyou/ui";
 import {
 	Alert,
@@ -50,6 +49,7 @@ import {
 	upsertChapterProgress,
 	upsertCourseProgress,
 } from "../course-workspace.functions";
+import { NotesEditor } from "./notes-editor";
 import { YouTubePlayer } from "./youtube-player";
 
 interface CoursePlayerScreenProps {
@@ -167,6 +167,9 @@ function CoursePlayerScreen({
 		mutationFn: (generationJobId: string) =>
 			retryJob({ data: { generationJobId } }),
 		onSuccess: async (result) => {
+			await queryClient.invalidateQueries({
+				queryKey: ["course-player", courseId],
+			});
 			await navigate({ href: `/courses/new/${result.generationJobId}` });
 		},
 	});
@@ -421,8 +424,9 @@ function CoursePlayerScreen({
 					</PlayerTabletStack>
 
 					<LearningTabs
+						courseId={courseId}
 						chapter={selectedChapter}
-						noteMarkdown={selectedNote?.markdown ?? ""}
+						note={selectedNote}
 						bookmarks={selectedBookmarks}
 					/>
 
@@ -590,12 +594,14 @@ function MobileChapterDrawer(props: Parameters<typeof ChapterPanel>[0]) {
 }
 
 function LearningTabs({
+	courseId,
 	chapter,
-	noteMarkdown,
+	note,
 	bookmarks,
 }: {
+	courseId: string;
 	chapter: CourseChapterDTO | null;
-	noteMarkdown: string;
+	note: CoursePlayerDataDTO["notes"][number] | undefined;
 	bookmarks: BookmarkDTO[];
 }) {
 	return (
@@ -621,12 +627,7 @@ function LearningTabs({
 					</p>
 				</TabsContent>
 				<TabsContent value="notes" className="p-4">
-					<Textarea
-						readOnly
-						value={noteMarkdown}
-						placeholder="Notes editor arrives in Phase 6."
-						className="min-h-32 resize-none"
-					/>
+					<NotesEditor courseId={courseId} chapter={chapter} note={note} />
 				</TabsContent>
 				<TabsContent value="bookmarks" className="p-4">
 					{bookmarks.length === 0 ? (

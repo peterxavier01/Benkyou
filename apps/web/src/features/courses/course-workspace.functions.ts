@@ -2,6 +2,7 @@ import { getCurrentUserFromHeaders } from "@benkyou/auth/server";
 import {
 	deleteCourseRequestV1Schema,
 	getCoursePlayerDataRequestV1Schema,
+	upsertChapterNoteRequestV1Schema,
 	upsertChapterProgressRequestV1Schema,
 	upsertCourseProgressRequestV1Schema,
 } from "@benkyou/core";
@@ -10,6 +11,7 @@ import {
 	getCourseLibrary as getCourseLibraryRecords,
 	getCoursePlayerData as getCoursePlayerDataRecord,
 	softDeleteCourse,
+	upsertChapterNoteIfCurrent as upsertChapterNoteIfCurrentRecord,
 	upsertChapterProgress as upsertChapterProgressRecord,
 	upsertCourseProgress as upsertCourseProgressRecord,
 } from "@benkyou/db";
@@ -17,6 +19,7 @@ import type {
 	DeleteCourseResponseV1,
 	GetCourseLibraryResponseV1,
 	GetCoursePlayerDataResponseV1,
+	UpsertChapterNoteResponseV1,
 	UpsertChapterProgressResponseV1,
 	UpsertCourseProgressResponseV1,
 } from "@benkyou/types";
@@ -85,6 +88,34 @@ export const upsertChapterProgress = createServerFn({ method: "POST" })
 		);
 
 		return { progress };
+	});
+
+export const upsertChapterNote = createServerFn({ method: "POST" })
+	.inputValidator((input) => upsertChapterNoteRequestV1Schema.parse(input))
+	.handler(async ({ data }): Promise<UpsertChapterNoteResponseV1> => {
+		const ownerId = await getOptionalUserId();
+		const course =
+			(await getCourseByChapter(data.chapterId, ownerId)) ??
+			(ownerId ? await getCourseByChapter(data.chapterId, null) : null);
+
+		if (!course) {
+			throw new Error("Chapter was not found.");
+		}
+
+		const note = await upsertChapterNoteIfCurrentRecord({
+			userId: ownerId,
+			chapterId: data.chapterId,
+			markdown: data.markdown,
+			expectedUpdatedAt: data.expectedUpdatedAt,
+		});
+
+		if (!note) {
+			throw new Error(
+				"Notes changed in another session. Copy your draft before reloading.",
+			);
+		}
+
+		return { note };
 	});
 
 export const deleteCourse = createServerFn({ method: "POST" })
