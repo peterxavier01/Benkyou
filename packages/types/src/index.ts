@@ -100,6 +100,13 @@ export interface BookmarkDTO {
 	updatedAt: string;
 }
 
+export interface BookmarkListItemDTO {
+	bookmark: BookmarkDTO;
+	course: CourseDTO;
+	video: VideoDTO;
+	chapter: CourseChapterDTO | null;
+}
+
 export interface LearningPreferencesDTO {
 	playbackSpeed: number;
 	autoplayNextChapter: boolean;
@@ -247,6 +254,39 @@ export interface UpsertChapterNoteRequestV1 {
 
 export interface UpsertChapterNoteResponseV1 {
 	note: ChapterNoteDTO;
+}
+
+export interface CreateBookmarkRequestV1 {
+	courseId: string;
+	timestampSeconds: number;
+	title?: string | null;
+	note?: string | null;
+}
+
+export interface CreateBookmarkResponseV1 {
+	bookmark: BookmarkDTO;
+}
+
+export interface UpdateBookmarkRequestV1 {
+	bookmarkId: string;
+	title?: string | null;
+	note?: string | null;
+}
+
+export interface UpdateBookmarkResponseV1 {
+	bookmark: BookmarkDTO;
+}
+
+export interface DeleteBookmarkRequestV1 {
+	bookmarkId: string;
+}
+
+export interface DeleteBookmarkResponseV1 {
+	deleted: boolean;
+}
+
+export interface GetBookmarksResponseV1 {
+	items: BookmarkListItemDTO[];
 }
 
 export interface DeleteCourseRequestV1 {

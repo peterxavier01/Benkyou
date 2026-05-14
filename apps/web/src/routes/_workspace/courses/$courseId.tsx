@@ -7,6 +7,7 @@ import { getCoursePlayerData } from "#/features/courses/course-workspace.functio
 export const Route = createFileRoute("/_workspace/courses/$courseId")({
 	validateSearch: (search: Record<string, unknown>) => ({
 		chapter: typeof search.chapter === "string" ? search.chapter : undefined,
+		bookmark: typeof search.bookmark === "string" ? search.bookmark : undefined,
 	}),
 	loader: ({ params }) =>
 		getCoursePlayerData({ data: { courseId: params.courseId } }),
@@ -24,6 +25,7 @@ function CoursePlayerRoute() {
 		<CoursePlayerScreen
 			initialData={response.data}
 			courseId={params.courseId}
+			initialBookmarkId={search.bookmark}
 			initialChapterId={search.chapter}
 		/>
 	);

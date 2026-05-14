@@ -36,7 +36,7 @@ type WorkspacePageProps = {
 const navItems = [
 	{ icon: "home", label: "Home", to: "/" },
 	{ icon: "library", label: "Courses", to: "/courses" },
-	{ href: "/bookmarks", icon: "bookmark", label: "Bookmarks" },
+	{ icon: "bookmark", label: "Bookmarks", to: "/bookmarks" },
 	{ icon: "settings", label: "Settings", to: "/settings" },
 ] as const;
 
@@ -64,7 +64,7 @@ function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
 							<SidebarGroupContent>
 								<SidebarMenu>
 									{navItems.map((item) => {
-										const destination = "to" in item ? item.to : item.href;
+										const destination = item.to;
 										const active = isActivePath(pathname, destination);
 
 										return (
@@ -75,17 +75,10 @@ function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
 													tooltip={item.label}
 													className="h-9 text-sidebar-foreground/75 data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground data-active:shadow-[inset_0_0_0_1px_var(--sidebar-border)]"
 												>
-													{"to" in item ? (
-														<Link to={item.to}>
-															<HugeIcon name={item.icon} className="size-4" />
-															<span>{item.label}</span>
-														</Link>
-													) : (
-														<a href={item.href}>
-															<HugeIcon name={item.icon} className="size-4" />
-															<span>{item.label}</span>
-														</a>
-													)}
+													<Link to={item.to}>
+														<HugeIcon name={item.icon} className="size-4" />
+														<span>{item.label}</span>
+													</Link>
 												</SidebarMenuButton>
 											</SidebarMenuItem>
 										);

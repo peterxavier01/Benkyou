@@ -2,6 +2,7 @@ import {
 	calculateProgressPercent,
 	DEFAULT_CHAPTER_COMPLETION_THRESHOLD,
 	DEFAULT_PROGRESS_SAVE_INTERVAL_MS,
+	formatTimestamp,
 	isChapterCompleteByWatchTime,
 } from "@benkyou/core";
 import type {
@@ -45,22 +46,28 @@ import { WorkspacePage } from "#components/workspace-layout";
 import BetterAuthHeader from "../../../integrations/better-auth/header-user";
 import { retryGenerationJob } from "../../course-generation/course-generation.functions";
 import {
+	createBookmark,
+	deleteBookmark,
 	getCoursePlayerData,
+	updateBookmark,
 	upsertChapterProgress,
 	upsertCourseProgress,
 } from "../course-workspace.functions";
+import { BookmarkDialog, type BookmarkDialogValues } from "./bookmark-dialog";
 import { NotesEditor } from "./notes-editor";
 import { YouTubePlayer } from "./youtube-player";
 
 interface CoursePlayerScreenProps {
 	initialData: CoursePlayerDataDTO;
 	courseId: string;
+	initialBookmarkId?: string;
 	initialChapterId?: string;
 }
 
 function CoursePlayerScreen({
 	initialData,
 	courseId,
+	initialBookmarkId,
 	initialChapterId,
 }: CoursePlayerScreenProps) {
 	const navigate = useNavigate();
@@ -68,17 +75,32 @@ function CoursePlayerScreen({
 	const getPlayerData = useServerFn(getCoursePlayerData);
 	const saveCourseProgress = useServerFn(upsertCourseProgress);
 	const saveChapterProgress = useServerFn(upsertChapterProgress);
+	const createBookmarkFn = useServerFn(createBookmark);
+	const updateBookmarkFn = useServerFn(updateBookmark);
+	const deleteBookmarkFn = useServerFn(deleteBookmark);
 	const retryJob = useServerFn(retryGenerationJob);
+	const initialBookmark = useMemo(
+		() =>
+			initialBookmarkId
+				? (initialData.bookmarks.find(
+						(bookmark) => bookmark.id === initialBookmarkId,
+					) ?? null)
+				: null,
+		[initialBookmarkId, initialData.bookmarks],
+	);
 	const initialSelectedChapterId = useMemo(
-		() => resolveInitialChapterId(initialData, initialChapterId),
-		[initialData, initialChapterId],
+		() =>
+			resolveInitialChapterId(initialData, initialChapterId, initialBookmark),
+		[initialData, initialBookmark, initialChapterId],
 	);
 	const [selectedChapterId, setSelectedChapterId] = useState(
 		initialSelectedChapterId,
 	);
 	const [seekToSeconds, setSeekToSeconds] = useState<number | null>(null);
 	const [currentSeconds, setCurrentSeconds] = useState(
-		initialData.progress?.resumeSeconds ?? 0,
+		initialBookmark?.timestampSeconds ??
+			initialData.progress?.resumeSeconds ??
+			0,
 	);
 	const [durationSeconds, setDurationSeconds] = useState(
 		initialData.video.durationSeconds ?? 0,
@@ -90,6 +112,10 @@ function CoursePlayerScreen({
 		toCompletedMap(initialData.chapterProgress),
 	);
 	const [saveError, setSaveError] = useState<string | null>(null);
+	const [bookmarkDialogOpen, setBookmarkDialogOpen] = useState(false);
+	const [editingBookmark, setEditingBookmark] = useState<BookmarkDTO | null>(
+		null,
+	);
 	const latestProgressRef = useRef({
 		currentSeconds,
 		durationSeconds,
@@ -161,6 +187,90 @@ function CoursePlayerScreen({
 			setSaveError(null);
 		},
 		onError: () => setSaveError("Chapter progress could not be saved."),
+	});
+
+	const createBookmarkMutation = useMutation({
+		mutationFn: (input: BookmarkDialogValues) =>
+			createBookmarkFn({
+				data: {
+					courseId,
+					timestampSeconds: currentSeconds,
+					title: input.title,
+					note: input.note,
+				},
+			}),
+		onSuccess: async (result) => {
+			queryClient.setQueryData<CoursePlayerDataDTO>(
+				["course-player", courseId],
+				(current) =>
+					current
+						? {
+								...current,
+								bookmarks: mergeBookmark(current.bookmarks, result.bookmark),
+							}
+						: current,
+			);
+			await queryClient.invalidateQueries({ queryKey: ["bookmarks"] });
+			setBookmarkDialogOpen(false);
+			setEditingBookmark(null);
+			setSaveError(null);
+		},
+		onError: () => setSaveError("Bookmark could not be saved."),
+	});
+
+	const updateBookmarkMutation = useMutation({
+		mutationFn: (input: BookmarkDialogValues & { bookmarkId: string }) =>
+			updateBookmarkFn({
+				data: {
+					bookmarkId: input.bookmarkId,
+					title: input.title,
+					note: input.note,
+				},
+			}),
+		onSuccess: async (result) => {
+			queryClient.setQueryData<CoursePlayerDataDTO>(
+				["course-player", courseId],
+				(current) =>
+					current
+						? {
+								...current,
+								bookmarks: mergeBookmark(current.bookmarks, result.bookmark),
+							}
+						: current,
+			);
+			await queryClient.invalidateQueries({ queryKey: ["bookmarks"] });
+			setBookmarkDialogOpen(false);
+			setEditingBookmark(null);
+			setSaveError(null);
+		},
+		onError: () => setSaveError("Bookmark could not be updated."),
+	});
+
+	const deleteBookmarkMutation = useMutation({
+		mutationFn: (bookmarkId: string) =>
+			deleteBookmarkFn({ data: { bookmarkId } }),
+		onSuccess: async (result, bookmarkId) => {
+			if (!result.deleted) {
+				setSaveError("Bookmark could not be deleted.");
+				return;
+			}
+
+			queryClient.setQueryData<CoursePlayerDataDTO>(
+				["course-player", courseId],
+				(current) =>
+					current
+						? {
+								...current,
+								bookmarks: current.bookmarks.filter(
+									(bookmark) => bookmark.id !== bookmarkId,
+								),
+							}
+						: current,
+			);
+			await queryClient.invalidateQueries({ queryKey: ["bookmarks"] });
+			setSaveError(null);
+		},
+		onError: () => setSaveError("Bookmark could not be deleted."),
 	});
 
 	const retryMutation = useMutation({
@@ -236,11 +346,37 @@ function CoursePlayerScreen({
 			void navigate({
 				to: "/courses/$courseId",
 				params: { courseId },
-				search: { chapter: chapter.id },
+				search: { chapter: chapter.id, bookmark: undefined },
 				replace: true,
 			});
 		},
 		[courseId, navigate],
+	);
+
+	const jumpToBookmark = useCallback(
+		(bookmark: BookmarkDTO) => {
+			const chapter =
+				data.chapters.find(
+					(candidate) => candidate.id === bookmark.chapterId,
+				) ?? findChapterAtTime(data.chapters, bookmark.timestampSeconds);
+
+			if (chapter) {
+				setSelectedChapterId(chapter.id);
+				void navigate({
+					to: "/courses/$courseId",
+					params: { courseId },
+					search: {
+						chapter: chapter.id,
+						bookmark: bookmark.id,
+					},
+					replace: true,
+				});
+			}
+
+			setCurrentSeconds(bookmark.timestampSeconds);
+			setSeekToSeconds(bookmark.timestampSeconds);
+		},
+		[courseId, data.chapters, navigate],
 	);
 
 	const handleTimeUpdate = useCallback(
@@ -256,7 +392,7 @@ function CoursePlayerScreen({
 				void navigate({
 					to: "/courses/$courseId",
 					params: { courseId },
-					search: { chapter: activeChapter.id },
+					search: { chapter: activeChapter.id, bookmark: undefined },
 					replace: true,
 				});
 			}
@@ -312,6 +448,28 @@ function CoursePlayerScreen({
 			watchedSeconds: watchedByChapter[chapter.id] ?? 0,
 			completed: nextCompleted,
 		});
+	};
+
+	const openCreateBookmarkDialog = () => {
+		setEditingBookmark(null);
+		setBookmarkDialogOpen(true);
+	};
+
+	const openEditBookmarkDialog = (bookmark: BookmarkDTO) => {
+		setEditingBookmark(bookmark);
+		setBookmarkDialogOpen(true);
+	};
+
+	const submitBookmarkDialog = async (values: BookmarkDialogValues) => {
+		if (editingBookmark) {
+			await updateBookmarkMutation.mutateAsync({
+				bookmarkId: editingBookmark.id,
+				...values,
+			});
+			return;
+		}
+
+		await createBookmarkMutation.mutateAsync(values);
 	};
 
 	if (data.chapters.length === 0) {
@@ -383,6 +541,20 @@ function CoursePlayerScreen({
 								onToggleComplete={toggleChapterComplete}
 							/>
 						</div>
+						<div className="mt-3 flex flex-wrap items-center gap-2">
+							<Button
+								type="button"
+								size="sm"
+								onClick={openCreateBookmarkDialog}
+							>
+								<HugeIcon name="bookmark" className="size-4" />
+								Add bookmark
+							</Button>
+							<span className="text-muted-foreground text-xs">
+								{formatTimestamp(currentSeconds)}
+								{selectedChapter ? ` in ${selectedChapter.title}` : ""}
+							</span>
+						</div>
 						<div className="mt-3">
 							<Progress
 								value={calculateProgressPercent(
@@ -396,7 +568,7 @@ function CoursePlayerScreen({
 					<PlayerVideoFrame>
 						<YouTubePlayer
 							providerVideoId={data.video.providerVideoId}
-							initialSeconds={data.progress?.resumeSeconds ?? 0}
+							initialSeconds={currentSeconds}
 							seekToSeconds={seekToSeconds}
 							onReady={(duration) => {
 								if (duration > 0) {
@@ -428,6 +600,12 @@ function CoursePlayerScreen({
 						chapter={selectedChapter}
 						note={selectedNote}
 						bookmarks={selectedBookmarks}
+						deletingBookmark={deleteBookmarkMutation.isPending}
+						onDeleteBookmark={(bookmark) =>
+							deleteBookmarkMutation.mutate(bookmark.id)
+						}
+						onEditBookmark={openEditBookmarkDialog}
+						onJumpToBookmark={jumpToBookmark}
 					/>
 
 					{saveError ? (
@@ -450,6 +628,30 @@ function CoursePlayerScreen({
 					/>
 				</PlayerAside>
 			</PlayerWorkspace>
+			<BookmarkDialog
+				bookmark={editingBookmark}
+				chapter={
+					editingBookmark
+						? (data.chapters.find(
+								(chapter) => chapter.id === editingBookmark.chapterId,
+							) ?? null)
+						: selectedChapter
+				}
+				open={bookmarkDialogOpen}
+				submitting={
+					createBookmarkMutation.isPending || updateBookmarkMutation.isPending
+				}
+				timestampSeconds={
+					editingBookmark?.timestampSeconds ?? Math.floor(currentSeconds)
+				}
+				onOpenChange={(open) => {
+					setBookmarkDialogOpen(open);
+					if (!open) {
+						setEditingBookmark(null);
+					}
+				}}
+				onSubmit={submitBookmarkDialog}
+			/>
 		</WorkspacePage>
 	);
 }
@@ -598,11 +800,19 @@ function LearningTabs({
 	chapter,
 	note,
 	bookmarks,
+	deletingBookmark,
+	onDeleteBookmark,
+	onEditBookmark,
+	onJumpToBookmark,
 }: {
 	courseId: string;
 	chapter: CourseChapterDTO | null;
 	note: CoursePlayerDataDTO["notes"][number] | undefined;
 	bookmarks: BookmarkDTO[];
+	deletingBookmark: boolean;
+	onDeleteBookmark: (bookmark: BookmarkDTO) => void;
+	onEditBookmark: (bookmark: BookmarkDTO) => void;
+	onJumpToBookmark: (bookmark: BookmarkDTO) => void;
 }) {
 	return (
 		<ContentPanel className="min-w-0 overflow-hidden p-0">
@@ -641,18 +851,53 @@ function LearningTabs({
 									key={bookmark.id}
 									className="rounded-md border border-border p-2 text-sm"
 								>
-									<p className="font-medium">
-										{bookmark.title ??
-											`Bookmark at ${formatTimestamp(bookmark.timestampSeconds)}`}
-									</p>
-									<p className="text-muted-foreground text-xs">
-										{formatTimestamp(bookmark.timestampSeconds)}
-									</p>
-									{bookmark.note ? (
-										<p className="mt-1 text-muted-foreground">
-											{bookmark.note}
-										</p>
-									) : null}
+									<div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+										<div className="min-w-0">
+											<p className="font-medium">
+												{bookmark.title ??
+													`Bookmark at ${formatTimestamp(
+														bookmark.timestampSeconds,
+													)}`}
+											</p>
+											<p className="text-muted-foreground text-xs">
+												{formatTimestamp(bookmark.timestampSeconds)}
+											</p>
+											{bookmark.note ? (
+												<p className="mt-1 text-muted-foreground">
+													{bookmark.note}
+												</p>
+											) : null}
+										</div>
+										<div className="flex shrink-0 flex-wrap gap-1">
+											<Button
+												type="button"
+												size="xs"
+												variant="outline"
+												onClick={() => onJumpToBookmark(bookmark)}
+											>
+												Jump
+											</Button>
+											<Button
+												type="button"
+												size="icon-xs"
+												variant="ghost"
+												onClick={() => onEditBookmark(bookmark)}
+											>
+												<HugeIcon name="edit" className="size-4" />
+												<span className="sr-only">Edit bookmark</span>
+											</Button>
+											<Button
+												type="button"
+												size="icon-xs"
+												variant="ghost"
+												disabled={deletingBookmark}
+												onClick={() => onDeleteBookmark(bookmark)}
+											>
+												<HugeIcon name="delete" className="size-4" />
+												<span className="sr-only">Delete bookmark</span>
+											</Button>
+										</div>
+									</div>
 								</li>
 							))}
 						</ul>
@@ -733,9 +978,31 @@ function NoChaptersScreen({
 function resolveInitialChapterId(
 	data: CoursePlayerDataDTO,
 	chapterId: string | undefined,
+	bookmark: BookmarkDTO | null,
 ) {
 	if (chapterId && data.chapters.some((chapter) => chapter.id === chapterId)) {
 		return chapterId;
+	}
+
+	if (bookmark?.chapterId) {
+		const bookmarkedChapter = data.chapters.find(
+			(chapter) => chapter.id === bookmark.chapterId,
+		);
+
+		if (bookmarkedChapter) {
+			return bookmarkedChapter.id;
+		}
+	}
+
+	if (bookmark) {
+		const bookmarkedChapter = findChapterAtTime(
+			data.chapters,
+			bookmark.timestampSeconds,
+		);
+
+		if (bookmarkedChapter) {
+			return bookmarkedChapter.id;
+		}
 	}
 
 	const resumeSeconds = data.progress?.resumeSeconds ?? 0;
@@ -797,18 +1064,14 @@ function mergeChapterProgress(
 	return current.map((item, index) => (index === existingIndex ? next : item));
 }
 
-function formatTimestamp(totalSeconds: number) {
-	const hours = Math.floor(totalSeconds / 3600);
-	const minutes = Math.floor((totalSeconds % 3600) / 60);
-	const seconds = Math.floor(totalSeconds % 60);
+function mergeBookmark(current: BookmarkDTO[], next: BookmarkDTO) {
+	const existingIndex = current.findIndex((item) => item.id === next.id);
+	const nextItems =
+		existingIndex === -1
+			? [...current, next]
+			: current.map((item, index) => (index === existingIndex ? next : item));
 
-	if (hours > 0) {
-		return `${hours}:${minutes.toString().padStart(2, "0")}:${seconds
-			.toString()
-			.padStart(2, "0")}`;
-	}
-
-	return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+	return [...nextItems].sort((a, b) => a.timestampSeconds - b.timestampSeconds);
 }
 
 export { CoursePlayerScreen };

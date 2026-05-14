@@ -380,30 +380,30 @@ Goal: let learners capture and revisit important timestamps.
 
 ### Bookmark Logic
 
-- [ ] Create bookmark at current playback timestamp.
-- [ ] Infer chapter id from timestamp when possible.
-- [ ] Add optional bookmark title and note.
-- [ ] Edit bookmark title/note.
-- [ ] Delete bookmark.
-- [ ] Jump to bookmark timestamp from player.
-- [ ] Load all bookmarks for a course.
-- [ ] Load all bookmarks across courses for the library view.
+- [x] Create bookmark at current playback timestamp.
+- [x] Infer chapter id from timestamp when possible.
+- [x] Add optional bookmark title and note.
+- [x] Edit bookmark title/note.
+- [x] Delete bookmark.
+- [x] Jump to bookmark timestamp from player.
+- [x] Load all bookmarks for a course.
+- [x] Load all bookmarks across courses for the library view.
 
 ### Bookmark UI
 
-- [ ] Add "Add bookmark" action near player controls.
-- [ ] Add add/edit bookmark modal.
-- [ ] Add Bookmarks tab in course player.
-- [ ] Show timestamp, title, note, chapter, and jump action.
-- [ ] Build `/bookmarks`.
-- [ ] Add bookmarks search.
-- [ ] Add course filter.
-- [ ] Add empty and no-results states.
+- [x] Add "Add bookmark" action near player controls.
+- [x] Add add/edit bookmark modal.
+- [x] Add Bookmarks tab in course player.
+- [x] Show timestamp, title, note, chapter, and jump action.
+- [x] Build `/bookmarks`.
+- [x] Add bookmarks search.
+- [x] Add course filter.
+- [x] Add empty and no-results states.
 
 ### Done When
 
-- [ ] A learner can save a moment and return to it later.
-- [ ] Bookmarks work both inside a course and from the global library.
+- [x] A learner can save a moment and return to it later.
+- [x] Bookmarks work both inside a course and from the global library.
 
 ## Phase 8: Course Management & Settings
 
@@ -568,7 +568,7 @@ Goal: verify the MVP behaves like a serious learning tool before release.
 - [ ] `/courses/:courseId/manage` - course metadata and chapter management.
 - [ ] `/courses/:courseId/chapters/:chapterId` - chapter deep link.
 - [ ] `/courses/:courseId/bookmarks/:bookmarkId` - bookmark deep link.
-- [ ] `/bookmarks` - global bookmarks.
+- [x] `/bookmarks` - global bookmarks.
 - [ ] `/settings` - account, preferences, export.
 - [ ] `/about` - mission and project context.
 - [ ] `/self-hosting` - self-hosting guide.
@@ -597,7 +597,7 @@ Goal: verify the MVP behaves like a serious learning tool before release.
 - [ ] Notes editor.
 - [x] Summary panel.
 - [x] Bookmark list.
-- [ ] Add/edit bookmark dialog.
+- [x] Add/edit bookmark dialog.
 - [x] Confirm dialog.
 - [x] Toast or inline alert.
 - [ ] Settings form controls.
@@ -620,7 +620,7 @@ Goal: verify the MVP behaves like a serious learning tool before release.
 - [x] `createBookmark`.
 - [x] `updateBookmark`.
 - [x] `deleteBookmark`.
-- [ ] `getBookmarks`.
+- [x] `getBookmarks`.
 - [ ] `updateLearningPreferences`.
 - [ ] `exportNotes` if included.
 
@@ -635,7 +635,7 @@ Goal: verify the MVP behaves like a serious learning tool before release.
 - [ ] Refresh and resume.
 - [ ] Write chapter notes.
 - [ ] Refresh and recover notes.
-- [ ] Add, edit, jump to, and delete bookmark.
+- [x] Add, edit, jump to, and delete bookmark.
 - [ ] Find course in library.
 - [ ] Manage course title and chapter title.
 - [ ] Delete course.

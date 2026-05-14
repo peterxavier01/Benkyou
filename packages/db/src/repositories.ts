@@ -1,5 +1,6 @@
 import type {
 	BookmarkDTO,
+	BookmarkListItemDTO,
 	ChapterNoteDTO,
 	ChapterProgressDTO,
 	CourseChapterDTO,
@@ -11,7 +12,7 @@ import type {
 	VideoDTO,
 	VideoProvider,
 } from "@benkyou/types";
-import { and, count, desc, eq, inArray, isNull } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNull, or } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
 
 import { db } from "./drizzle";
@@ -120,6 +121,12 @@ function toIso(value: Date | string | null): string | null {
 
 function userMatches(column: PgColumn, userId: UserId) {
 	return userId === null ? isNull(column) : eq(column, userId);
+}
+
+function accessibleCourseOwner(column: PgColumn, userId: UserId) {
+	return userId === null
+		? isNull(column)
+		: or(eq(column, userId), isNull(column));
 }
 
 function mapVideo(row: typeof videos.$inferSelect): VideoDTO {
@@ -526,6 +533,38 @@ export async function getCourseLibrary(
 			};
 		}),
 	);
+}
+
+export async function getBookmarks(
+	userId: UserId,
+): Promise<BookmarkListItemDTO[]> {
+	const rows = await db
+		.select({
+			bookmark: bookmarks,
+			course: courses,
+			video: videos,
+			chapter: courseChapters,
+		})
+		.from(bookmarks)
+		.innerJoin(courses, eq(bookmarks.courseId, courses.id))
+		.innerJoin(videos, eq(courses.videoId, videos.id))
+		.leftJoin(courseChapters, eq(bookmarks.chapterId, courseChapters.id))
+		.where(
+			and(
+				userMatches(bookmarks.userId, userId),
+				accessibleCourseOwner(courses.ownerId, userId),
+				isNull(bookmarks.deletedAt),
+				isNull(courses.deletedAt),
+			),
+		)
+		.orderBy(desc(bookmarks.updatedAt));
+
+	return rows.map((row) => ({
+		bookmark: mapBookmark(row.bookmark),
+		course: mapCourse(row.course),
+		video: mapVideo(row.video),
+		chapter: row.chapter ? mapChapter(row.chapter) : null,
+	}));
 }
 
 export async function getGenerationJob(

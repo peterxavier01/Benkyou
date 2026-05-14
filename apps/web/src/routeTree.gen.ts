@@ -13,6 +13,7 @@ import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as WorkspaceRouteImport } from './routes/_workspace'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as WorkspaceSettingsRouteImport } from './routes/_workspace/settings'
+import { Route as WorkspaceBookmarksRouteImport } from './routes/_workspace/bookmarks'
 import { Route as WorkspaceCoursesIndexRouteImport } from './routes/_workspace/courses/index'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as WorkspaceCoursesCourseIdRouteImport } from './routes/_workspace/courses/$courseId'
@@ -35,6 +36,11 @@ const IndexRoute = IndexRouteImport.update({
 const WorkspaceSettingsRoute = WorkspaceSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => WorkspaceRoute,
+} as any)
+const WorkspaceBookmarksRoute = WorkspaceBookmarksRouteImport.update({
+  id: '/bookmarks',
+  path: '/bookmarks',
   getParentRoute: () => WorkspaceRoute,
 } as any)
 const WorkspaceCoursesIndexRoute = WorkspaceCoursesIndexRouteImport.update({
@@ -63,6 +69,7 @@ const WorkspaceCoursesNewJobIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/sign-in': typeof SignInRoute
+  '/bookmarks': typeof WorkspaceBookmarksRoute
   '/settings': typeof WorkspaceSettingsRoute
   '/courses/$courseId': typeof WorkspaceCoursesCourseIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -72,6 +79,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/sign-in': typeof SignInRoute
+  '/bookmarks': typeof WorkspaceBookmarksRoute
   '/settings': typeof WorkspaceSettingsRoute
   '/courses/$courseId': typeof WorkspaceCoursesCourseIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -83,6 +91,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_workspace': typeof WorkspaceRouteWithChildren
   '/sign-in': typeof SignInRoute
+  '/_workspace/bookmarks': typeof WorkspaceBookmarksRoute
   '/_workspace/settings': typeof WorkspaceSettingsRoute
   '/_workspace/courses/$courseId': typeof WorkspaceCoursesCourseIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -94,6 +103,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/sign-in'
+    | '/bookmarks'
     | '/settings'
     | '/courses/$courseId'
     | '/api/auth/$'
@@ -103,6 +113,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/sign-in'
+    | '/bookmarks'
     | '/settings'
     | '/courses/$courseId'
     | '/api/auth/$'
@@ -113,6 +124,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_workspace'
     | '/sign-in'
+    | '/_workspace/bookmarks'
     | '/_workspace/settings'
     | '/_workspace/courses/$courseId'
     | '/api/auth/$'
@@ -157,6 +169,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkspaceSettingsRouteImport
       parentRoute: typeof WorkspaceRoute
     }
+    '/_workspace/bookmarks': {
+      id: '/_workspace/bookmarks'
+      path: '/bookmarks'
+      fullPath: '/bookmarks'
+      preLoaderRoute: typeof WorkspaceBookmarksRouteImport
+      parentRoute: typeof WorkspaceRoute
+    }
     '/_workspace/courses/': {
       id: '/_workspace/courses/'
       path: '/courses'
@@ -189,6 +208,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface WorkspaceRouteChildren {
+  WorkspaceBookmarksRoute: typeof WorkspaceBookmarksRoute
   WorkspaceSettingsRoute: typeof WorkspaceSettingsRoute
   WorkspaceCoursesCourseIdRoute: typeof WorkspaceCoursesCourseIdRoute
   WorkspaceCoursesIndexRoute: typeof WorkspaceCoursesIndexRoute
@@ -196,6 +216,7 @@ interface WorkspaceRouteChildren {
 }
 
 const WorkspaceRouteChildren: WorkspaceRouteChildren = {
+  WorkspaceBookmarksRoute: WorkspaceBookmarksRoute,
   WorkspaceSettingsRoute: WorkspaceSettingsRoute,
   WorkspaceCoursesCourseIdRoute: WorkspaceCoursesCourseIdRoute,
   WorkspaceCoursesIndexRoute: WorkspaceCoursesIndexRoute,

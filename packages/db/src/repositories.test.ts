@@ -212,10 +212,49 @@ test("repository helpers upsert learning data into DTO-compatible course data", 
 		assert.equal(data?.notes[0]?.markdown, "A durable note.");
 		assert.equal(data?.bookmarks[0]?.title, "Updated timestamp");
 
+		const bookmarks = await modules.getBookmarks(null);
+		const listedBookmark = bookmarks.find(
+			(item) => item.bookmark.id === bookmark.id,
+		);
+		assert.equal(listedBookmark?.course.id, course.id);
+		assert.equal(listedBookmark?.video.id, video.id);
+		assert.equal(listedBookmark?.chapter?.id, firstChapter.id);
+
+		assert.equal(
+			(await modules.getBookmarks("other-user")).some(
+				(item) => item.bookmark.id === bookmark.id,
+			),
+			false,
+		);
+
+		const signedInSampleBookmark = await modules.createBookmark({
+			userId: "user-a",
+			courseId: course.id,
+			chapterId: secondChapter.id,
+			timestampSeconds: 70,
+			title: "Signed in sample timestamp",
+		});
+		assert.equal(
+			(await modules.getBookmarks("user-a")).some(
+				(item) => item.bookmark.id === signedInSampleBookmark.id,
+			),
+			true,
+		);
+		assert.equal(
+			await modules.deleteBookmark(signedInSampleBookmark.id, "user-a"),
+			true,
+		);
+
 		assert.equal(await modules.deleteBookmark(bookmark.id, null), true);
 
 		const dataAfterDelete = await modules.getCoursePlayerData(course.id, null);
 		assert.equal(dataAfterDelete?.bookmarks.length, 0);
+		assert.equal(
+			(await modules.getBookmarks(null)).some(
+				(item) => item.bookmark.id === bookmark.id,
+			),
+			false,
+		);
 
 		const library = await modules.getCourseLibrary(null);
 		assert.equal(

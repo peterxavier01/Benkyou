@@ -165,7 +165,7 @@ function GenerationStatusScreen({
 									<Link
 										to="/courses/$courseId"
 										params={{ courseId: detail.course.id }}
-										search={{ chapter: undefined }}
+										search={{ chapter: undefined, bookmark: undefined }}
 									>
 										Open course
 										<HugeIcon name="arrowRight" className="size-4" />
