@@ -18,6 +18,7 @@ import { Route as WorkspaceCoursesIndexRouteImport } from './routes/_workspace/c
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as WorkspaceCoursesCourseIdRouteImport } from './routes/_workspace/courses/$courseId'
 import { Route as WorkspaceCoursesNewJobIdRouteImport } from './routes/_workspace/courses/new/$jobId'
+import { Route as WorkspaceCoursesCourseIdManageRouteImport } from './routes/_workspace/courses/$courseId_.manage'
 
 const SignInRoute = SignInRouteImport.update({
   id: '/sign-in',
@@ -65,6 +66,12 @@ const WorkspaceCoursesNewJobIdRoute =
     path: '/courses/new/$jobId',
     getParentRoute: () => WorkspaceRoute,
   } as any)
+const WorkspaceCoursesCourseIdManageRoute =
+  WorkspaceCoursesCourseIdManageRouteImport.update({
+    id: '/courses/$courseId_/manage',
+    path: '/courses/$courseId/manage',
+    getParentRoute: () => WorkspaceRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -74,6 +81,7 @@ export interface FileRoutesByFullPath {
   '/courses/$courseId': typeof WorkspaceCoursesCourseIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/courses/': typeof WorkspaceCoursesIndexRoute
+  '/courses/$courseId/manage': typeof WorkspaceCoursesCourseIdManageRoute
   '/courses/new/$jobId': typeof WorkspaceCoursesNewJobIdRoute
 }
 export interface FileRoutesByTo {
@@ -84,6 +92,7 @@ export interface FileRoutesByTo {
   '/courses/$courseId': typeof WorkspaceCoursesCourseIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/courses': typeof WorkspaceCoursesIndexRoute
+  '/courses/$courseId/manage': typeof WorkspaceCoursesCourseIdManageRoute
   '/courses/new/$jobId': typeof WorkspaceCoursesNewJobIdRoute
 }
 export interface FileRoutesById {
@@ -96,6 +105,7 @@ export interface FileRoutesById {
   '/_workspace/courses/$courseId': typeof WorkspaceCoursesCourseIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/_workspace/courses/': typeof WorkspaceCoursesIndexRoute
+  '/_workspace/courses/$courseId_/manage': typeof WorkspaceCoursesCourseIdManageRoute
   '/_workspace/courses/new/$jobId': typeof WorkspaceCoursesNewJobIdRoute
 }
 export interface FileRouteTypes {
@@ -108,6 +118,7 @@ export interface FileRouteTypes {
     | '/courses/$courseId'
     | '/api/auth/$'
     | '/courses/'
+    | '/courses/$courseId/manage'
     | '/courses/new/$jobId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -118,6 +129,7 @@ export interface FileRouteTypes {
     | '/courses/$courseId'
     | '/api/auth/$'
     | '/courses'
+    | '/courses/$courseId/manage'
     | '/courses/new/$jobId'
   id:
     | '__root__'
@@ -129,6 +141,7 @@ export interface FileRouteTypes {
     | '/_workspace/courses/$courseId'
     | '/api/auth/$'
     | '/_workspace/courses/'
+    | '/_workspace/courses/$courseId_/manage'
     | '/_workspace/courses/new/$jobId'
   fileRoutesById: FileRoutesById
 }
@@ -204,6 +217,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkspaceCoursesNewJobIdRouteImport
       parentRoute: typeof WorkspaceRoute
     }
+    '/_workspace/courses/$courseId_/manage': {
+      id: '/_workspace/courses/$courseId_/manage'
+      path: '/courses/$courseId/manage'
+      fullPath: '/courses/$courseId/manage'
+      preLoaderRoute: typeof WorkspaceCoursesCourseIdManageRouteImport
+      parentRoute: typeof WorkspaceRoute
+    }
   }
 }
 
@@ -212,6 +232,7 @@ interface WorkspaceRouteChildren {
   WorkspaceSettingsRoute: typeof WorkspaceSettingsRoute
   WorkspaceCoursesCourseIdRoute: typeof WorkspaceCoursesCourseIdRoute
   WorkspaceCoursesIndexRoute: typeof WorkspaceCoursesIndexRoute
+  WorkspaceCoursesCourseIdManageRoute: typeof WorkspaceCoursesCourseIdManageRoute
   WorkspaceCoursesNewJobIdRoute: typeof WorkspaceCoursesNewJobIdRoute
 }
 
@@ -220,6 +241,7 @@ const WorkspaceRouteChildren: WorkspaceRouteChildren = {
   WorkspaceSettingsRoute: WorkspaceSettingsRoute,
   WorkspaceCoursesCourseIdRoute: WorkspaceCoursesCourseIdRoute,
   WorkspaceCoursesIndexRoute: WorkspaceCoursesIndexRoute,
+  WorkspaceCoursesCourseIdManageRoute: WorkspaceCoursesCourseIdManageRoute,
   WorkspaceCoursesNewJobIdRoute: WorkspaceCoursesNewJobIdRoute,
 }
 

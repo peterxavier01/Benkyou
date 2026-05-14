@@ -2,6 +2,7 @@ import type {
 	CreateBookmarkRequestV1,
 	DeleteBookmarkRequestV1,
 	DeleteCourseRequestV1,
+	ExportCourseMarkdownRequestV1,
 	GetCoursePlayerDataRequestV1,
 	UpdateBookmarkRequestV1,
 	UpsertChapterNoteRequestV1,
@@ -24,6 +25,9 @@ export const getCoursePlayerDataRequestV1Schema =
 
 export const deleteCourseRequestV1Schema =
 	courseIdRequestV1Schema satisfies z.ZodType<DeleteCourseRequestV1>;
+
+export const exportCourseMarkdownRequestV1Schema =
+	courseIdRequestV1Schema satisfies z.ZodType<ExportCourseMarkdownRequestV1>;
 
 export const upsertCourseProgressRequestV1Schema = z.object({
 	courseId: z.uuid("Course id is invalid."),

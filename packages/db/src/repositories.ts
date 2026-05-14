@@ -7,8 +7,10 @@ import type {
 	CourseDTO,
 	CourseGenerationJobDTO,
 	CourseLibraryItemDTO,
+	CourseManagementDataDTO,
 	CoursePlayerDataDTO,
 	CourseProgressDTO,
+	LearningPreferencesDTO,
 	VideoDTO,
 	VideoProvider,
 } from "@benkyou/types";
@@ -24,10 +26,12 @@ import {
 	courseGenerationJobs,
 	courseProgress,
 	courses,
+	learningPreferences,
 	videos,
 } from "./schema";
 
 type UserId = string | null;
+type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 export interface VideoGenerationContextDTO extends VideoDTO {
 	description: string | null;
@@ -84,6 +88,7 @@ export interface CompleteGenerationJobInput {
 	description?: string | null;
 	transcriptSource: "youtube_captions" | "manual" | "sample";
 	transcriptText?: string | null;
+	durationSeconds?: number | null;
 	rawOutput?: Record<string, unknown> | null;
 	chapters: GeneratedChapterRecordInput[];
 }
@@ -109,6 +114,18 @@ export interface UpdateBookmarkInput {
 	note?: string | null;
 	chapterId?: string | null;
 	timestampSeconds?: number;
+}
+
+export interface UpdateCourseMetadataInput {
+	title: string;
+	description?: string | null;
+}
+
+export interface UpdateChapterInput {
+	title: string;
+	summary?: string | null;
+	startSeconds: number;
+	endSeconds?: number | null;
 }
 
 function toIso(value: Date | string | null): string | null {
@@ -247,6 +264,16 @@ function mapBookmark(row: typeof bookmarks.$inferSelect): BookmarkDTO {
 		note: row.note,
 		createdAt: toIso(row.createdAt) ?? "",
 		updatedAt: toIso(row.updatedAt) ?? "",
+	};
+}
+
+function mapLearningPreferences(
+	row: typeof learningPreferences.$inferSelect,
+): LearningPreferencesDTO {
+	return {
+		playbackSpeed: row.playbackSpeed,
+		manualCompletionOnly: row.manualCompletionOnly,
+		autoplayNextChapter: row.autoplayNextChapter,
 	};
 }
 
@@ -467,6 +494,103 @@ export async function getCoursePlayerData(
 			? mapGenerationJob(latestGenerationJobRow)
 			: null,
 	};
+}
+
+export async function getCourseManagementData(
+	courseId: string,
+	userId: UserId,
+): Promise<CourseManagementDataDTO | null> {
+	const [courseRow] = await db
+		.select({ course: courses, video: videos })
+		.from(courses)
+		.innerJoin(videos, eq(courses.videoId, videos.id))
+		.where(
+			and(
+				eq(courses.id, courseId),
+				accessibleCourseOwner(courses.ownerId, userId),
+				isNull(courses.deletedAt),
+			),
+		)
+		.limit(1);
+
+	if (!courseRow) {
+		return null;
+	}
+
+	const chapterRows = await db
+		.select()
+		.from(courseChapters)
+		.where(eq(courseChapters.courseId, courseId))
+		.orderBy(courseChapters.orderIndex);
+
+	const [latestGenerationJobRow] = await db
+		.select()
+		.from(courseGenerationJobs)
+		.where(eq(courseGenerationJobs.courseId, courseId))
+		.orderBy(desc(courseGenerationJobs.createdAt))
+		.limit(1);
+
+	return {
+		course: mapCourse(courseRow.course),
+		video: mapVideo(courseRow.video),
+		chapters: chapterRows.map(mapChapter),
+		latestGenerationJob: latestGenerationJobRow
+			? mapGenerationJob(latestGenerationJobRow)
+			: null,
+	};
+}
+
+export async function updateCourseMetadata(
+	courseId: string,
+	userId: UserId,
+	input: UpdateCourseMetadataInput,
+): Promise<CourseDTO | null> {
+	const now = new Date();
+	const [row] = await db
+		.update(courses)
+		.set({
+			title: input.title,
+			description: input.description ?? null,
+			updatedAt: now,
+		})
+		.where(
+			and(
+				eq(courses.id, courseId),
+				accessibleCourseOwner(courses.ownerId, userId),
+				isNull(courses.deletedAt),
+			),
+		)
+		.returning();
+
+	return row ? mapCourse(row) : null;
+}
+
+export async function updateChapter(
+	chapterId: string,
+	userId: UserId,
+	input: UpdateChapterInput,
+): Promise<CourseChapterDTO | null> {
+	const [row] = await db
+		.update(courseChapters)
+		.set({
+			title: input.title,
+			summary: input.summary ?? null,
+			startSeconds: input.startSeconds,
+			endSeconds: input.endSeconds ?? null,
+			updatedAt: new Date(),
+		})
+		.from(courses)
+		.where(
+			and(
+				eq(courseChapters.id, chapterId),
+				eq(courseChapters.courseId, courses.id),
+				accessibleCourseOwner(courses.ownerId, userId),
+				isNull(courses.deletedAt),
+			),
+		)
+		.returning();
+
+	return row ? mapChapter(row) : null;
 }
 
 export async function getCourseByChapter(
@@ -764,21 +888,65 @@ export async function completeGenerationJob(
 			return null;
 		}
 
-		await tx
-			.delete(courseChapters)
-			.where(eq(courseChapters.courseId, row.course.id));
-
-		if (input.chapters.length > 0) {
-			await tx.insert(courseChapters).values(
-				input.chapters.map((chapter) => ({
-					courseId: row.course.id,
-					title: chapter.title,
-					summary: chapter.summary,
-					orderIndex: chapter.orderIndex,
-					startSeconds: chapter.startSeconds,
-					endSeconds: chapter.endSeconds,
-				})),
+		const oldChapterRows = await tx
+			.select()
+			.from(courseChapters)
+			.where(eq(courseChapters.courseId, row.course.id))
+			.orderBy(courseChapters.orderIndex);
+		const oldChapterIds = oldChapterRows.map((chapter) => chapter.id);
+		const oldNoteRows =
+			oldChapterIds.length === 0
+				? []
+				: await tx
+						.select()
+						.from(chapterNotes)
+						.where(inArray(chapterNotes.chapterId, oldChapterIds));
+		const oldProgressRows =
+			oldChapterIds.length === 0
+				? []
+				: await tx
+						.select()
+						.from(chapterProgress)
+						.where(inArray(chapterProgress.chapterId, oldChapterIds));
+		const oldBookmarkRows = await tx
+			.select()
+			.from(bookmarks)
+			.where(
+				and(eq(bookmarks.courseId, row.course.id), isNull(bookmarks.deletedAt)),
 			);
+
+		if (oldChapterIds.length > 0) {
+			await tx
+				.delete(courseChapters)
+				.where(inArray(courseChapters.id, oldChapterIds));
+		}
+
+		const newChapterRows =
+			input.chapters.length === 0
+				? []
+				: await tx
+						.insert(courseChapters)
+						.values(
+							input.chapters.map((chapter) => ({
+								courseId: row.course.id,
+								title: chapter.title,
+								summary: chapter.summary,
+								orderIndex: chapter.orderIndex,
+								startSeconds: chapter.startSeconds,
+								endSeconds: chapter.endSeconds,
+							})),
+						)
+						.returning();
+
+		if (newChapterRows.length > 0) {
+			await remapLearningDataAfterChapterReplacement({
+				tx,
+				oldChapters: oldChapterRows,
+				newChapters: newChapterRows,
+				notes: oldNoteRows,
+				progress: oldProgressRows,
+				bookmarks: oldBookmarkRows,
+			});
 		}
 
 		const [courseRow] = await tx
@@ -794,6 +962,7 @@ export async function completeGenerationJob(
 		const [videoRow] = await tx
 			.update(videos)
 			.set({
+				durationSeconds: input.durationSeconds ?? row.video.durationSeconds,
 				transcriptSource: input.transcriptSource,
 				transcriptText: input.transcriptText,
 				updatedAt: completedAt,
@@ -808,6 +977,149 @@ export async function completeGenerationJob(
 			chapterCount: input.chapters.length,
 		};
 	});
+}
+
+async function remapLearningDataAfterChapterReplacement({
+	tx,
+	oldChapters,
+	newChapters,
+	notes,
+	progress,
+	bookmarks: bookmarkRows,
+}: {
+	tx: DbTransaction;
+	oldChapters: Array<typeof courseChapters.$inferSelect>;
+	newChapters: Array<typeof courseChapters.$inferSelect>;
+	notes: Array<typeof chapterNotes.$inferSelect>;
+	progress: Array<typeof chapterProgress.$inferSelect>;
+	bookmarks: Array<typeof bookmarks.$inferSelect>;
+}) {
+	const oldChapterById = new Map(
+		oldChapters.map((chapter) => [chapter.id, chapter]),
+	);
+
+	for (const bookmark of bookmarkRows) {
+		const nextChapter = findChapterForTimestamp(
+			newChapters,
+			bookmark.timestampSeconds,
+		);
+		await tx
+			.update(bookmarks)
+			.set({
+				chapterId: nextChapter?.id ?? null,
+				updatedAt: new Date(),
+			})
+			.where(eq(bookmarks.id, bookmark.id));
+	}
+
+	const notesByTarget = new Map<
+		string,
+		Array<{
+			oldChapter: typeof courseChapters.$inferSelect;
+			note: typeof chapterNotes.$inferSelect;
+		}>
+	>();
+
+	for (const note of notes) {
+		const oldChapter = oldChapterById.get(note.chapterId);
+		if (!oldChapter || !note.markdown.trim()) {
+			continue;
+		}
+		const nextChapter = findChapterForTimestamp(
+			newChapters,
+			oldChapter.startSeconds,
+		);
+		if (!nextChapter) {
+			continue;
+		}
+		const key = `${note.userId ?? "local"}:${nextChapter.id}`;
+		const existing = notesByTarget.get(key) ?? [];
+		existing.push({ oldChapter, note });
+		notesByTarget.set(key, existing);
+	}
+
+	for (const entries of notesByTarget.values()) {
+		const [{ note }, ...rest] = entries;
+		const targetChapter = findChapterForTimestamp(
+			newChapters,
+			entries[0].oldChapter.startSeconds,
+		);
+		if (!targetChapter) {
+			continue;
+		}
+		const markdown =
+			rest.length === 0
+				? note.markdown
+				: entries
+						.map(
+							(entry) =>
+								`### Recovered from ${entry.oldChapter.title}\n\n${entry.note.markdown.trim()}`,
+						)
+						.join("\n\n");
+
+		await tx.insert(chapterNotes).values({
+			userId: note.userId,
+			chapterId: targetChapter.id,
+			markdown,
+		});
+	}
+
+	const progressByTarget = new Map<
+		string,
+		{
+			userId: string | null;
+			chapterId: string;
+			watchedSeconds: number;
+			completed: boolean;
+		}
+	>();
+
+	for (const item of progress) {
+		const oldChapter = oldChapterById.get(item.chapterId);
+		if (!oldChapter) {
+			continue;
+		}
+		const nextChapter = findChapterForTimestamp(
+			newChapters,
+			oldChapter.startSeconds,
+		);
+		if (!nextChapter) {
+			continue;
+		}
+		const key = `${item.userId ?? "local"}:${nextChapter.id}`;
+		const current = progressByTarget.get(key);
+		progressByTarget.set(key, {
+			userId: item.userId,
+			chapterId: nextChapter.id,
+			watchedSeconds: Math.max(
+				current?.watchedSeconds ?? 0,
+				item.watchedSeconds,
+			),
+			completed: Boolean(current?.completed || item.completed),
+		});
+	}
+
+	for (const item of progressByTarget.values()) {
+		await tx.insert(chapterProgress).values(item);
+	}
+}
+
+function findChapterForTimestamp(
+	chapters: Array<typeof courseChapters.$inferSelect>,
+	timestampSeconds: number,
+) {
+	return (
+		chapters.find((chapter, index) => {
+			const nextChapter = chapters[index + 1];
+			const endSeconds =
+				chapter.endSeconds ?? nextChapter?.startSeconds ?? Infinity;
+
+			return (
+				timestampSeconds >= chapter.startSeconds &&
+				timestampSeconds < endSeconds
+			);
+		}) ?? null
+	);
 }
 
 export async function failGenerationJob(
@@ -865,6 +1177,53 @@ export async function createRetryGenerationJob(
 	return getGenerationJob(jobRow.id);
 }
 
+export async function createRegenerationJob(
+	courseId: string,
+	ownerId: UserId,
+): Promise<GenerationJobWithContextDTO | null> {
+	const jobId = await db.transaction(async (tx) => {
+		const [row] = await tx
+			.select({ course: courses })
+			.from(courses)
+			.where(
+				and(
+					eq(courses.id, courseId),
+					accessibleCourseOwner(courses.ownerId, ownerId),
+					isNull(courses.deletedAt),
+				),
+			)
+			.limit(1);
+
+		if (!row) {
+			return null;
+		}
+
+		const [activeJob] = await tx
+			.select()
+			.from(courseGenerationJobs)
+			.where(
+				and(
+					eq(courseGenerationJobs.courseId, courseId),
+					inArray(courseGenerationJobs.status, ["queued", "processing"]),
+				),
+			)
+			.limit(1);
+
+		if (activeJob) {
+			return activeJob.id;
+		}
+
+		const [jobRow] = await tx
+			.insert(courseGenerationJobs)
+			.values({ courseId, status: "queued" })
+			.returning();
+
+		return jobRow.id;
+	});
+
+	return jobId ? getGenerationJob(jobId) : null;
+}
+
 export async function getSampleCourse(): Promise<CourseDTO | null> {
 	const [row] = await db
 		.select({ course: courses })
@@ -901,6 +1260,45 @@ export async function softDeleteCourse(
 		.returning({ id: courses.id });
 
 	return rows.length > 0;
+}
+
+export async function getLearningPreferences(
+	userId: string,
+): Promise<LearningPreferencesDTO | null> {
+	const [row] = await db
+		.select()
+		.from(learningPreferences)
+		.where(eq(learningPreferences.userId, userId))
+		.limit(1);
+
+	return row ? mapLearningPreferences(row) : null;
+}
+
+export async function upsertLearningPreferences(
+	userId: string,
+	input: LearningPreferencesDTO,
+): Promise<LearningPreferencesDTO> {
+	const now = new Date();
+	const [row] = await db
+		.insert(learningPreferences)
+		.values({
+			userId,
+			playbackSpeed: input.playbackSpeed,
+			manualCompletionOnly: input.manualCompletionOnly,
+			autoplayNextChapter: input.autoplayNextChapter,
+		})
+		.onConflictDoUpdate({
+			target: learningPreferences.userId,
+			set: {
+				playbackSpeed: input.playbackSpeed,
+				manualCompletionOnly: input.manualCompletionOnly,
+				autoplayNextChapter: input.autoplayNextChapter,
+				updatedAt: now,
+			},
+		})
+		.returning();
+
+	return mapLearningPreferences(row);
 }
 
 export async function upsertCourseProgress(

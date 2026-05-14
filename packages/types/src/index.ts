@@ -218,12 +218,58 @@ export interface CoursePlayerDataDTO {
 	latestGenerationJob: CourseGenerationJobDTO | null;
 }
 
+export interface CourseManagementDataDTO {
+	course: CourseDTO;
+	video: VideoDTO;
+	chapters: CourseChapterDTO[];
+	latestGenerationJob: CourseGenerationJobDTO | null;
+}
+
 export interface GetCoursePlayerDataRequestV1 {
 	courseId: string;
 }
 
 export interface GetCoursePlayerDataResponseV1 {
 	data: CoursePlayerDataDTO;
+}
+
+export interface GetCourseManagementDataRequestV1 {
+	courseId: string;
+}
+
+export interface GetCourseManagementDataResponseV1 {
+	data: CourseManagementDataDTO;
+}
+
+export interface UpdateCourseMetadataRequestV1 {
+	courseId: string;
+	title: string;
+	description?: string | null;
+}
+
+export interface UpdateCourseMetadataResponseV1 {
+	course: CourseDTO;
+}
+
+export interface UpdateChapterRequestV1 {
+	chapterId: string;
+	title: string;
+	summary?: string | null;
+	startSeconds: number;
+	endSeconds?: number | null;
+}
+
+export interface UpdateChapterResponseV1 {
+	chapter: CourseChapterDTO;
+}
+
+export interface RegenerateChaptersRequestV1 {
+	courseId: string;
+}
+
+export interface RegenerateChaptersResponseV1 {
+	courseId: string;
+	generationJobId: string;
 }
 
 export interface UpsertCourseProgressRequestV1 {
@@ -289,12 +335,32 @@ export interface GetBookmarksResponseV1 {
 	items: BookmarkListItemDTO[];
 }
 
+export interface ExportCourseMarkdownRequestV1 {
+	courseId: string;
+}
+
+export interface ExportCourseMarkdownResponseV1 {
+	filename: string;
+	markdown: string;
+}
+
 export interface DeleteCourseRequestV1 {
 	courseId: string;
 }
 
 export interface DeleteCourseResponseV1 {
 	deleted: boolean;
+}
+
+export interface GetLearningPreferencesResponseV1 {
+	preferences: LearningPreferencesDTO;
+}
+
+export interface UpdateLearningPreferencesRequestV1
+	extends LearningPreferencesDTO {}
+
+export interface UpdateLearningPreferencesResponseV1 {
+	preferences: LearningPreferencesDTO;
 }
 
 export interface LocalCoursesPayloadV1 {
@@ -319,5 +385,11 @@ export interface LocalNotesPayloadV1 {
 export interface LocalBookmarksPayloadV1 {
 	version: 1;
 	bookmarks: BookmarkDTO[];
+	updatedAt: string;
+}
+
+export interface LocalPreferencesPayloadV1 {
+	version: 1;
+	preferences: LearningPreferencesDTO;
 	updatedAt: string;
 }

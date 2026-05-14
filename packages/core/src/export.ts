@@ -1,15 +1,31 @@
-import type { BookmarkDTO, ChapterNoteDTO, CourseChapterDTO, CourseDTO } from "@benkyou/types";
+import type {
+	BookmarkDTO,
+	ChapterNoteDTO,
+	CourseChapterDTO,
+	CourseDTO,
+	VideoDTO,
+} from "@benkyou/types";
 
 export interface CourseMarkdownExportInput {
 	course: Pick<CourseDTO, "title" | "description">;
-	chapters: Array<Pick<CourseChapterDTO, "id" | "title" | "summary" | "startSeconds">>;
+	video?: Pick<VideoDTO, "canonicalUrl" | "title" | "channelTitle">;
+	chapters: Array<
+		Pick<CourseChapterDTO, "id" | "title" | "summary" | "startSeconds">
+	>;
 	notes: Array<Pick<ChapterNoteDTO, "chapterId" | "markdown">>;
-	bookmarks: Array<Pick<BookmarkDTO, "chapterId" | "timestampSeconds" | "title" | "note">>;
+	bookmarks: Array<
+		Pick<BookmarkDTO, "chapterId" | "timestampSeconds" | "title" | "note">
+	>;
 }
 
 export function formatCourseMarkdownExport(input: CourseMarkdownExportInput) {
-	const notesByChapter = new Map(input.notes.map((note) => [note.chapterId, note.markdown]));
-	const bookmarksByChapter = new Map<string, CourseMarkdownExportInput["bookmarks"]>();
+	const notesByChapter = new Map(
+		input.notes.map((note) => [note.chapterId, note.markdown]),
+	);
+	const bookmarksByChapter = new Map<
+		string,
+		CourseMarkdownExportInput["bookmarks"]
+	>();
 
 	for (const bookmark of input.bookmarks) {
 		if (!bookmark.chapterId) {
@@ -25,6 +41,10 @@ export function formatCourseMarkdownExport(input: CourseMarkdownExportInput) {
 
 	if (input.course.description) {
 		lines.push(input.course.description, "");
+	}
+
+	if (input.video?.canonicalUrl) {
+		lines.push(`Source: ${input.video.canonicalUrl}`, "");
 	}
 
 	for (const chapter of input.chapters) {
@@ -46,8 +66,12 @@ export function formatCourseMarkdownExport(input: CourseMarkdownExportInput) {
 			lines.push("### Bookmarks", "");
 
 			for (const bookmark of bookmarks) {
-				const title = bookmark.title ?? `Bookmark at ${formatTimestamp(bookmark.timestampSeconds)}`;
-				lines.push(`- ${formatTimestamp(bookmark.timestampSeconds)} - ${title}`);
+				const title =
+					bookmark.title ??
+					`Bookmark at ${formatTimestamp(bookmark.timestampSeconds)}`;
+				lines.push(
+					`- ${formatTimestamp(bookmark.timestampSeconds)} - ${title}`,
+				);
 
 				if (bookmark.note) {
 					lines.push(`  ${bookmark.note}`);
@@ -66,8 +90,11 @@ export function formatTimestamp(totalSeconds: number) {
 	const hours = Math.floor(safeSeconds / 3600);
 	const minutes = Math.floor((safeSeconds % 3600) / 60);
 	const seconds = safeSeconds % 60;
-	const minuteText = hours > 0 ? String(minutes).padStart(2, "0") : String(minutes);
+	const minuteText =
+		hours > 0 ? String(minutes).padStart(2, "0") : String(minutes);
 	const secondText = String(seconds).padStart(2, "0");
 
-	return hours > 0 ? `${hours}:${minuteText}:${secondText}` : `${minuteText}:${secondText}`;
+	return hours > 0
+		? `${hours}:${minuteText}:${secondText}`
+		: `${minuteText}:${secondText}`;
 }

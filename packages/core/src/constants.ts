@@ -4,9 +4,14 @@ export const PRODUCT_NAME = "Benkyou";
 
 export const CORE_PROMISE = "Turn a video into a structured course.";
 
-export const SUPPORTED_VIDEO_PROVIDERS = ["youtube"] as const satisfies readonly VideoProvider[];
+export const SUPPORTED_VIDEO_PROVIDERS = [
+	"youtube",
+] as const satisfies readonly VideoProvider[];
 
-export const PLANNED_VIDEO_PROVIDERS = ["vimeo", "loom"] as const satisfies readonly VideoProvider[];
+export const PLANNED_VIDEO_PROVIDERS = [
+	"vimeo",
+	"loom",
+] as const satisfies readonly VideoProvider[];
 
 export const DEFAULT_CHAPTER_COMPLETION_THRESHOLD = 0.9;
 
@@ -20,6 +25,24 @@ export const MAX_BOOKMARK_TITLE_LENGTH = 120;
 
 export const MAX_BOOKMARK_NOTE_LENGTH = 2_000;
 
+export const MAX_COURSE_TITLE_LENGTH = 160;
+
+export const MAX_COURSE_DESCRIPTION_LENGTH = 1_000;
+
+export const MAX_CHAPTER_TITLE_LENGTH = 160;
+
+export const MAX_CHAPTER_SUMMARY_LENGTH = 2_000;
+
+export const LEARNING_PLAYBACK_SPEEDS = [
+	0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2,
+] as const;
+
+export const DEFAULT_LEARNING_PREFERENCES = {
+	playbackSpeed: 1,
+	autoplayNextChapter: false,
+	manualCompletionOnly: false,
+} as const;
+
 export const LOCAL_STORAGE_PAYLOAD_VERSION = 1;
 
 export const LOCAL_STORAGE_KEYS = {
@@ -27,4 +50,5 @@ export const LOCAL_STORAGE_KEYS = {
 	progress: "benkyou:progress:v1",
 	notes: "benkyou:notes:v1",
 	bookmarks: "benkyou:bookmarks:v1",
+	preferences: "benkyou:preferences:v1",
 } as const;

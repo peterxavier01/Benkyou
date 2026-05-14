@@ -33,6 +33,19 @@ test("repository helpers upsert learning data into DTO-compatible course data", 
 	}
 
 	const providerVideoId = `repository-test-${randomUUID()}`;
+	const userId = `repository-user-${randomUUID()}`;
+	await database.insert(schema.authUser).values({
+		id: userId,
+		name: "Repository User",
+		email: `${userId}@example.com`,
+	});
+	const preferences = await modules.upsertLearningPreferences(userId, {
+		playbackSpeed: 1.5,
+		manualCompletionOnly: true,
+		autoplayNextChapter: true,
+	});
+	assert.deepEqual(await modules.getLearningPreferences(userId), preferences);
+
 	const video = await modules.upsertVideoByProvider(
 		"youtube",
 		providerVideoId,
@@ -62,7 +75,7 @@ test("repository helpers upsert learning data into DTO-compatible course data", 
 
 	try {
 		const cancellable = await modules.createCourseFromUrlRecord({
-			ownerId: "user-a",
+			ownerId: userId,
 			provider: "youtube",
 			providerVideoId: `repository-cancel-${randomUUID()}`,
 			sourceUrl: "https://www.youtube.com/watch?v=repository-cancel",
@@ -77,19 +90,19 @@ test("repository helpers upsert learning data into DTO-compatible course data", 
 		);
 		const cancelled = await modules.cancelGenerationJob(
 			cancellable.job.id,
-			"user-a",
+			userId,
 		);
 		assert.equal(cancelled?.job.status, "cancelled");
 		assert.equal(cancelled?.job.retryable, true);
 
 		const retry = await modules.createRetryGenerationJob(
 			cancellable.job.id,
-			"user-a",
+			userId,
 		);
 		assert.equal(retry?.course.id, cancellable.course.id);
 
 		const timeoutCandidate = await modules.createCourseFromUrlRecord({
-			ownerId: "user-a",
+			ownerId: userId,
 			provider: "youtube",
 			providerVideoId: `repository-timeout-${randomUUID()}`,
 			sourceUrl: "https://www.youtube.com/watch?v=repository-timeout",
@@ -121,6 +134,92 @@ test("repository helpers upsert learning data into DTO-compatible course data", 
 			}),
 			null,
 		);
+
+		const regenerating = await modules.createCourseFromUrlRecord({
+			ownerId: userId,
+			provider: "youtube",
+			providerVideoId: `repository-regenerate-${randomUUID()}`,
+			sourceUrl: "https://www.youtube.com/watch?v=repository-regenerate",
+			canonicalUrl: "https://www.youtube.com/watch?v=repository-regenerate",
+			title: "Repository Regenerate Course",
+		});
+		extraCourseIds.push(regenerating.course.id);
+		assert.ok(await modules.claimGenerationJob(regenerating.job.id));
+		await modules.completeGenerationJob({
+			jobId: regenerating.job.id,
+			transcriptSource: "sample",
+			chapters: [
+				{
+					title: "Old first",
+					orderIndex: 0,
+					startSeconds: 0,
+					endSeconds: 60,
+				},
+				{
+					title: "Old second",
+					orderIndex: 1,
+					startSeconds: 60,
+					endSeconds: null,
+				},
+			],
+		});
+		const beforeRegeneration = await modules.getCoursePlayerData(
+			regenerating.course.id,
+			userId,
+		);
+		const oldFirstChapter = beforeRegeneration?.chapters[0];
+		assert.ok(oldFirstChapter);
+		await modules.upsertChapterNote(userId, oldFirstChapter.id, "Keep me.");
+		await modules.upsertChapterProgress(userId, oldFirstChapter.id, {
+			watchedSeconds: 30,
+			completed: true,
+		});
+		await modules.createBookmark({
+			userId,
+			courseId: regenerating.course.id,
+			chapterId: oldFirstChapter.id,
+			timestampSeconds: 35,
+			title: "Preserved bookmark",
+		});
+		const regenerationJob = await modules.createRegenerationJob(
+			regenerating.course.id,
+			userId,
+		);
+		assert.equal(regenerationJob?.course.id, regenerating.course.id);
+		const activeRegenerationJob = await modules.createRegenerationJob(
+			regenerating.course.id,
+			userId,
+		);
+		assert.equal(activeRegenerationJob?.job.id, regenerationJob?.job.id);
+		assert.ok(await modules.claimGenerationJob(regenerationJob?.job.id ?? ""));
+		await modules.completeGenerationJob({
+			jobId: regenerationJob?.job.id ?? "",
+			transcriptSource: "sample",
+			chapters: [
+				{
+					title: "New first",
+					orderIndex: 0,
+					startSeconds: 0,
+					endSeconds: 90,
+				},
+				{
+					title: "New second",
+					orderIndex: 1,
+					startSeconds: 90,
+					endSeconds: null,
+				},
+			],
+		});
+		const afterRegeneration = await modules.getCoursePlayerData(
+			regenerating.course.id,
+			userId,
+		);
+		assert.equal(afterRegeneration?.notes[0]?.markdown, "Keep me.");
+		assert.equal(
+			afterRegeneration?.bookmarks[0]?.chapterId,
+			afterRegeneration?.chapters[0]?.id,
+		);
+		assert.equal(afterRegeneration?.chapterProgress[0]?.completed, true);
 
 		const [course] = await database
 			.insert(schema.courses)
@@ -228,20 +327,20 @@ test("repository helpers upsert learning data into DTO-compatible course data", 
 		);
 
 		const signedInSampleBookmark = await modules.createBookmark({
-			userId: "user-a",
+			userId,
 			courseId: course.id,
 			chapterId: secondChapter.id,
 			timestampSeconds: 70,
 			title: "Signed in sample timestamp",
 		});
 		assert.equal(
-			(await modules.getBookmarks("user-a")).some(
+			(await modules.getBookmarks(userId)).some(
 				(item) => item.bookmark.id === signedInSampleBookmark.id,
 			),
 			true,
 		);
 		assert.equal(
-			await modules.deleteBookmark(signedInSampleBookmark.id, "user-a"),
+			await modules.deleteBookmark(signedInSampleBookmark.id, userId),
 			true,
 		);
 
@@ -266,6 +365,29 @@ test("repository helpers upsert learning data into DTO-compatible course data", 
 			await modules.softDeleteCourse(course.id, "other-user"),
 			false,
 		);
+		assert.equal(
+			await modules.updateCourseMetadata(course.id, "other-user", {
+				title: "Blocked",
+			}),
+			null,
+		);
+		const updatedCourse = await modules.updateCourseMetadata(course.id, null, {
+			title: "Managed title",
+			description: "Managed description",
+		});
+		assert.equal(updatedCourse?.title, "Managed title");
+		const updatedChapter = await modules.updateChapter(firstChapter.id, null, {
+			title: "Managed chapter",
+			summary: "Managed summary",
+			startSeconds: 0,
+			endSeconds: 55,
+		});
+		assert.equal(updatedChapter?.title, "Managed chapter");
+		const managementData = await modules.getCourseManagementData(
+			course.id,
+			null,
+		);
+		assert.equal(managementData?.chapters[0]?.title, "Managed chapter");
 		assert.equal(await modules.softDeleteCourse(course.id, null), true);
 
 		const libraryAfterDelete = await modules.getCourseLibrary(null);
@@ -286,5 +408,8 @@ test("repository helpers upsert learning data into DTO-compatible course data", 
 				.set({ deletedAt: new Date(), updatedAt: new Date() })
 				.where(eq(schema.courses.id, id));
 		}
+		await database
+			.delete(schema.authUser)
+			.where(eq(schema.authUser.id, userId));
 	}
 });

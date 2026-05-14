@@ -491,10 +491,10 @@ function CoursePlayerScreen({
 			action={
 				<div className="flex items-center gap-2">
 					<Button asChild size="sm" variant="outline">
-						<a href={`/courses/${courseId}/manage`}>
+						<Link to="/courses/$courseId/manage" params={{ courseId }}>
 							<HugeIcon name="settings" className="size-4" />
 							Manage
-						</a>
+						</Link>
 					</Button>
 					<Button asChild size="sm" variant="outline">
 						<Link to="/courses" search={{ q: "", filter: "all" }}>

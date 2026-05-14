@@ -148,6 +148,7 @@ export const processGenerationJob = createServerFn({ method: "POST" })
 					description: claimed.course.description,
 					transcriptSource: "youtube_captions",
 					transcriptText,
+					durationSeconds,
 					rawOutput: {
 						chapterSource: "creator_timestamps",
 						chapterCount: creatorChapters.length,
@@ -182,6 +183,7 @@ export const processGenerationJob = createServerFn({ method: "POST" })
 				description: generated.description,
 				transcriptSource: "youtube_captions",
 				transcriptText,
+				durationSeconds,
 				rawOutput: {
 					chapterSource: policy.isCoarseFallback
 						? "ai_coarse_fallback"

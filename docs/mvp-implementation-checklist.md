@@ -412,50 +412,50 @@ manage learner data.
 
 ### Course Management Logic
 
-- [ ] Load course metadata and chapters.
-- [ ] Update course title and description.
-- [ ] Keep visibility private for MVP, with disabled unlisted/public options if
+- [x] Load course metadata and chapters.
+- [x] Update course title and description.
+- [x] Keep visibility private for MVP, with disabled unlisted/public options if
       needed.
-- [ ] Edit chapter title, summary, start time, and end time.
-- [ ] Validate chapter time ranges.
-- [ ] Regenerate chapters with confirmation.
-- [ ] Preserve notes/bookmarks where possible during regeneration.
-- [ ] Soft-delete course with confirmation.
+- [x] Edit chapter title, summary, start time, and end time.
+- [x] Validate chapter time ranges.
+- [x] Regenerate chapters with confirmation.
+- [x] Preserve notes/bookmarks where possible during regeneration.
+- [x] Soft-delete course with confirmation.
 
 ### Course Management UI
 
-- [ ] Build `/courses/:courseId/manage`.
-- [ ] Add editable metadata form.
-- [ ] Add source video details.
-- [ ] Add chapter table.
-- [ ] Add edit chapter modal.
-- [ ] Add regenerate confirmation modal.
-- [ ] Add delete confirmation modal.
-- [ ] Add save, saving, saved, and failed states.
+- [x] Build `/courses/:courseId/manage`.
+- [x] Add editable metadata form.
+- [x] Add source video details.
+- [x] Add chapter table.
+- [x] Add edit chapter modal.
+- [x] Add regenerate confirmation modal.
+- [x] Add delete confirmation modal.
+- [x] Add save, saving, saved, and failed states.
 
 ### Settings Logic
 
-- [ ] Build account profile loading.
-- [ ] Store learning preferences: playback speed, completion behavior, autoplay
+- [x] Build account profile loading.
+- [x] Store learning preferences: playback speed, completion behavior, autoplay
       next chapter.
-- [ ] Add data export endpoint if export is in MVP.
-- [ ] Add local data reset if local-first is included.
+- [x] Add data export endpoint if export is in MVP.
+- [x] Add local data reset if local-first is included.
 
 ### Settings UI
 
-- [ ] Build `/settings`.
-- [ ] Add profile summary.
-- [ ] Add learning preferences section.
-- [ ] Add data export section.
-- [ ] Add self-hosting link.
-- [ ] Build `/settings/profile`, `/settings/learning`, and `/settings/export`
+- [x] Build `/settings`.
+- [x] Add profile summary.
+- [x] Add learning preferences section.
+- [x] Add data export section.
+- [x] Add self-hosting link.
+- [x] Build `/settings/profile`, `/settings/learning`, and `/settings/export`
       only if separate routes are needed.
 
 ### Done When
 
-- [ ] A learner can correct course metadata and generated chapters.
-- [ ] A learner can delete a course intentionally.
-- [ ] Settings covers account state, preferences, and data ownership basics.
+- [x] A learner can correct course metadata and generated chapters.
+- [x] A learner can delete a course intentionally.
+- [x] Settings covers account state, preferences, and data ownership basics.
 
 ## Phase 9: Static, Legal, and Error Pages
 
@@ -520,7 +520,7 @@ Goal: verify the MVP behaves like a serious learning tool before release.
 ### Testing
 
 - [x] Unit test YouTube URL parser.
-- [ ] Unit test chapter time range validation.
+- [x] Unit test chapter time range validation.
 - [x] Unit test progress percentage calculation.
 - [x] Unit test AI output validator.
 - [ ] Integration test course creation server function.
@@ -565,11 +565,11 @@ Goal: verify the MVP behaves like a serious learning tool before release.
 - [x] `/courses/new/:jobId` - generation status.
 - [x] `/courses/:courseId` - course player.
 - [ ] `/courses/:courseId/focus` - distraction-free player if included in MVP.
-- [ ] `/courses/:courseId/manage` - course metadata and chapter management.
+- [x] `/courses/:courseId/manage` - course metadata and chapter management.
 - [ ] `/courses/:courseId/chapters/:chapterId` - chapter deep link.
 - [ ] `/courses/:courseId/bookmarks/:bookmarkId` - bookmark deep link.
 - [x] `/bookmarks` - global bookmarks.
-- [ ] `/settings` - account, preferences, export.
+- [x] `/settings` - account, preferences, export.
 - [ ] `/about` - mission and project context.
 - [ ] `/self-hosting` - self-hosting guide.
 - [ ] `/privacy` - privacy page.
@@ -600,7 +600,7 @@ Goal: verify the MVP behaves like a serious learning tool before release.
 - [x] Add/edit bookmark dialog.
 - [x] Confirm dialog.
 - [x] Toast or inline alert.
-- [ ] Settings form controls.
+- [x] Settings form controls.
 - [ ] Error page layout.
 
 ## API & Server Function Checklist
@@ -610,9 +610,9 @@ Goal: verify the MVP behaves like a serious learning tool before release.
 - [x] `retryGenerationJob`.
 - [x] `getCourseLibrary`.
 - [x] `getCoursePlayerData`.
-- [ ] `updateCourseMetadata`.
-- [ ] `updateChapter`.
-- [ ] `regenerateChapters`.
+- [x] `updateCourseMetadata`.
+- [x] `updateChapter`.
+- [x] `regenerateChapters`.
 - [x] `deleteCourse`.
 - [x] `upsertCourseProgress`.
 - [x] `upsertChapterProgress`.
@@ -621,8 +621,8 @@ Goal: verify the MVP behaves like a serious learning tool before release.
 - [x] `updateBookmark`.
 - [x] `deleteBookmark`.
 - [x] `getBookmarks`.
-- [ ] `updateLearningPreferences`.
-- [ ] `exportNotes` if included.
+- [x] `updateLearningPreferences`.
+- [x] `exportNotes` if included.
 
 ## MVP Release Gate
 

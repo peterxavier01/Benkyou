@@ -15,6 +15,13 @@
       "when": 1778273668590,
       "tag": "0001_skinny_nehzno",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1778755225262,
+      "tag": "0002_learning_preferences",
+      "breakpoints": true
     }
   ]
 }
