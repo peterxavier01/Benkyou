@@ -27,6 +27,7 @@ import {
 	failGenerationJob,
 	getGenerationJobDetailRecord,
 	getSampleCourse,
+	markGenerationJobTranscriptReady,
 	timeoutGenerationJob,
 } from "@benkyou/db";
 import type {
@@ -111,6 +112,38 @@ export const processGenerationJob = createServerFn({ method: "POST" })
 		}
 
 		try {
+			const creatorChapters = parseYouTubeDescriptionChapters(
+				claimed.video.description,
+				claimed.video.durationSeconds,
+			);
+
+			if (creatorChapters.length > 0) {
+				const completed = await completeGenerationJob({
+					jobId: claimed.job.id,
+					title: claimed.course.title,
+					description: claimed.course.description,
+					transcriptSource: null,
+					durationSeconds: claimed.video.durationSeconds,
+					rawOutput: {
+						chapterSource: "creator_timestamps",
+						chapterCount: creatorChapters.length,
+					},
+					chapters: creatorChapters.map((chapter, index) => ({
+						title: chapter.title,
+						summary: null,
+						orderIndex: index,
+						startSeconds: chapter.startSeconds,
+						endSeconds: chapter.endSeconds,
+					})),
+				});
+
+				if (!completed) {
+					throw new Error("Generation job disappeared before completion.");
+				}
+
+				return { detail: toGenerationJobDetail(completed) };
+			}
+
 			const transcriptSegments = await fetchYouTubeTranscript(
 				claimed.video.providerVideoId,
 			);
@@ -136,38 +169,7 @@ export const processGenerationJob = createServerFn({ method: "POST" })
 				durationSeconds,
 				policy,
 			});
-			const creatorChapters = parseYouTubeDescriptionChapters(
-				claimed.video.description,
-				durationSeconds,
-			);
-
-			if (creatorChapters.length > 0) {
-				const completed = await completeGenerationJob({
-					jobId: claimed.job.id,
-					title: claimed.course.title,
-					description: claimed.course.description,
-					transcriptSource: "youtube_captions",
-					transcriptText,
-					durationSeconds,
-					rawOutput: {
-						chapterSource: "creator_timestamps",
-						chapterCount: creatorChapters.length,
-					},
-					chapters: creatorChapters.map((chapter, index) => ({
-						title: chapter.title,
-						summary: null,
-						orderIndex: index,
-						startSeconds: chapter.startSeconds,
-						endSeconds: chapter.endSeconds,
-					})),
-				});
-
-				if (!completed) {
-					throw new Error("Generation job disappeared before completion.");
-				}
-
-				return { detail: toGenerationJobDetail(completed) };
-			}
+			await markGenerationJobTranscriptReady(claimed.job.id);
 
 			const generated = await generateCourseChapters({
 				videoTitle: claimed.video.title ?? claimed.course.title,

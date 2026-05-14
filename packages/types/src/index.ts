@@ -56,6 +56,10 @@ export interface CourseGenerationJobDTO {
 	failureReason: string | null;
 	retryable: boolean;
 	startedAt: string | null;
+	metadataCompletedAt: string | null;
+	transcriptCompletedAt: string | null;
+	chaptersCompletedAt: string | null;
+	playerCompletedAt: string | null;
 	createdAt: string;
 	updatedAt: string;
 	completedAt: string | null;
@@ -139,7 +143,8 @@ export type GenerationTimelineStepStatusV1 =
 	| "pending"
 	| "processing"
 	| "completed"
-	| "failed";
+	| "failed"
+	| "skipped";
 
 export interface GenerationTimelineStepV1 {
 	key: GenerationTimelineStepKeyV1;

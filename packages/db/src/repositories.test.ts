@@ -111,7 +111,11 @@ test("repository helpers upsert learning data into DTO-compatible course data", 
 		});
 		extraCourseIds.push(timeoutCandidate.course.id);
 
-		assert.ok(await modules.claimGenerationJob(timeoutCandidate.job.id));
+		const claimedTimeoutCandidate = await modules.claimGenerationJob(
+			timeoutCandidate.job.id,
+		);
+		assert.ok(claimedTimeoutCandidate);
+		assert.ok(claimedTimeoutCandidate.job.metadataCompletedAt);
 		const timedOut = await modules.timeoutGenerationJob(
 			timeoutCandidate.job.id,
 			10 * 60 * 1000,
@@ -192,6 +196,10 @@ test("repository helpers upsert learning data into DTO-compatible course data", 
 		);
 		assert.equal(activeRegenerationJob?.job.id, regenerationJob?.job.id);
 		assert.ok(await modules.claimGenerationJob(regenerationJob?.job.id ?? ""));
+		const transcriptReadyJob = await modules.markGenerationJobTranscriptReady(
+			regenerationJob?.job.id ?? "",
+		);
+		assert.ok(transcriptReadyJob?.job.transcriptCompletedAt);
 		await modules.completeGenerationJob({
 			jobId: regenerationJob?.job.id ?? "",
 			transcriptSource: "sample",
@@ -210,6 +218,36 @@ test("repository helpers upsert learning data into DTO-compatible course data", 
 				},
 			],
 		});
+		const creatorTimestampJob = await modules.createRegenerationJob(
+			regenerating.course.id,
+			userId,
+		);
+		assert.ok(
+			await modules.claimGenerationJob(creatorTimestampJob?.job.id ?? ""),
+		);
+		const creatorTimestampCompleted = await modules.completeGenerationJob({
+			jobId: creatorTimestampJob?.job.id ?? "",
+			transcriptSource: null,
+			rawOutput: { chapterSource: "creator_timestamps" },
+			chapters: [
+				{
+					title: "Creator first",
+					orderIndex: 0,
+					startSeconds: 0,
+					endSeconds: 45,
+				},
+				{
+					title: "Creator second",
+					orderIndex: 1,
+					startSeconds: 45,
+					endSeconds: null,
+				},
+			],
+		});
+		assert.equal(creatorTimestampCompleted?.job.transcriptSource, null);
+		assert.equal(creatorTimestampCompleted?.job.transcriptCompletedAt, null);
+		assert.ok(creatorTimestampCompleted?.job.chaptersCompletedAt);
+		assert.ok(creatorTimestampCompleted?.job.playerCompletedAt);
 		const afterRegeneration = await modules.getCoursePlayerData(
 			regenerating.course.id,
 			userId,

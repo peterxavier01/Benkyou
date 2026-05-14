@@ -321,19 +321,38 @@ export function buildGenerationTimeline(
 	job: CourseGenerationJobDTO,
 	chapterCount: number,
 ): GenerationTimelineStepV1[] {
-	const transcriptReady = Boolean(job.transcriptSource);
+	const metadataReady = Boolean(job.metadataCompletedAt);
+	const transcriptReady = Boolean(
+		job.transcriptCompletedAt || job.transcriptSource,
+	);
+	const chaptersReady = Boolean(
+		job.chaptersCompletedAt || (job.status === "completed" && chapterCount > 0),
+	);
+	const playerReady = Boolean(
+		job.playerCompletedAt || job.status === "completed",
+	);
+	const transcriptSkipped = chaptersReady && !transcriptReady;
 	const completed = job.status === "completed";
 	const failed = job.status === "failed" || job.status === "cancelled";
 	const processing = job.status === "processing";
+	const failedStep = failed
+		? getFailedTimelineStep({
+				metadataReady,
+				transcriptReady,
+				transcriptSkipped,
+				chaptersReady,
+				playerReady,
+			})
+		: null;
 
 	return [
 		{
 			key: "metadata",
 			label: "Video metadata",
 			status: getStepStatus({
-				completed: processing || completed || failed || transcriptReady,
-				failed: false,
-				processing: job.status === "queued",
+				completed: metadataReady || processing || completed || failed,
+				failed: failedStep === "metadata",
+				processing: job.status === "queued" && !metadataReady,
 			}),
 			description:
 				"Read the source details and prepare a private course shell.",
@@ -342,9 +361,11 @@ export function buildGenerationTimeline(
 			key: "transcript",
 			label: "Captions",
 			status: getStepStatus({
-				completed: transcriptReady || completed,
-				failed: failed && !transcriptReady,
-				processing,
+				completed: transcriptReady,
+				failed: failedStep === "transcript",
+				processing:
+					processing && metadataReady && !transcriptReady && !chaptersReady,
+				skipped: transcriptSkipped,
 			}),
 			description: "Extract YouTube captions for chapter generation.",
 		},
@@ -352,9 +373,12 @@ export function buildGenerationTimeline(
 			key: "chapters",
 			label: "Chapter outline",
 			status: getStepStatus({
-				completed: completed && chapterCount > 0,
-				failed: failed && transcriptReady && chapterCount === 0,
-				processing,
+				completed: chaptersReady,
+				failed: failedStep === "chapters",
+				processing:
+					processing &&
+					(transcriptReady || transcriptSkipped) &&
+					!chaptersReady,
 			}),
 			description: "Generate and validate the structured course outline.",
 		},
@@ -362,9 +386,9 @@ export function buildGenerationTimeline(
 			key: "player",
 			label: "Player prep",
 			status: getStepStatus({
-				completed,
-				failed,
-				processing: false,
+				completed: playerReady,
+				failed: failedStep === "player",
+				processing: processing && chaptersReady && !playerReady,
 			}),
 			description: "Save chapters so the course can open in the player.",
 		},
@@ -395,10 +419,12 @@ function getStepStatus({
 	completed,
 	failed,
 	processing,
+	skipped,
 }: {
 	completed: boolean;
 	failed: boolean;
 	processing: boolean;
+	skipped?: boolean;
 }): GenerationTimelineStepStatusV1 {
 	if (failed) {
 		return "failed";
@@ -412,5 +438,41 @@ function getStepStatus({
 		return "processing";
 	}
 
+	if (skipped) {
+		return "skipped";
+	}
+
 	return "pending";
+}
+
+function getFailedTimelineStep({
+	metadataReady,
+	transcriptReady,
+	transcriptSkipped,
+	chaptersReady,
+	playerReady,
+}: {
+	metadataReady: boolean;
+	transcriptReady: boolean;
+	transcriptSkipped: boolean;
+	chaptersReady: boolean;
+	playerReady: boolean;
+}) {
+	if (!metadataReady) {
+		return "metadata";
+	}
+
+	if (!transcriptReady && !transcriptSkipped) {
+		return "transcript";
+	}
+
+	if (!chaptersReady) {
+		return "chapters";
+	}
+
+	if (!playerReady) {
+		return "player";
+	}
+
+	return null;
 }

@@ -28,6 +28,10 @@ const baseJob = {
 	failureReason: null,
 	retryable: false,
 	startedAt: null,
+	metadataCompletedAt: null,
+	transcriptCompletedAt: null,
+	chaptersCompletedAt: null,
+	playerCompletedAt: null,
 	createdAt: "2026-05-09T00:00:00.000Z",
 	updatedAt: "2026-05-09T00:00:00.000Z",
 	completedAt: null,
@@ -287,6 +291,56 @@ test("generation detail derives retry and open-course states", () => {
 	assert.equal(
 		failed.timeline.some((step) => step.status === "failed"),
 		true,
+	);
+});
+
+test("generation timeline uses persisted step progress", () => {
+	const processingAfterTranscript = toGenerationJobDetail({
+		job: {
+			...baseJob,
+			status: "processing",
+			startedAt: "2026-05-09T00:01:00.000Z",
+			metadataCompletedAt: "2026-05-09T00:01:00.000Z",
+			transcriptCompletedAt: "2026-05-09T00:01:05.000Z",
+			transcriptSource: "youtube_captions",
+		},
+		course: baseCourse,
+		video: baseVideo,
+		chapterCount: 0,
+	});
+	const creatorTimestampCompleted = toGenerationJobDetail({
+		job: {
+			...baseJob,
+			status: "completed",
+			metadataCompletedAt: "2026-05-09T00:01:00.000Z",
+			chaptersCompletedAt: "2026-05-09T00:01:03.000Z",
+			playerCompletedAt: "2026-05-09T00:01:03.000Z",
+			completedAt: "2026-05-09T00:01:03.000Z",
+		},
+		course: baseCourse,
+		video: baseVideo,
+		chapterCount: 4,
+	});
+
+	assert.equal(
+		processingAfterTranscript.timeline.find((step) => step.key === "transcript")
+			?.status,
+		"completed",
+	);
+	assert.equal(
+		processingAfterTranscript.timeline.find((step) => step.key === "chapters")
+			?.status,
+		"processing",
+	);
+	assert.equal(
+		creatorTimestampCompleted.timeline.find((step) => step.key === "transcript")
+			?.status,
+		"skipped",
+	);
+	assert.equal(
+		creatorTimestampCompleted.timeline.find((step) => step.key === "chapters")
+			?.status,
+		"completed",
 	);
 });
 

@@ -331,6 +331,10 @@ function getTimelineTone(
 		return "info";
 	}
 
+	if (status === "skipped") {
+		return "neutral";
+	}
+
 	return "neutral";
 }
 

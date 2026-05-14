@@ -86,7 +86,7 @@ export interface CompleteGenerationJobInput {
 	jobId: string;
 	title?: string | null;
 	description?: string | null;
-	transcriptSource: "youtube_captions" | "manual" | "sample";
+	transcriptSource?: "youtube_captions" | "manual" | "sample" | null;
 	transcriptText?: string | null;
 	durationSeconds?: number | null;
 	rawOutput?: Record<string, unknown> | null;
@@ -210,6 +210,10 @@ function mapGenerationJob(
 		failureReason: row.failureReason,
 		retryable: row.retryable,
 		startedAt: toIso(row.startedAt),
+		metadataCompletedAt: toIso(row.metadataCompletedAt),
+		transcriptCompletedAt: toIso(row.transcriptCompletedAt),
+		chaptersCompletedAt: toIso(row.chaptersCompletedAt),
+		playerCompletedAt: toIso(row.playerCompletedAt),
 		createdAt: toIso(row.createdAt) ?? "",
 		updatedAt: toIso(row.updatedAt) ?? "",
 		completedAt: toIso(row.completedAt),
@@ -818,14 +822,16 @@ export async function cancelGenerationJob(
 export async function claimGenerationJob(
 	jobId: string,
 ): Promise<GenerationJobWithContextDTO | null> {
+	const now = new Date();
 	const [jobRow] = await db
 		.update(courseGenerationJobs)
 		.set({
 			status: "processing",
-			startedAt: new Date(),
+			startedAt: now,
+			metadataCompletedAt: now,
 			failureReason: null,
 			retryable: false,
-			updatedAt: new Date(),
+			updatedAt: now,
 		})
 		.where(
 			and(
@@ -840,6 +846,27 @@ export async function claimGenerationJob(
 	}
 
 	return getGenerationJob(jobRow.id);
+}
+
+export async function markGenerationJobTranscriptReady(
+	jobId: string,
+): Promise<GenerationJobDetailRecordDTO | null> {
+	const now = new Date();
+	const [jobRow] = await db
+		.update(courseGenerationJobs)
+		.set({
+			transcriptCompletedAt: now,
+			updatedAt: now,
+		})
+		.where(
+			and(
+				eq(courseGenerationJobs.id, jobId),
+				eq(courseGenerationJobs.status, "processing"),
+			),
+		)
+		.returning();
+
+	return jobRow ? getGenerationJobDetailRecord(jobRow.id) : null;
 }
 
 export async function completeGenerationJob(
@@ -865,14 +892,21 @@ export async function completeGenerationJob(
 		}
 
 		const completedAt = new Date();
+		const transcriptCompletedAt = input.transcriptSource
+			? (row.job.transcriptCompletedAt ?? completedAt)
+			: row.job.transcriptCompletedAt;
 		const [jobRow] = await tx
 			.update(courseGenerationJobs)
 			.set({
 				status: "completed",
-				transcriptSource: input.transcriptSource,
+				transcriptSource: input.transcriptSource ?? row.job.transcriptSource,
 				failureReason: null,
 				retryable: false,
 				rawOutput: input.rawOutput ?? undefined,
+				metadataCompletedAt: row.job.metadataCompletedAt ?? completedAt,
+				transcriptCompletedAt,
+				chaptersCompletedAt: row.job.chaptersCompletedAt ?? completedAt,
+				playerCompletedAt: row.job.playerCompletedAt ?? completedAt,
 				completedAt,
 				updatedAt: completedAt,
 			})
@@ -959,14 +993,19 @@ export async function completeGenerationJob(
 			.where(eq(courses.id, row.course.id))
 			.returning();
 
+		const videoUpdate: Partial<typeof videos.$inferInsert> = {
+			durationSeconds: input.durationSeconds ?? row.video.durationSeconds,
+			updatedAt: completedAt,
+		};
+
+		if (input.transcriptSource) {
+			videoUpdate.transcriptSource = input.transcriptSource;
+			videoUpdate.transcriptText = input.transcriptText;
+		}
+
 		const [videoRow] = await tx
 			.update(videos)
-			.set({
-				durationSeconds: input.durationSeconds ?? row.video.durationSeconds,
-				transcriptSource: input.transcriptSource,
-				transcriptText: input.transcriptText,
-				updatedAt: completedAt,
-			})
+			.set(videoUpdate)
 			.where(eq(videos.id, row.video.id))
 			.returning();
 
