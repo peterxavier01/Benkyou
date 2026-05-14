@@ -1,4 +1,5 @@
 import {
+	classifyEducationalSuitability,
 	fetchYouTubeDataApiMetadata,
 	fetchYouTubeOEmbedMetadata,
 	fetchYouTubeTranscript,
@@ -9,9 +10,11 @@ import { getCurrentUserFromHeaders } from "@benkyou/auth/server";
 import {
 	cancelGenerationJobRequestV1Schema,
 	createCourseFromUrlRequestV1Schema,
+	EDUCATIONAL_SUITABILITY_REJECTION_MESSAGE,
 	GENERATION_JOB_TIMEOUT_MS,
 	getChapterGenerationPolicy,
 	getParseVideoUrlErrorMessage,
+	isEducationalSuitabilityAllowed,
 	parseVideoUrl,
 	parseYouTubeDescriptionChapters,
 	processGenerationJobRequestV1Schema,
@@ -112,6 +115,26 @@ export const processGenerationJob = createServerFn({ method: "POST" })
 		}
 
 		try {
+			const educationalSuitability =
+				await classifyEducationalSuitabilityForVideo(claimed.video);
+
+			if (!isEducationalSuitabilityAllowed(educationalSuitability.result)) {
+				const failed = await failGenerationJob({
+					jobId: claimed.job.id,
+					failureReason: EDUCATIONAL_SUITABILITY_REJECTION_MESSAGE,
+					retryable: false,
+					rawOutput: {
+						educationalSuitability,
+					},
+				});
+
+				if (!failed) {
+					throw new Error("Generation job disappeared before suitability check.");
+				}
+
+				return { detail: toGenerationJobDetail(failed) };
+			}
+
 			const creatorChapters = parseYouTubeDescriptionChapters(
 				claimed.video.description,
 				claimed.video.durationSeconds,
@@ -317,6 +340,54 @@ async function getOptionalUserId() {
 }
 
 class RetryableGenerationError extends Error {}
+
+async function classifyEducationalSuitabilityForVideo(video: {
+	title: string | null;
+	description: string | null;
+	channelTitle: string | null;
+	rawMetadata: Record<string, unknown> | null;
+}) {
+	const metadata = getSuitabilityMetadata(video.rawMetadata);
+	const result = await classifyEducationalSuitability({
+		videoTitle: video.title,
+		description: video.description,
+		channelName: video.channelTitle,
+		categoryId: metadata.categoryId,
+		tags: metadata.tags,
+		topicCategories: metadata.topicCategories,
+	});
+
+	return {
+		result,
+		metadata,
+	};
+}
+
+function getSuitabilityMetadata(rawMetadata: Record<string, unknown> | null) {
+	const snippet = getRecord(rawMetadata?.snippet);
+	const topicDetails = getRecord(rawMetadata?.topicDetails);
+
+	return {
+		categoryId:
+			typeof snippet?.categoryId === "string" ? snippet.categoryId : null,
+		tags: Array.isArray(snippet?.tags)
+			? snippet.tags.filter((tag): tag is string => typeof tag === "string")
+			: [],
+		topicCategories: Array.isArray(topicDetails?.topicCategories)
+			? topicDetails.topicCategories.filter(
+					(topic): topic is string => typeof topic === "string",
+				)
+			: [],
+		source:
+			typeof rawMetadata?.source === "string" ? rawMetadata.source : "unknown",
+	};
+}
+
+function getRecord(value: unknown) {
+	return value && typeof value === "object" && !Array.isArray(value)
+		? (value as Record<string, unknown>)
+		: null;
+}
 
 function toUserSafeGenerationFailure(error: unknown) {
 	if (error instanceof RetryableGenerationError) {

@@ -1,6 +1,7 @@
 import type {
 	CancelGenerationJobRequestV1,
 	CourseGenerationJobDTO,
+	EducationalSuitabilityResultV1,
 	GenerationJobDetailV1,
 	GenerationTimelineStepStatusV1,
 	GenerationTimelineStepV1,
@@ -72,6 +73,23 @@ export const aiGeneratedCourseV1Schema = z
 
 export type AiGeneratedCourseV1 = z.infer<typeof aiGeneratedCourseV1Schema>;
 export type AiGeneratedChapterV1 = z.infer<typeof aiGeneratedChapterV1Schema>;
+
+export const EDUCATIONAL_SUITABILITY_REJECTION_MESSAGE =
+	"This video does not look like educational content, so Benkyou cannot turn it into a course.";
+
+export const educationalSuitabilityResultV1Schema = z.object({
+	verdict: z.enum(["educational", "non_educational", "ambiguous"]),
+	confidence: z.number().min(0).max(1),
+	reason: z.string().trim().min(1).max(500),
+	contentType: z.string().trim().min(1).max(120),
+	evidence: z.array(z.string().trim().min(1).max(160)).max(8),
+}) satisfies z.ZodType<EducationalSuitabilityResultV1>;
+
+export function isEducationalSuitabilityAllowed(
+	result: EducationalSuitabilityResultV1,
+) {
+	return result.verdict === "educational";
+}
 
 export interface ParsedCreatorChapter {
 	title: string;

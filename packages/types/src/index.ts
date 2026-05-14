@@ -11,6 +11,19 @@ export type GenerationJobStatus =
 
 export type TranscriptSource = "youtube_captions" | "manual" | "sample";
 
+export type EducationalSuitabilityVerdictV1 =
+	| "educational"
+	| "non_educational"
+	| "ambiguous";
+
+export interface EducationalSuitabilityResultV1 {
+	verdict: EducationalSuitabilityVerdictV1;
+	confidence: number;
+	reason: string;
+	contentType: string;
+	evidence: string[];
+}
+
 export interface VideoDTO {
 	id: string;
 	provider: VideoProvider;

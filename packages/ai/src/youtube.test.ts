@@ -2,13 +2,17 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+	parseYouTubeDataApiVideoMetadata,
 	parseYouTubeDuration,
 	sampleTranscriptSegmentsAcrossDuration,
-	transcriptSegmentsToText,
 	type TranscriptSegment,
+	transcriptSegmentsToText,
 } from "./youtube";
 
-function makeSegments(count: number, intervalSeconds: number): TranscriptSegment[] {
+function makeSegments(
+	count: number,
+	intervalSeconds: number,
+): TranscriptSegment[] {
 	return Array.from({ length: count }, (_, index) => ({
 		text: `segment ${index}`,
 		startSeconds: index * intervalSeconds,
@@ -23,12 +27,56 @@ test("parseYouTubeDuration converts ISO 8601 durations to seconds", () => {
 	assert.equal(parseYouTubeDuration("not-a-duration"), null);
 });
 
+test("YouTube Data API metadata preserves category, tags, and topics", () => {
+	const metadata = parseYouTubeDataApiVideoMetadata({
+		items: [
+			{
+				snippet: {
+					title: "Learn TypeScript",
+					description: "A practical tutorial.",
+					channelTitle: "Benkyou Tests",
+					channelId: "channel-1",
+					categoryId: "27",
+					tags: ["typescript", "tutorial", 123],
+					thumbnails: { high: { url: "https://img.test/high.jpg" } },
+				},
+				contentDetails: { duration: "PT12M3S" },
+				topicDetails: {
+					topicCategories: [
+						"https://en.wikipedia.org/wiki/Technology",
+						null,
+						"https://en.wikipedia.org/wiki/Education",
+					],
+				},
+			},
+		],
+	});
+
+	assert.equal(metadata?.categoryId, "27");
+	assert.deepEqual(metadata?.tags, ["typescript", "tutorial"]);
+	assert.deepEqual(metadata?.topicCategories, [
+		"https://en.wikipedia.org/wiki/Technology",
+		"https://en.wikipedia.org/wiki/Education",
+	]);
+	assert.equal(metadata?.durationSeconds, 723);
+	assert.deepEqual(metadata?.rawMetadata.topicDetails, {
+		topicCategories: [
+			"https://en.wikipedia.org/wiki/Technology",
+			null,
+			"https://en.wikipedia.org/wiki/Education",
+		],
+	});
+});
+
 test("long transcript sampling includes beginning, middle, and end regions", () => {
 	const segments = makeSegments(1_000, 60);
 	const sampled = sampleTranscriptSegmentsAcrossDuration(segments, 60_000, 100);
 
 	assert.equal(sampled.length <= 100, true);
-	assert.equal(sampled.some((segment) => segment.startSeconds < 10 * 60), true);
+	assert.equal(
+		sampled.some((segment) => segment.startSeconds < 10 * 60),
+		true,
+	);
 	assert.equal(
 		sampled.some(
 			(segment) =>

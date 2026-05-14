@@ -463,27 +463,27 @@ Goal: make the app feel complete and launch-ready.
 
 ### Static Pages
 
-- [ ] Build `/about`.
-- [ ] Build `/self-hosting`.
-- [ ] Build `/privacy`.
-- [ ] Build `/terms`.
-- [ ] Add 404 handling.
-- [ ] Add app error boundary UI.
+- [x] Build `/about`.
+- [x] Build `/self-hosting`.
+- [x] Build `/privacy`.
+- [x] Build `/terms`.
+- [x] Add 404 handling.
+- [x] Add app error boundary UI.
 
 ### Static Page Content
 
-- [ ] About explains mission, open-source ethos, and learning focus.
-- [ ] Self-hosting includes requirements, Docker path, env vars, and database
+- [x] About explains mission, open-source ethos, and learning focus.
+- [x] Self-hosting includes requirements, Docker path, env vars, and database
       setup.
-- [ ] Privacy explains stored data, local-first behavior, AI processing, and
+- [x] Privacy explains stored data, local-first behavior, AI processing, and
       external video provider handling.
-- [ ] Terms covers acceptable use, external video responsibility, and AI output
+- [x] Terms covers acceptable use, external video responsibility, and AI output
       caveats.
 
 ### Done When
 
-- [ ] Public visitors can understand trust and data handling.
-- [ ] Broken routes and app crashes recover to useful actions.
+- [x] Public visitors can understand trust and data handling.
+- [x] Broken routes and app crashes recover to useful actions.
 
 ## Phase 10: Quality, Accessibility, and Launch Hardening
 
@@ -570,12 +570,12 @@ Goal: verify the MVP behaves like a serious learning tool before release.
 - [ ] `/courses/:courseId/bookmarks/:bookmarkId` - bookmark deep link.
 - [x] `/bookmarks` - global bookmarks.
 - [x] `/settings` - account, preferences, export.
-- [ ] `/about` - mission and project context.
-- [ ] `/self-hosting` - self-hosting guide.
-- [ ] `/privacy` - privacy page.
-- [ ] `/terms` - terms page.
-- [ ] `404` - unknown route recovery.
-- [ ] App error boundary - unrecoverable error recovery.
+- [x] `/about` - mission and project context.
+- [x] `/self-hosting` - self-hosting guide.
+- [x] `/privacy` - privacy page.
+- [x] `/terms` - terms page.
+- [x] `404` - unknown route recovery.
+- [x] App error boundary - unrecoverable error recovery.
 
 ## UI Component Checklist
 
@@ -601,7 +601,7 @@ Goal: verify the MVP behaves like a serious learning tool before release.
 - [x] Confirm dialog.
 - [x] Toast or inline alert.
 - [x] Settings form controls.
-- [ ] Error page layout.
+- [x] Error page layout.
 
 ## API & Server Function Checklist
 
@@ -640,5 +640,5 @@ Goal: verify the MVP behaves like a serious learning tool before release.
 - [ ] Manage course title and chapter title.
 - [ ] Delete course.
 - [ ] Sign in and sign out.
-- [ ] View privacy, terms, and self-hosting pages.
+- [x] View privacy, terms, and self-hosting pages.
 - [ ] Pass build, type check, lint/check, and smoke tests.

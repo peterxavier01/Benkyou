@@ -1,5 +1,5 @@
-import { fetchTranscript } from "youtube-transcript";
 import type { ChapterGenerationPolicy } from "@benkyou/core";
+import { fetchTranscript } from "youtube-transcript";
 
 export interface TranscriptSegment {
 	text: string;
@@ -14,6 +14,9 @@ export interface YouTubeMetadata {
 	channelUrl: string | null;
 	thumbnailUrl: string | null;
 	durationSeconds: number | null;
+	categoryId: string | null;
+	tags: string[];
+	topicCategories: string[];
 	rawMetadata: Record<string, unknown>;
 }
 
@@ -41,7 +44,7 @@ export async function fetchYouTubeDataApiMetadata(
 	}
 
 	const response = await fetch(
-		`https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${encodeURIComponent(
+		`https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails,topicDetails&id=${encodeURIComponent(
 			providerVideoId,
 		)}&key=${encodeURIComponent(apiKey)}`,
 	);
@@ -57,13 +60,41 @@ export async function fetchYouTubeDataApiMetadata(
 				description?: unknown;
 				channelTitle?: unknown;
 				channelId?: unknown;
+				categoryId?: unknown;
+				tags?: unknown;
 				thumbnails?: Record<string, { url?: unknown } | undefined>;
 			};
 			contentDetails?: {
 				duration?: unknown;
 			};
+			topicDetails?: {
+				topicCategories?: unknown;
+			};
 		}>;
 	};
+
+	return parseYouTubeDataApiVideoMetadata(data);
+}
+
+export function parseYouTubeDataApiVideoMetadata(data: {
+	items?: Array<{
+		snippet?: {
+			title?: unknown;
+			description?: unknown;
+			channelTitle?: unknown;
+			channelId?: unknown;
+			categoryId?: unknown;
+			tags?: unknown;
+			thumbnails?: Record<string, { url?: unknown } | undefined>;
+		};
+		contentDetails?: {
+			duration?: unknown;
+		};
+		topicDetails?: {
+			topicCategories?: unknown;
+		};
+	}>;
+}): YouTubeMetadata | null {
 	const item = data.items?.[0];
 
 	if (!item) {
@@ -88,10 +119,21 @@ export async function fetchYouTubeDataApiMetadata(
 			typeof item.contentDetails?.duration === "string"
 				? parseYouTubeDuration(item.contentDetails.duration)
 				: null,
+		categoryId:
+			typeof snippet?.categoryId === "string" ? snippet.categoryId : null,
+		tags: Array.isArray(snippet?.tags)
+			? snippet.tags.filter((tag): tag is string => typeof tag === "string")
+			: [],
+		topicCategories: Array.isArray(item.topicDetails?.topicCategories)
+			? item.topicDetails.topicCategories.filter(
+					(topic): topic is string => typeof topic === "string",
+				)
+			: [],
 		rawMetadata: {
 			source: "youtube_data_api",
 			snippet: item.snippet ?? null,
 			contentDetails: item.contentDetails ?? null,
+			topicDetails: item.topicDetails ?? null,
 		},
 	};
 }
@@ -122,6 +164,9 @@ export async function fetchYouTubeOEmbedMetadata(canonicalUrl: string) {
 		thumbnailUrl:
 			typeof data.thumbnail_url === "string" ? data.thumbnail_url : null,
 		durationSeconds: null,
+		categoryId: null,
+		tags: [],
+		topicCategories: [],
 		rawMetadata: {
 			source: "youtube_oembed",
 			...data,
@@ -162,7 +207,7 @@ export function sampleTranscriptSegmentsAcrossDuration(
 	const duration =
 		durationSeconds && durationSeconds > 0
 			? durationSeconds
-			: segments.at(-1)?.startSeconds ?? 0;
+			: (segments.at(-1)?.startSeconds ?? 0);
 	const windowCount = 5;
 	const segmentsPerWindow = Math.max(1, Math.floor(maxSegments / windowCount));
 	const sampled = new Map<number, TranscriptSegment>();

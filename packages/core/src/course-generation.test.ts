@@ -11,8 +11,10 @@ import {
 	aiGeneratedCourseV1Schema,
 	cancelGenerationJobRequestV1Schema,
 	createCourseFromUrlRequestV1Schema,
+	educationalSuitabilityResultV1Schema,
 	GENERATION_JOB_TIMEOUT_MS,
 	getChapterGenerationPolicy,
+	isEducationalSuitabilityAllowed,
 	parseYouTubeDescriptionChapters,
 	processGenerationJobRequestV1Schema,
 	retryGenerationJobRequestV1Schema,
@@ -151,6 +153,37 @@ test("AI output schema rejects empty, untitled, and invalid ranges", () => {
 			],
 		}).success,
 		false,
+	);
+});
+
+test("educational suitability schema validates strict verdicts", () => {
+	const educational = educationalSuitabilityResultV1Schema.parse({
+		verdict: "educational",
+		confidence: 0.92,
+		reason: "The video teaches a practical workflow.",
+		contentType: "tutorial",
+		evidence: ["tutorial in title", "step-by-step description"],
+	});
+
+	assert.equal(isEducationalSuitabilityAllowed(educational), true);
+	assert.equal(
+		isEducationalSuitabilityAllowed({
+			...educational,
+			verdict: "ambiguous",
+		}),
+		false,
+	);
+	assert.throws(() =>
+		educationalSuitabilityResultV1Schema.parse({
+			...educational,
+			verdict: "asmr",
+		}),
+	);
+	assert.throws(() =>
+		educationalSuitabilityResultV1Schema.parse({
+			...educational,
+			confidence: 1.5,
+		}),
 	);
 });
 

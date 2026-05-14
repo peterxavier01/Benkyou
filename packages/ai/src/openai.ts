@@ -1,11 +1,13 @@
 import {
 	type AiGeneratedCourseV1,
 	aiGeneratedCourseV1Schema,
-	DEFAULT_OPENAI_GENERATION_MODEL,
-	getChapterGenerationPolicy,
 	type ChapterGenerationPolicy,
+	DEFAULT_OPENAI_GENERATION_MODEL,
+	educationalSuitabilityResultV1Schema,
+	getChapterGenerationPolicy,
 	validateGeneratedChapterRanges,
 } from "@benkyou/core";
+import type { EducationalSuitabilityResultV1 } from "@benkyou/types";
 import OpenAI from "openai";
 
 const chapterSchema = {
@@ -37,6 +39,26 @@ const courseSchema = {
 	},
 } as const;
 
+const educationalSuitabilitySchema = {
+	type: "object",
+	additionalProperties: false,
+	required: ["verdict", "confidence", "reason", "contentType", "evidence"],
+	properties: {
+		verdict: {
+			type: "string",
+			enum: ["educational", "non_educational", "ambiguous"],
+		},
+		confidence: { type: "number", minimum: 0, maximum: 1 },
+		reason: { type: "string", maxLength: 500 },
+		contentType: { type: "string", maxLength: 120 },
+		evidence: {
+			type: "array",
+			maxItems: 8,
+			items: { type: "string" },
+		},
+	},
+} as const;
+
 export interface GenerateChaptersInput {
 	videoTitle: string | null;
 	canonicalUrl?: string;
@@ -44,6 +66,17 @@ export interface GenerateChaptersInput {
 	durationSeconds?: number | null;
 	transcriptSegmentCount?: number;
 	policy?: ChapterGenerationPolicy;
+	model?: string;
+}
+
+export interface ClassifyEducationalSuitabilityInput {
+	videoTitle: string | null;
+	description?: string | null;
+	channelName?: string | null;
+	categoryId?: string | null;
+	tags?: string[];
+	topicCategories?: string[];
+	transcriptSample?: string | null;
 	model?: string;
 }
 
@@ -123,4 +156,71 @@ export async function generateCourseChapters(
 	}
 
 	return generated;
+}
+
+export async function classifyEducationalSuitability(
+	input: ClassifyEducationalSuitabilityInput,
+): Promise<EducationalSuitabilityResultV1> {
+	if (process.env.AI_PROVIDER && process.env.AI_PROVIDER !== "openai") {
+		throw new Error("Only AI_PROVIDER=openai is supported for Phase 3.");
+	}
+
+	const apiKey = process.env.AI_API_KEY;
+
+	if (!apiKey) {
+		throw new Error("AI_API_KEY is required for course generation.");
+	}
+
+	const client = new OpenAI({ apiKey });
+	const response = await client.responses.create({
+		model:
+			input.model ||
+			process.env.OPENAI_SUITABILITY_MODEL ||
+			process.env.OPENAI_MODEL ||
+			DEFAULT_OPENAI_GENERATION_MODEL,
+		input: [
+			{
+				role: "system",
+				content:
+					"You decide whether a YouTube video is suitable for Benkyou, a product that turns clearly educational videos into structured courses. Return only structured data.",
+			},
+			{
+				role: "user",
+				content: [
+					"Classify this video for educational course generation.",
+					"",
+					"Allowed as educational: tutorials, lectures, explainers, walkthroughs, documentaries with learning intent, academic or professional training, and practical skill instruction.",
+					"Reject as non_educational: ASMR, music, reactions, entertainment, vlogs without instructional intent, ambience, compilations, gossip, pure gaming entertainment, and lifestyle content without teaching.",
+					"When evidence is weak or mixed, use ambiguous. Benkyou blocks ambiguous videos.",
+					"Treat YouTube category as weak evidence only.",
+					"",
+					`Title: ${input.videoTitle || "Untitled YouTube video"}`,
+					`Channel: ${input.channelName || "Unknown"}`,
+					`Category ID: ${input.categoryId || "Unknown"}`,
+					`Tags: ${(input.tags ?? []).slice(0, 25).join(", ") || "None"}`,
+					`Topic categories: ${
+						(input.topicCategories ?? []).slice(0, 12).join(", ") || "None"
+					}`,
+					"",
+					"Description:",
+					(input.description || "").slice(0, 4_000) || "None",
+					input.transcriptSample
+						? `\nTranscript sample:\n${input.transcriptSample.slice(0, 4_000)}`
+						: "",
+				].join("\n"),
+			},
+		],
+		text: {
+			format: {
+				type: "json_schema",
+				name: "benkyou_educational_suitability_v1",
+				strict: true,
+				schema: educationalSuitabilitySchema,
+			},
+		},
+	});
+
+	return educationalSuitabilityResultV1Schema.parse(
+		JSON.parse(response.output_text),
+	);
 }
