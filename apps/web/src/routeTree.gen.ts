@@ -9,7 +9,11 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SignInRouteImport } from './routes/sign-in'
+import { Route as SelfHostingRouteImport } from './routes/self-hosting'
+import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as AboutRouteImport } from './routes/about'
 import { Route as WorkspaceRouteImport } from './routes/_workspace'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as WorkspaceSettingsRouteImport } from './routes/_workspace/settings'
@@ -20,9 +24,29 @@ import { Route as WorkspaceCoursesCourseIdRouteImport } from './routes/_workspac
 import { Route as WorkspaceCoursesNewJobIdRouteImport } from './routes/_workspace/courses/new/$jobId'
 import { Route as WorkspaceCoursesCourseIdManageRouteImport } from './routes/_workspace/courses/$courseId_.manage'
 
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SignInRoute = SignInRouteImport.update({
   id: '/sign-in',
   path: '/sign-in',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SelfHostingRoute = SelfHostingRouteImport.update({
+  id: '/self-hosting',
+  path: '/self-hosting',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AboutRoute = AboutRouteImport.update({
+  id: '/about',
+  path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
 const WorkspaceRoute = WorkspaceRouteImport.update({
@@ -75,7 +99,11 @@ const WorkspaceCoursesCourseIdManageRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/privacy': typeof PrivacyRoute
+  '/self-hosting': typeof SelfHostingRoute
   '/sign-in': typeof SignInRoute
+  '/terms': typeof TermsRoute
   '/bookmarks': typeof WorkspaceBookmarksRoute
   '/settings': typeof WorkspaceSettingsRoute
   '/courses/$courseId': typeof WorkspaceCoursesCourseIdRoute
@@ -86,7 +114,11 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/privacy': typeof PrivacyRoute
+  '/self-hosting': typeof SelfHostingRoute
   '/sign-in': typeof SignInRoute
+  '/terms': typeof TermsRoute
   '/bookmarks': typeof WorkspaceBookmarksRoute
   '/settings': typeof WorkspaceSettingsRoute
   '/courses/$courseId': typeof WorkspaceCoursesCourseIdRoute
@@ -99,7 +131,11 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_workspace': typeof WorkspaceRouteWithChildren
+  '/about': typeof AboutRoute
+  '/privacy': typeof PrivacyRoute
+  '/self-hosting': typeof SelfHostingRoute
   '/sign-in': typeof SignInRoute
+  '/terms': typeof TermsRoute
   '/_workspace/bookmarks': typeof WorkspaceBookmarksRoute
   '/_workspace/settings': typeof WorkspaceSettingsRoute
   '/_workspace/courses/$courseId': typeof WorkspaceCoursesCourseIdRoute
@@ -112,7 +148,11 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/about'
+    | '/privacy'
+    | '/self-hosting'
     | '/sign-in'
+    | '/terms'
     | '/bookmarks'
     | '/settings'
     | '/courses/$courseId'
@@ -123,7 +163,11 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/about'
+    | '/privacy'
+    | '/self-hosting'
     | '/sign-in'
+    | '/terms'
     | '/bookmarks'
     | '/settings'
     | '/courses/$courseId'
@@ -135,7 +179,11 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_workspace'
+    | '/about'
+    | '/privacy'
+    | '/self-hosting'
     | '/sign-in'
+    | '/terms'
     | '/_workspace/bookmarks'
     | '/_workspace/settings'
     | '/_workspace/courses/$courseId'
@@ -148,17 +196,49 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   WorkspaceRoute: typeof WorkspaceRouteWithChildren
+  AboutRoute: typeof AboutRoute
+  PrivacyRoute: typeof PrivacyRoute
+  SelfHostingRoute: typeof SelfHostingRoute
   SignInRoute: typeof SignInRoute
+  TermsRoute: typeof TermsRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sign-in': {
       id: '/sign-in'
       path: '/sign-in'
       fullPath: '/sign-in'
       preLoaderRoute: typeof SignInRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/self-hosting': {
+      id: '/self-hosting'
+      path: '/self-hosting'
+      fullPath: '/self-hosting'
+      preLoaderRoute: typeof SelfHostingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_workspace': {
@@ -252,7 +332,11 @@ const WorkspaceRouteWithChildren = WorkspaceRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   WorkspaceRoute: WorkspaceRouteWithChildren,
+  AboutRoute: AboutRoute,
+  PrivacyRoute: PrivacyRoute,
+  SelfHostingRoute: SelfHostingRoute,
   SignInRoute: SignInRoute,
+  TermsRoute: TermsRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport
