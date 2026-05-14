@@ -565,55 +565,57 @@ function CoursePlayerScreen({
 						</div>
 					</ContentPanel>
 
-					<PlayerVideoFrame>
-						<YouTubePlayer
-							providerVideoId={data.video.providerVideoId}
-							initialSeconds={currentSeconds}
-							seekToSeconds={seekToSeconds}
-							onReady={(duration) => {
-								if (duration > 0) {
-									setDurationSeconds(duration);
-								}
-							}}
-							onTimeUpdate={handleTimeUpdate}
-							onPauseOrEnd={(time, duration) => {
-								handleTimeUpdate(time, duration);
-								persistProgress();
-							}}
+					<div className="flex flex-col gap-3">
+						<PlayerVideoFrame className="lg:shadow-sm">
+							<YouTubePlayer
+								providerVideoId={data.video.providerVideoId}
+								initialSeconds={currentSeconds}
+								seekToSeconds={seekToSeconds}
+								onReady={(duration) => {
+									if (duration > 0) {
+										setDurationSeconds(duration);
+									}
+								}}
+								onTimeUpdate={handleTimeUpdate}
+								onPauseOrEnd={(time, duration) => {
+									handleTimeUpdate(time, duration);
+									persistProgress();
+								}}
+							/>
+						</PlayerVideoFrame>
+
+						<PlayerTabletStack>
+							<ChapterPanel
+								chapters={data.chapters}
+								selectedChapterId={selectedChapter?.id ?? null}
+								watchedByChapter={watchedByChapter}
+								completedByChapter={completedByChapter}
+								durationSeconds={durationSeconds}
+								onSelect={selectChapter}
+								onToggleComplete={toggleChapterComplete}
+							/>
+						</PlayerTabletStack>
+
+						<LearningTabs
+							courseId={courseId}
+							chapter={selectedChapter}
+							note={selectedNote}
+							bookmarks={selectedBookmarks}
+							deletingBookmark={deleteBookmarkMutation.isPending}
+							onDeleteBookmark={(bookmark) =>
+								deleteBookmarkMutation.mutate(bookmark.id)
+							}
+							onEditBookmark={openEditBookmarkDialog}
+							onJumpToBookmark={jumpToBookmark}
 						/>
-					</PlayerVideoFrame>
 
-					<PlayerTabletStack>
-						<ChapterPanel
-							chapters={data.chapters}
-							selectedChapterId={selectedChapter?.id ?? null}
-							watchedByChapter={watchedByChapter}
-							completedByChapter={completedByChapter}
-							durationSeconds={durationSeconds}
-							onSelect={selectChapter}
-							onToggleComplete={toggleChapterComplete}
-						/>
-					</PlayerTabletStack>
-
-					<LearningTabs
-						courseId={courseId}
-						chapter={selectedChapter}
-						note={selectedNote}
-						bookmarks={selectedBookmarks}
-						deletingBookmark={deleteBookmarkMutation.isPending}
-						onDeleteBookmark={(bookmark) =>
-							deleteBookmarkMutation.mutate(bookmark.id)
-						}
-						onEditBookmark={openEditBookmarkDialog}
-						onJumpToBookmark={jumpToBookmark}
-					/>
-
-					{saveError ? (
-						<Alert variant="destructive">
-							<AlertTitle>Save failed</AlertTitle>
-							<AlertDescription>{saveError}</AlertDescription>
-						</Alert>
-					) : null}
+						{saveError ? (
+							<Alert variant="destructive">
+								<AlertTitle>Save failed</AlertTitle>
+								<AlertDescription>{saveError}</AlertDescription>
+							</Alert>
+						) : null}
+					</div>
 				</PlayerPrimary>
 
 				<PlayerAside>
@@ -674,14 +676,14 @@ function ChapterPanel({
 	onToggleComplete: (chapter: CourseChapterDTO) => void;
 }) {
 	return (
-		<div className="min-h-0 flex-1 overflow-hidden">
+		<div className="flex min-h-0 flex-1 flex-col overflow-hidden">
 			<div className="border-b border-border p-3">
 				<h2 className="font-semibold text-sm">Chapters</h2>
 				<p className="text-muted-foreground text-xs">
 					Jump through the generated outline.
 				</p>
 			</div>
-			<div className="max-h-[420px] overflow-auto p-2 lg:max-h-none">
+			<div className="min-h-0 flex-1 overflow-auto p-2 md:max-h-[420px] lg:max-h-none">
 				{chapters.map((chapter) => (
 					<ChapterItem
 						key={chapter.id}
@@ -728,9 +730,10 @@ function ChapterItem({
 
 	return (
 		<div
-			className={`mb-2 rounded-md border p-2 transition-colors ${
+			aria-current={active ? "true" : undefined}
+			className={`mb-1.5 rounded-md border px-2 py-1.5 transition-colors ${
 				active
-					? "border-primary/35 bg-primary/5"
+					? "border-primary/40 bg-accent text-accent-foreground"
 					: "border-border bg-background hover:bg-muted/45"
 			}`}
 		>
@@ -738,37 +741,43 @@ function ChapterItem({
 				<div className="min-w-0">
 					<button
 						type="button"
-						className="line-clamp-2 cursor-pointer text-left font-medium text-sm transition-colors hover:text-primary focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35"
+						className="line-clamp-2 cursor-pointer text-left font-medium text-sm leading-5 transition-colors hover:text-primary focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35"
 						onClick={() => onSelect(chapter)}
 					>
 						{chapter.title}
 					</button>
-					<p className="mt-1 text-muted-foreground text-xs">
-						{formatTimestamp(chapter.startSeconds)}
-						{chapter.endSeconds
-							? ` - ${formatTimestamp(chapter.endSeconds)}`
-							: ""}
-					</p>
+					<div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-muted-foreground text-xs">
+						<span>
+							{formatTimestamp(chapter.startSeconds)}
+							{chapter.endSeconds
+								? ` - ${formatTimestamp(chapter.endSeconds)}`
+								: ""}
+						</span>
+						{active ? (
+							<span className="font-medium text-primary">Now playing</span>
+						) : null}
+					</div>
 				</div>
-				{completed ? (
+				<Button
+					type="button"
+					size="icon-xs"
+					variant={completed ? "secondary" : "ghost"}
+					className="mt-0.5"
+					aria-pressed={completed}
+					onClick={() => onToggleComplete(chapter)}
+				>
 					<HugeIcon
-						name="checkmarkCircle"
-						className="mt-0.5 size-4 shrink-0 text-primary"
+						name={completed ? "checkmarkCircle" : "circle"}
+						className={completed ? "size-4 text-primary" : "size-4"}
 					/>
-				) : null}
+					<span className="sr-only">
+						{completed ? "Mark chapter incomplete" : "Mark chapter complete"}
+					</span>
+				</Button>
 			</div>
-			<div className="mt-2">
+			<div className="mt-1.5">
 				<Progress value={completed ? 100 : percent} />
 			</div>
-			<Button
-				type="button"
-				size="xs"
-				variant="ghost"
-				className="mt-2"
-				onClick={() => onToggleComplete(chapter)}
-			>
-				{completed ? "Mark incomplete" : "Mark complete"}
-			</Button>
 		</div>
 	);
 }
