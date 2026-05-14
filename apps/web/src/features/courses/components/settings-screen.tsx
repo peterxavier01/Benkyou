@@ -245,7 +245,7 @@ function SettingsScreen({
 						</p>
 					</div>
 					<Button asChild variant="outline">
-						<a href="/self-hosting">Open guide</a>
+						<Link to="/self-hosting">Open guide</Link>
 					</Button>
 				</div>
 			</ContentPanel>

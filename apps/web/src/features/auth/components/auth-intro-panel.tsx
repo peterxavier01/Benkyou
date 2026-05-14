@@ -24,19 +24,21 @@ const authBenefits = [
 function AuthIntroPanel() {
 	return (
 		<ContentPanel className="flex min-h-[420px] flex-col justify-between p-5 sm:p-7">
-			<div>
+			<div className="grid gap-5">
 				<BrandLogo subtitle="Hosted sync" />
 
-				<StatusBadge tone="neutral" className="mt-8 px-2">
+				<StatusBadge tone="neutral" className="w-fit px-2">
 					Account workspace
 				</StatusBadge>
-				<h1 className="mt-4 max-w-xl font-semibold text-2xl leading-tight tracking-normal sm:text-3xl">
-					{CORE_PROMISE}
-				</h1>
-				<p className="mt-4 max-w-xl text-muted-foreground text-sm leading-6">
-					Use Benkyou locally right away. Sign in when you want your study state
-					to follow you across sessions.
-				</p>
+				<div className="grid gap-4">
+					<h1 className="max-w-xl font-semibold text-2xl leading-tight tracking-normal sm:text-3xl">
+						{CORE_PROMISE}
+					</h1>
+					<p className="max-w-xl text-muted-foreground text-sm leading-6">
+						Use Benkyou locally right away. Sign in when you want your study
+						state to follow you across sessions.
+					</p>
+				</div>
 			</div>
 
 			<ul className="mt-8 space-y-2.5 text-sm">

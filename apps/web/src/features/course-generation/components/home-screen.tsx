@@ -2,6 +2,7 @@ import { CORE_PROMISE } from "@benkyou/core";
 import { ContentPanel, HugeIcon, Progress, StatusBadge } from "@benkyou/ui";
 
 import { AppHeader } from "#components/app-header";
+import { PublicFooter } from "#components/public-trust-links";
 import BetterAuthHeader from "../../../integrations/better-auth/header-user";
 import { NewCourseForm } from "./new-course-form";
 
@@ -9,11 +10,11 @@ const learningLoopSteps = ["Outline", "Chapters", "Notes", "Bookmarks"];
 
 function HomeScreen() {
 	return (
-		<main className="min-h-dvh bg-background text-foreground">
+		<main className="flex min-h-dvh flex-col bg-background text-foreground">
 			<AppHeader action={<BetterAuthHeader />} />
 
-			<section className="mx-auto grid w-full max-w-7xl gap-4 p-3 sm:p-6 lg:grid-cols-[minmax(0,1fr)_380px]">
-				<div className="flex min-h-[520px] items-center rounded-lg border border-border bg-card px-4 py-8 text-card-foreground sm:px-8">
+			<section className="mx-auto grid w-full max-w-7xl flex-1 items-start gap-4 p-3 sm:p-6 lg:grid-cols-[minmax(0,1fr)_380px]">
+				<div className="flex min-h-[500px] items-center rounded-lg border border-border bg-card px-4 py-8 text-card-foreground sm:px-8 lg:min-h-[560px]">
 					<div className="max-w-3xl">
 						<StatusBadge className="px-4 py-0.5" tone="success">
 							Local-first MVP
@@ -74,6 +75,7 @@ function HomeScreen() {
 					</div>
 				</ContentPanel>
 			</section>
+			<PublicFooter />
 		</main>
 	);
 }
