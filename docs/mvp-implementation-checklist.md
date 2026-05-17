@@ -501,11 +501,11 @@ Goal: verify the MVP behaves like a serious learning tool before release.
 
 ### Accessibility
 
-- [ ] Ensure keyboard navigation for forms, tabs, chapter list, dialogs, and
+- [x] Ensure keyboard navigation for forms, tabs, chapter list, dialogs, and
       menus.
-- [ ] Add visible focus states.
-- [ ] Add accessible labels for icon buttons.
-- [ ] Ensure dialogs trap focus and restore focus on close.
+- [x] Add visible focus states.
+- [x] Add accessible labels for icon buttons.
+- [x] Ensure dialogs trap focus and restore focus on close.
 - [ ] Confirm color contrast for text, badges, progress bars, and errors.
 - [x] Respect reduced motion preferences.
 
