@@ -103,7 +103,9 @@ function PublicSection({
 function PublicMetadataRow({ label, value }: PublicMetadataRowProps) {
 	return (
 		<div className="grid gap-1 border-border border-t py-3 first:border-t-0 sm:grid-cols-[180px_minmax(0,1fr)]">
-			<dt className="font-medium text-foreground">{label}</dt>
+			<dt className="min-w-0 wrap-break-word font-medium text-foreground">
+				{label}
+			</dt>
 			<dd className="min-w-0 text-muted-foreground">{value}</dd>
 		</div>
 	);

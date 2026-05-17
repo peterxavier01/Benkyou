@@ -16,6 +16,7 @@ import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as WorkspaceRouteImport } from './routes/_workspace'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as WorkspaceSettingsRouteImport } from './routes/_workspace/settings'
 import { Route as WorkspaceBookmarksRouteImport } from './routes/_workspace/bookmarks'
 import { Route as WorkspaceCoursesIndexRouteImport } from './routes/_workspace/courses/index'
@@ -56,6 +57,11 @@ const WorkspaceRoute = WorkspaceRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiHealthRoute = ApiHealthRouteImport.update({
+  id: '/api/health',
+  path: '/api/health',
   getParentRoute: () => rootRouteImport,
 } as any)
 const WorkspaceSettingsRoute = WorkspaceSettingsRouteImport.update({
@@ -106,6 +112,7 @@ export interface FileRoutesByFullPath {
   '/terms': typeof TermsRoute
   '/bookmarks': typeof WorkspaceBookmarksRoute
   '/settings': typeof WorkspaceSettingsRoute
+  '/api/health': typeof ApiHealthRoute
   '/courses/$courseId': typeof WorkspaceCoursesCourseIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/courses/': typeof WorkspaceCoursesIndexRoute
@@ -121,6 +128,7 @@ export interface FileRoutesByTo {
   '/terms': typeof TermsRoute
   '/bookmarks': typeof WorkspaceBookmarksRoute
   '/settings': typeof WorkspaceSettingsRoute
+  '/api/health': typeof ApiHealthRoute
   '/courses/$courseId': typeof WorkspaceCoursesCourseIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/courses': typeof WorkspaceCoursesIndexRoute
@@ -138,6 +146,7 @@ export interface FileRoutesById {
   '/terms': typeof TermsRoute
   '/_workspace/bookmarks': typeof WorkspaceBookmarksRoute
   '/_workspace/settings': typeof WorkspaceSettingsRoute
+  '/api/health': typeof ApiHealthRoute
   '/_workspace/courses/$courseId': typeof WorkspaceCoursesCourseIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/_workspace/courses/': typeof WorkspaceCoursesIndexRoute
@@ -155,6 +164,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/bookmarks'
     | '/settings'
+    | '/api/health'
     | '/courses/$courseId'
     | '/api/auth/$'
     | '/courses/'
@@ -170,6 +180,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/bookmarks'
     | '/settings'
+    | '/api/health'
     | '/courses/$courseId'
     | '/api/auth/$'
     | '/courses'
@@ -186,6 +197,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/_workspace/bookmarks'
     | '/_workspace/settings'
+    | '/api/health'
     | '/_workspace/courses/$courseId'
     | '/api/auth/$'
     | '/_workspace/courses/'
@@ -201,6 +213,7 @@ export interface RootRouteChildren {
   SelfHostingRoute: typeof SelfHostingRoute
   SignInRoute: typeof SignInRoute
   TermsRoute: typeof TermsRoute
+  ApiHealthRoute: typeof ApiHealthRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
@@ -253,6 +266,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/health': {
+      id: '/api/health'
+      path: '/api/health'
+      fullPath: '/api/health'
+      preLoaderRoute: typeof ApiHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_workspace/settings': {
@@ -337,6 +357,7 @@ const rootRouteChildren: RootRouteChildren = {
   SelfHostingRoute: SelfHostingRoute,
   SignInRoute: SignInRoute,
   TermsRoute: TermsRoute,
+  ApiHealthRoute: ApiHealthRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport

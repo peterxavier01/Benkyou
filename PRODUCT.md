@@ -1,9 +1,5 @@
 # Product
 
-## Register
-
-product
-
 ## Users
 
 Benkyou is for self-directed learners, developers, students, and professionals
@@ -29,6 +25,26 @@ hosted sync can layer on later.
 Success looks like a learner moving from an unstructured video to a navigable,
 recoverable study workspace in minutes, with every interaction supporting the
 next study action.
+
+## Non-Goals
+
+Benkyou is not a general video hosting platform, LMS, social learning network,
+or entertainment discovery app. The MVP should avoid broad course marketplaces,
+instructor tooling, cohort management, public profiles, social feeds, and
+content discovery features unless they directly support the focused study loop.
+
+## Self-Hosted Product Boundary
+
+The public product should remain a complete, self-hostable learning workspace.
+Hosted capabilities can layer on separately, but core learning flows should not
+depend on hosted-only infrastructure.
+
+Keep billing, hosted quotas, internal operations, hosted telemetry, managed
+scaling, and SaaS growth flows out of the core product unless they have a
+self-hosted equivalent.
+
+See [core-docs/open-core-boundary.md](./core-docs/open-core-boundary.md) for the
+working boundary rules.
 
 ## Brand Personality
 

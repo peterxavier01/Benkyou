@@ -128,9 +128,7 @@ export const updateChapter = createServerFn({ method: "POST" })
 	.inputValidator((input) => updateChapterRequestV1Schema.parse(input))
 	.handler(async ({ data }): Promise<UpdateChapterResponseV1> => {
 		const ownerId = await getOptionalUserId();
-		const course =
-			(await getCourseByChapter(data.chapterId, ownerId)) ??
-			(ownerId ? await getCourseByChapter(data.chapterId, null) : null);
+		const course = await getCourseByChapter(data.chapterId, ownerId);
 
 		if (!course) {
 			throw new Error("Chapter was not found.");

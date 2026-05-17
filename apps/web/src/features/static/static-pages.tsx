@@ -71,95 +71,118 @@ function SelfHostingPage() {
 	return (
 		<PublicContentPage
 			eyebrow="Self-hosting"
-			title="Run Benkyou with Node, pnpm, Postgres, and explicit environment values."
-			description="The current path is a straightforward local or server deployment. Docker is planned for the launch hardening phase and is not required for Phase 9."
+			title="Run Benkyou with Docker Compose and a private Postgres service."
+			description="Docker Compose is the recommended self-host path. Node and pnpm remain the development path when you want to work directly in the repo."
 		>
 			<PublicSection title="Requirements">
 				<dl>
-					<PublicMetadataRow label="Node.js" value={<code>&gt;=20.19</code>} />
 					<PublicMetadataRow
-						label="Package manager"
-						value={<code>pnpm</code>}
+						label="Recommended"
+						value="Docker and Docker Compose for the web app plus Postgres."
 					/>
 					<PublicMetadataRow
-						label="Database"
-						value="A reachable Postgres database connection string."
+						label="Development"
+						value="Node.js 22 and pnpm when running outside Docker."
 					/>
 					<PublicMetadataRow
-						label="Application"
-						value="The TanStack Start app in apps/web."
+						label="Network"
+						value="Port 3000 for the app. Postgres stays on the internal Compose network."
 					/>
 				</dl>
 			</PublicSection>
 
 			<PublicSection
 				title="Environment"
-				description="Copy the example file, then fill in the values needed by the app and supporting packages."
+				description="Use the root environment template for self-hosting. Keep real values in .env, not in docker-compose.yml."
 			>
-				<pre>
-					<code>cp apps/web/.env.example apps/web/.env.local</code>
-				</pre>
+				<CommandBlock command="cp .env.example .env" />
 				<dl>
 					<PublicMetadataRow
-						label="DATABASE_URL"
-						value="Postgres connection string used by the database package."
+						label="POSTGRES_PASSWORD"
+						value="Set a long random password. Do not commit it."
 					/>
 					<PublicMetadataRow
 						label="BETTER_AUTH_SECRET"
-						value="Secret used by Better Auth for hosted sessions."
+						value="Generate a strong session secret and rotate the placeholder."
 					/>
 					<PublicMetadataRow
 						label="BETTER_AUTH_URL"
-						value="Canonical app URL, for example http://localhost:3000."
+						value="Set to the canonical app URL, for example http://localhost:3000."
 					/>
 					<PublicMetadataRow
-						label="AI_PROVIDER"
-						value="Currently openai for generated chapter fallback."
-					/>
-					<PublicMetadataRow
-						label="AI_API_KEY and OPENAI_MODEL"
-						value="Needed when real AI generation is enabled."
+						label="AI_API_KEY"
+						value="Required for real AI generation. Keep it server-side."
 					/>
 					<PublicMetadataRow
 						label="YOUTUBE_API_KEY"
 						value="Optional for YouTube metadata enrichment."
 					/>
+					<PublicMetadataRow
+						label="GENERATION_RATE_LIMIT_MAX / WINDOW_HOURS"
+						value="Optional quota controls. Defaults are 5 attempts per 24 hours."
+					/>
 				</dl>
 			</PublicSection>
 
-			<PublicSection title="Database setup">
-				<pre>
-					<code>pnpm --filter @benkyou/db db:migrate</code>
-				</pre>
-				<pre>
-					<code>pnpm --filter @benkyou/db db:seed</code>
-				</pre>
+			<PublicSection
+				title="Docker start"
+				description="The Compose stack builds the app, starts Postgres, waits for the database healthcheck, runs migrations, then starts the web server."
+			>
+				<CommandBlock command="docker compose up --build" />
+				<PublicCallout>
+					The Compose file publishes only the web app by default. Postgres is
+					reachable to containers as <code>db</code>, not as a public host port.
+				</PublicCallout>
+			</PublicSection>
+
+			<PublicSection title="Health check">
+				<CommandBlock command="curl http://localhost:3000/api/health" />
 				<p>
-					Migrations and seed data live in <code>packages/db</code>. App-local
-					schema files and database clients should not be added under{" "}
-					<code>apps/web</code>.
+					Use <code>/api/health</code> for deployment readiness checks. It is
+					simple, unauthenticated, and does not expose application data.
 				</p>
 			</PublicSection>
 
-			<PublicSection title="Run and build">
-				<pre>
-					<code>pnpm install</code>
-				</pre>
-				<pre>
-					<code>pnpm --filter @benkyou/web dev</code>
-				</pre>
-				<pre>
-					<code>pnpm --filter @benkyou/web build</code>
-				</pre>
-				<pre>
-					<code>pnpm --filter @benkyou/web start</code>
-				</pre>
+			<PublicSection
+				title="Development path"
+				description="Use Node and pnpm when contributing locally or running against your own Postgres instance."
+			>
+				<CommandBlock
+					command={
+						"pnpm install\npnpm --filter @benkyou/db db:migrate\npnpm --filter @benkyou/web dev"
+					}
+				/>
+			</PublicSection>
+
+			<PublicSection title="Operations">
+				<dl>
+					<PublicMetadataRow
+						label="Migrations"
+						value="Run automatically before the web server starts in the Docker image."
+					/>
+					<PublicMetadataRow
+						label="Backups"
+						value="Back up the Postgres volume before upgrades or destructive maintenance."
+					/>
+					<PublicMetadataRow
+						label="Public deploy"
+						value="Put Benkyou behind a reverse proxy with TLS before exposing it beyond localhost."
+					/>
+				</dl>
 				<PublicCallout>
-					Docker files are tracked as Phase 10 launch hardening. Until then, use
-					the Node, pnpm, and Postgres path above.
+					Rotate every placeholder secret in <code>.env</code>. The values in
+					<code>.env.example</code> are a template, not production credentials.
 				</PublicCallout>
 			</PublicSection>
 		</PublicContentPage>
+	);
+}
+
+function CommandBlock({ command }: { command: string }) {
+	return (
+		<pre className="max-w-full overflow-x-auto rounded-md border border-border bg-muted/40 p-3 text-xs leading-relaxed sm:text-sm">
+			<code className="whitespace-pre">{command}</code>
+		</pre>
 	);
 }
 

@@ -25,6 +25,7 @@ import {
 	cancelGenerationJob as cancelGenerationJobRecord,
 	claimGenerationJob,
 	completeGenerationJob,
+	consumeCourseGenerationRateLimit,
 	createCourseFromUrlRecord,
 	createRetryGenerationJob,
 	failGenerationJob,
@@ -53,11 +54,13 @@ export const createCourseFromUrl = createServerFn({ method: "POST" })
 			throw new Error(getParseVideoUrlErrorMessage(parsedUrl.error));
 		}
 
+		const headers = getHeaders();
+		const ownerId = await getOptionalUserId(headers);
+		await assertGenerationRateLimit(headers, ownerId);
 		const metadata = await safeFetchMetadata(
 			parsedUrl.value.providerVideoId,
 			parsedUrl.value.canonicalUrl,
 		);
-		const ownerId = await getOptionalUserId();
 		const result = await createCourseFromUrlRecord({
 			ownerId,
 			provider: parsedUrl.value.provider,
@@ -129,7 +132,9 @@ export const processGenerationJob = createServerFn({ method: "POST" })
 				});
 
 				if (!failed) {
-					throw new Error("Generation job disappeared before suitability check.");
+					throw new Error(
+						"Generation job disappeared before suitability check.",
+					);
 				}
 
 				return { detail: toGenerationJobDetail(failed) };
@@ -331,12 +336,88 @@ async function safeFetchMetadata(
 	}
 }
 
-async function getOptionalUserId() {
-	const user = await getCurrentUserFromHeaders(
-		new Headers(getRequestHeaders()),
-	);
+async function getOptionalUserId(headers = getHeaders()) {
+	const user = await getCurrentUserFromHeaders(headers);
 
 	return user?.id ?? null;
+}
+
+function getHeaders() {
+	return new Headers(getRequestHeaders());
+}
+
+async function assertGenerationRateLimit(
+	headers: Headers,
+	userId: string | null,
+) {
+	const { limit, windowMs } = getGenerationRateLimitOptions();
+	const identity = getGenerationRateLimitIdentity(headers, userId);
+	const result = await consumeCourseGenerationRateLimit({
+		key: identity.key,
+		keyType: identity.keyType,
+		limit,
+		windowMs,
+	});
+
+	if (!result.allowed) {
+		throw new Error(
+			`Course generation is limited to ${result.limit} attempts per ${Math.round(
+				windowMs / 60 / 60 / 1000,
+			)} hours. Try again later.`,
+		);
+	}
+}
+
+function getGenerationRateLimitOptions() {
+	const limit = parsePositiveInteger(process.env.GENERATION_RATE_LIMIT_MAX, 5);
+	const windowHours = parsePositiveInteger(
+		process.env.GENERATION_RATE_LIMIT_WINDOW_HOURS,
+		24,
+	);
+
+	return {
+		limit,
+		windowMs: windowHours * 60 * 60 * 1000,
+	};
+}
+
+function getGenerationRateLimitIdentity(
+	headers: Headers,
+	userId: string | null,
+): { key: string; keyType: "user" | "ip" | "anonymous" } {
+	if (userId) {
+		return { key: `user:${userId}`, keyType: "user" };
+	}
+
+	const ip = getRequestIp(headers);
+
+	if (ip) {
+		return { key: `ip:${ip}`, keyType: "ip" };
+	}
+
+	return { key: "anonymous:global", keyType: "anonymous" };
+}
+
+function getRequestIp(headers: Headers) {
+	const forwardedFor = headers.get("x-forwarded-for");
+	const firstForwardedIp = forwardedFor?.split(",")[0]?.trim();
+
+	return (
+		firstForwardedIp ||
+		headers.get("x-real-ip")?.trim() ||
+		headers.get("cf-connecting-ip")?.trim() ||
+		null
+	);
+}
+
+function parsePositiveInteger(value: string | undefined, fallback: number) {
+	if (!value) {
+		return fallback;
+	}
+
+	const parsed = Number.parseInt(value, 10);
+
+	return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
 class RetryableGenerationError extends Error {}

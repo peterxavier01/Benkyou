@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import test from "node:test";
 
 import { config } from "dotenv";
-import { eq, sql } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 
 config({
 	path: [
@@ -24,6 +24,7 @@ test("repository helpers upsert learning data into DTO-compatible course data", 
 	const database = (await import("./drizzle")).db;
 	let courseId: string | null = null;
 	const extraCourseIds: string[] = [];
+	const rateLimitKeys: string[] = [];
 
 	try {
 		await database.execute(sql`select 1`);
@@ -39,6 +40,84 @@ test("repository helpers upsert learning data into DTO-compatible course data", 
 		name: "Repository User",
 		email: `${userId}@example.com`,
 	});
+	const userRateLimitKey = `user:${userId}`;
+	const ipRateLimitKey = `ip:127.0.0.${Math.floor(Math.random() * 200) + 1}`;
+	const anonymousRateLimitKey = `anonymous:${randomUUID()}`;
+	rateLimitKeys.push(userRateLimitKey, ipRateLimitKey, anonymousRateLimitKey);
+	const rateLimitNow = new Date("2026-05-14T12:00:00.000Z");
+	const windowMs = 24 * 60 * 60 * 1000;
+	assert.deepEqual(
+		await modules.consumeCourseGenerationRateLimit({
+			key: userRateLimitKey,
+			keyType: "user",
+			limit: 2,
+			windowMs,
+			now: rateLimitNow,
+		}),
+		{
+			allowed: true,
+			limit: 2,
+			remaining: 1,
+			resetAt: new Date(rateLimitNow.getTime() + windowMs).toISOString(),
+		},
+	);
+	assert.equal(
+		(
+			await modules.consumeCourseGenerationRateLimit({
+				key: userRateLimitKey,
+				keyType: "user",
+				limit: 2,
+				windowMs,
+				now: new Date(rateLimitNow.getTime() + 1000),
+			})
+		).allowed,
+		true,
+	);
+	const blockedRateLimit = await modules.consumeCourseGenerationRateLimit({
+		key: userRateLimitKey,
+		keyType: "user",
+		limit: 2,
+		windowMs,
+		now: new Date(rateLimitNow.getTime() + 2000),
+	});
+	assert.equal(blockedRateLimit.allowed, false);
+	assert.equal(blockedRateLimit.remaining, 0);
+	assert.equal(
+		(
+			await modules.consumeCourseGenerationRateLimit({
+				key: userRateLimitKey,
+				keyType: "user",
+				limit: 2,
+				windowMs,
+				now: new Date(rateLimitNow.getTime() + windowMs + 1000),
+			})
+		).allowed,
+		true,
+	);
+	assert.equal(
+		(
+			await modules.consumeCourseGenerationRateLimit({
+				key: ipRateLimitKey,
+				keyType: "ip",
+				limit: 1,
+				windowMs,
+				now: rateLimitNow,
+			})
+		).allowed,
+		true,
+	);
+	assert.equal(
+		(
+			await modules.consumeCourseGenerationRateLimit({
+				key: anonymousRateLimitKey,
+				keyType: "anonymous",
+				limit: 1,
+				windowMs,
+				now: rateLimitNow,
+			})
+		).allowed,
+		true,
+	);
 	const preferences = await modules.upsertLearningPreferences(userId, {
 		playbackSpeed: 1.5,
 		manualCompletionOnly: true,
@@ -445,6 +524,11 @@ test("repository helpers upsert learning data into DTO-compatible course data", 
 				.update(schema.courses)
 				.set({ deletedAt: new Date(), updatedAt: new Date() })
 				.where(eq(schema.courses.id, id));
+		}
+		if (rateLimitKeys.length > 0) {
+			await database
+				.delete(schema.courseGenerationRateLimits)
+				.where(inArray(schema.courseGenerationRateLimits.key, rateLimitKeys));
 		}
 		await database
 			.delete(schema.authUser)

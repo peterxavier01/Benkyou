@@ -24,7 +24,6 @@
     "shadcn",
     "better-auth",
     "tanstack-query",
-    "neon",
     "form"
   ]
 }
