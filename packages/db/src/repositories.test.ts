@@ -134,6 +134,7 @@ test("repository helpers upsert learning data into DTO-compatible course data", 
 			title: "Repository Test Video",
 			channelName: "Benkyou Tests",
 			transcriptSource: "sample",
+			transcriptText: "[0s] Cached transcript.",
 		},
 	);
 
@@ -145,14 +146,38 @@ test("repository helpers upsert learning data into DTO-compatible course data", 
 			canonicalUrl: `https://www.youtube.com/watch?v=${providerVideoId}`,
 			title: "Repository Test Video Updated",
 			channelName: "Benkyou Tests",
-			transcriptSource: "sample",
 		},
 	);
 
 	assert.equal(updatedVideo.id, video.id);
 	assert.equal(updatedVideo.title, "Repository Test Video Updated");
+	const [cachedVideoAfterUpsert] = await database
+		.select()
+		.from(schema.videos)
+		.where(eq(schema.videos.id, video.id))
+		.limit(1);
+	assert.equal(cachedVideoAfterUpsert?.transcriptSource, "sample");
+	assert.equal(
+		cachedVideoAfterUpsert?.transcriptText,
+		"[0s] Cached transcript.",
+	);
 
 	try {
+		const reusedCachedVideo = await modules.createCourseFromUrlRecord({
+			ownerId: userId,
+			provider: "youtube",
+			providerVideoId,
+			sourceUrl: `https://www.youtube.com/watch?v=${providerVideoId}`,
+			canonicalUrl: `https://www.youtube.com/watch?v=${providerVideoId}`,
+			title: "Repository Cached Transcript Course",
+		});
+		extraCourseIds.push(reusedCachedVideo.course.id);
+		assert.equal(reusedCachedVideo.video.transcriptSource, "sample");
+		assert.equal(
+			reusedCachedVideo.video.transcriptText,
+			"[0s] Cached transcript.",
+		);
+
 		const cancellable = await modules.createCourseFromUrlRecord({
 			ownerId: userId,
 			provider: "youtube",
@@ -228,9 +253,10 @@ test("repository helpers upsert learning data into DTO-compatible course data", 
 		});
 		extraCourseIds.push(regenerating.course.id);
 		assert.ok(await modules.claimGenerationJob(regenerating.job.id));
-		await modules.completeGenerationJob({
+		const completedRegeneration = await modules.completeGenerationJob({
 			jobId: regenerating.job.id,
 			transcriptSource: "sample",
+			transcriptText: "[0s] Stored transcript.",
 			chapters: [
 				{
 					title: "Old first",
@@ -246,6 +272,10 @@ test("repository helpers upsert learning data into DTO-compatible course data", 
 				},
 			],
 		});
+		assert.equal(
+			completedRegeneration?.video.transcriptText,
+			"[0s] Stored transcript.",
+		);
 		const beforeRegeneration = await modules.getCoursePlayerData(
 			regenerating.course.id,
 			userId,
