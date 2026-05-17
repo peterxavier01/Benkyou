@@ -13,7 +13,7 @@
     "build": "vite build",
     "start": "node .output/server/index.mjs",
     "preview": "vite preview",
-    "test": "vitest run",
+    "test": "vitest run --config vitest.config.ts --passWithNoTests",
     "format": "biome format",
     "lint": "biome lint",
     "check": "biome check",
