@@ -16,8 +16,8 @@
     "./lib/*": "./src/lib/*.ts"
   },
   "scripts": {
-    "format": "prettier --check \"src/**/*.{ts,tsx}\"",
-    "lint": "eslint . --max-warnings 0",
+    "format": "biome format --write src",
+    "lint": "biome lint src",
     "check": "pnpm run lint && pnpm run check-types",
     "generate:component": "turbo gen react-component",
     "check-types": "tsc --noEmit"
@@ -26,7 +26,6 @@
     "@types/node": "^22.15.3",
     "@types/react": "19.2.2",
     "@types/react-dom": "19.2.2",
-    "eslint": "^9.39.1",
     "typescript": "5.9.2"
   },
   "dependencies": {
