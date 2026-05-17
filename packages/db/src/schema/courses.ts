@@ -113,6 +113,23 @@ export const courseGenerationJobs = pgTable(
 	],
 );
 
+export const courseGenerationRateLimits = pgTable(
+	"course_generation_rate_limits",
+	{
+		id: idColumn(),
+		key: text("key").notNull(),
+		keyType: text("key_type").notNull(),
+		createdAt: createdAtColumn(),
+	},
+	(table) => [
+		index("course_generation_rate_limits_key_created_idx").on(
+			table.key,
+			table.createdAt,
+		),
+		index("course_generation_rate_limits_created_idx").on(table.createdAt),
+	],
+);
+
 export const chapterNotes = pgTable(
 	"chapter_notes",
 	{

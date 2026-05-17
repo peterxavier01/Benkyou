@@ -268,7 +268,7 @@ Goal: let a learner submit a YouTube URL and see course generation progress.
 
 - [x] A valid YouTube URL creates a course and job.
 - [x] The job screen accurately reflects the lifecycle.
-- [ ] Completed jobs open the course player with chapters.
+- [x] Completed jobs open the course player with chapters.
 - [x] Failed jobs explain what happened and offer a next action.
 
 ## Phase 4: Course Library
@@ -491,12 +491,12 @@ Goal: verify the MVP behaves like a serious learning tool before release.
 
 ### Validation
 
-- [ ] Validate all forms with Zod or equivalent schema validation.
-- [ ] Sanitize or safely render Markdown.
-- [ ] Enforce authorization on course, notes, progress, and bookmark mutations.
-- [ ] Rate-limit course generation.
-- [ ] Validate AI chapter output before writing to the database.
-- [ ] Add defensive handling for missing thumbnails, titles, transcripts, and
+- [x] Validate all forms with Zod or equivalent schema validation.
+- [x] Sanitize or safely render Markdown.
+- [x] Enforce authorization on course, notes, progress, and bookmark mutations.
+- [x] Rate-limit course generation.
+- [x] Validate AI chapter output before writing to the database.
+- [x] Add defensive handling for missing thumbnails, titles, transcripts, and
       durations.
 
 ### Accessibility
@@ -507,7 +507,7 @@ Goal: verify the MVP behaves like a serious learning tool before release.
 - [ ] Add accessible labels for icon buttons.
 - [ ] Ensure dialogs trap focus and restore focus on close.
 - [ ] Confirm color contrast for text, badges, progress bars, and errors.
-- [ ] Respect reduced motion preferences.
+- [x] Respect reduced motion preferences.
 
 ### Responsive QA
 
@@ -527,27 +527,27 @@ Goal: verify the MVP behaves like a serious learning tool before release.
 - [ ] Integration test notes autosave.
 - [x] Integration test bookmark create/edit/delete.
 - [ ] Integration test route guards.
-- [ ] Smoke test build with `pnpm build`.
-- [ ] Smoke test type checks with `pnpm check-types`.
-- [ ] Smoke test lint/check with `pnpm check`.
+- [x] Smoke test build with `pnpm build`.
+- [x] Smoke test type checks with `pnpm check-types`.
+- [x] Smoke test lint/check with `pnpm check`.
 
 ### Observability
 
 - [ ] Log generation job failures with job id and provider error category.
-- [ ] Add user-safe error messages.
+- [x] Add user-safe error messages.
 - [ ] Track generation duration and failure rate.
 - [ ] Track autosave failures.
-- [ ] Add basic health check route if needed for deployment.
+- [x] Add basic health check route if needed for deployment.
 
 ### Launch
 
-- [ ] Add MIT license if open-source launch is in MVP.
-- [ ] Add deployment docs.
-- [ ] Add Docker or self-hosting deployment path.
-- [ ] Confirm production env variables.
-- [ ] Confirm database migrations run in production.
-- [ ] Confirm app manifest and icons.
-- [ ] Confirm robots policy.
+- [x] Add MIT license if open-source launch is in MVP.
+- [x] Add deployment docs.
+- [x] Add Docker or self-hosting deployment path.
+- [x] Confirm production env variables.
+- [x] Confirm database migrations run in production.
+- [x] Confirm app manifest and icons.
+- [x] Confirm robots policy.
 
 ### Done When
 
@@ -594,7 +594,7 @@ Goal: verify the MVP behaves like a serious learning tool before release.
 - [x] YouTube player wrapper.
 - [x] Chapter sidebar item.
 - [x] Chapter drawer.
-- [ ] Notes editor.
+- [x] Notes editor.
 - [x] Summary panel.
 - [x] Bookmark list.
 - [x] Add/edit bookmark dialog.

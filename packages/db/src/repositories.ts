@@ -14,7 +14,17 @@ import type {
 	VideoDTO,
 	VideoProvider,
 } from "@benkyou/types";
-import { and, count, desc, eq, inArray, isNull, or } from "drizzle-orm";
+import {
+	and,
+	asc,
+	count,
+	desc,
+	eq,
+	gte,
+	inArray,
+	isNull,
+	or,
+} from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
 
 import { db } from "./drizzle";
@@ -24,6 +34,7 @@ import {
 	chapterProgress,
 	courseChapters,
 	courseGenerationJobs,
+	courseGenerationRateLimits,
 	courseProgress,
 	courses,
 	learningPreferences,
@@ -128,6 +139,23 @@ export interface UpdateChapterInput {
 	endSeconds?: number | null;
 }
 
+export type GenerationRateLimitKeyType = "user" | "ip" | "anonymous";
+
+export interface ConsumeGenerationRateLimitInput {
+	key: string;
+	keyType: GenerationRateLimitKeyType;
+	limit: number;
+	windowMs: number;
+	now?: Date;
+}
+
+export interface GenerationRateLimitResult {
+	allowed: boolean;
+	limit: number;
+	remaining: number;
+	resetAt: string;
+}
+
 function toIso(value: Date | string | null): string | null {
 	if (value === null) {
 		return null;
@@ -144,6 +172,62 @@ function accessibleCourseOwner(column: PgColumn, userId: UserId) {
 	return userId === null
 		? isNull(column)
 		: or(eq(column, userId), isNull(column));
+}
+
+export async function consumeCourseGenerationRateLimit(
+	input: ConsumeGenerationRateLimitInput,
+): Promise<GenerationRateLimitResult> {
+	const now = input.now ?? new Date();
+	const windowStart = new Date(now.getTime() - input.windowMs);
+
+	return db.transaction(async (tx) => {
+		const [usage] = await tx
+			.select({ value: count() })
+			.from(courseGenerationRateLimits)
+			.where(
+				and(
+					eq(courseGenerationRateLimits.key, input.key),
+					gte(courseGenerationRateLimits.createdAt, windowStart),
+				),
+			);
+		const used = usage?.value ?? 0;
+		const [oldestEvent] = await tx
+			.select({ createdAt: courseGenerationRateLimits.createdAt })
+			.from(courseGenerationRateLimits)
+			.where(
+				and(
+					eq(courseGenerationRateLimits.key, input.key),
+					gte(courseGenerationRateLimits.createdAt, windowStart),
+				),
+			)
+			.orderBy(asc(courseGenerationRateLimits.createdAt))
+			.limit(1);
+		const resetAt = oldestEvent?.createdAt
+			? new Date(oldestEvent.createdAt.getTime() + input.windowMs)
+			: new Date(now.getTime() + input.windowMs);
+
+		if (used >= input.limit) {
+			return {
+				allowed: false,
+				limit: input.limit,
+				remaining: 0,
+				resetAt: resetAt.toISOString(),
+			};
+		}
+
+		await tx.insert(courseGenerationRateLimits).values({
+			key: input.key,
+			keyType: input.keyType,
+			createdAt: now,
+		});
+
+		return {
+			allowed: true,
+			limit: input.limit,
+			remaining: Math.max(input.limit - used - 1, 0),
+			resetAt: resetAt.toISOString(),
+		};
+	});
 }
 
 function mapVideo(row: typeof videos.$inferSelect): VideoDTO {
@@ -511,7 +595,7 @@ export async function getCourseManagementData(
 		.where(
 			and(
 				eq(courses.id, courseId),
-				accessibleCourseOwner(courses.ownerId, userId),
+				userMatches(courses.ownerId, userId),
 				isNull(courses.deletedAt),
 			),
 		)
@@ -560,7 +644,7 @@ export async function updateCourseMetadata(
 		.where(
 			and(
 				eq(courses.id, courseId),
-				accessibleCourseOwner(courses.ownerId, userId),
+				userMatches(courses.ownerId, userId),
 				isNull(courses.deletedAt),
 			),
 		)
@@ -588,7 +672,7 @@ export async function updateChapter(
 			and(
 				eq(courseChapters.id, chapterId),
 				eq(courseChapters.courseId, courses.id),
-				accessibleCourseOwner(courses.ownerId, userId),
+				userMatches(courses.ownerId, userId),
 				isNull(courses.deletedAt),
 			),
 		)
@@ -1227,7 +1311,7 @@ export async function createRegenerationJob(
 			.where(
 				and(
 					eq(courses.id, courseId),
-					accessibleCourseOwner(courses.ownerId, ownerId),
+					userMatches(courses.ownerId, ownerId),
 					isNull(courses.deletedAt),
 				),
 			)

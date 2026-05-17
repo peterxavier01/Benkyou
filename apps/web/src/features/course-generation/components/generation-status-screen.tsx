@@ -271,7 +271,7 @@ function VideoPreview({ detail }: { detail: GenerationJobDetailV1 }) {
 	return (
 		<img
 			src={detail.video.thumbnailUrl}
-			alt=""
+			alt={`${detail.video.title ?? detail.course.title} thumbnail`}
 			className="aspect-video w-full shrink-0 rounded-md border border-border object-cover sm:w-64"
 		/>
 	);
