@@ -30,6 +30,7 @@ import {
 	createCourseFromUrlRecord,
 	createRetryGenerationJob,
 	failGenerationJob,
+	getExistingCourseByProviderVideo,
 	getGenerationJobDetailRecord,
 	getSampleCourse,
 	markGenerationJobTranscriptReady,
@@ -42,6 +43,7 @@ import type {
 	OpenSampleCourseResponseV1,
 	ProcessGenerationJobResponseV1,
 	RetryGenerationJobResponseV1,
+	TranscriptSource,
 } from "@benkyou/types";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
@@ -57,6 +59,20 @@ export const createCourseFromUrl = createServerFn({ method: "POST" })
 
 		const headers = getHeaders();
 		const ownerId = await getOptionalUserId(headers);
+		const existingCourse = await getExistingCourseByProviderVideo(
+			parsedUrl.value.provider,
+			parsedUrl.value.providerVideoId,
+			ownerId,
+		);
+
+		if (existingCourse) {
+			return {
+				courseId: existingCourse.id,
+				generationJobId: null,
+				reusedExistingCourse: true,
+			};
+		}
+
 		await assertGenerationRateLimit(headers, ownerId);
 		const metadata = await safeFetchMetadata(
 			parsedUrl.value.providerVideoId,
@@ -173,25 +189,14 @@ export const processGenerationJob = createServerFn({ method: "POST" })
 				return { detail: toGenerationJobDetail(completed) };
 			}
 
-			const transcriptSegments = await fetchYouTubeTranscript(
-				claimed.video.providerVideoId,
-			);
-
-			const lastTranscriptSegment = transcriptSegments.at(-1);
-			const transcriptEndSeconds = lastTranscriptSegment
-				? lastTranscriptSegment.startSeconds +
-					lastTranscriptSegment.durationSeconds
-				: null;
-			const durationSeconds =
-				claimed.video.durationSeconds ?? transcriptEndSeconds;
-			const policy = getChapterGenerationPolicy(
-				durationSeconds,
-				transcriptSegments.length,
-			);
-			const transcriptText = transcriptSegmentsToText(transcriptSegments, {
-				durationSeconds,
-				policy,
+			const transcriptInput = await getTranscriptInputForGeneration({
+				providerVideoId: claimed.video.providerVideoId,
+				durationSeconds: claimed.video.durationSeconds,
+				transcriptSource: claimed.video.transcriptSource,
+				transcriptText: claimed.video.transcriptText,
 			});
+			const { durationSeconds, policy, transcriptSource, transcriptText } =
+				transcriptInput;
 			await markGenerationJobTranscriptReady(claimed.job.id);
 
 			const generated = await generateCourseChapters({
@@ -199,20 +204,21 @@ export const processGenerationJob = createServerFn({ method: "POST" })
 				canonicalUrl: claimed.video.canonicalUrl,
 				transcriptText,
 				durationSeconds,
-				transcriptSegmentCount: transcriptSegments.length,
+				transcriptSegmentCount: transcriptInput.transcriptSegmentCount,
 				policy,
 			});
 			const completed = await completeGenerationJob({
 				jobId: claimed.job.id,
 				title: generated.title,
 				description: generated.description,
-				transcriptSource: "youtube_captions",
+				transcriptSource,
 				transcriptText,
 				durationSeconds,
 				rawOutput: {
 					chapterSource: policy.isCoarseFallback
 						? "ai_coarse_fallback"
 						: "ai_generated",
+					transcriptCacheHit: transcriptInput.cacheHit,
 					policy,
 					generated,
 				},
@@ -253,6 +259,64 @@ export const processGenerationJob = createServerFn({ method: "POST" })
 			return { detail: toGenerationJobDetail(failed) };
 		}
 	});
+
+async function getTranscriptInputForGeneration(input: {
+	providerVideoId: string;
+	durationSeconds: number | null;
+	transcriptSource: TranscriptSource | null;
+	transcriptText: string | null;
+}) {
+	const cachedTranscriptText = input.transcriptText?.trim();
+
+	if (input.transcriptSource && cachedTranscriptText) {
+		const transcriptSegmentCount =
+			estimateCachedTranscriptSegmentCount(cachedTranscriptText);
+		const policy = getChapterGenerationPolicy(
+			input.durationSeconds,
+			transcriptSegmentCount,
+		);
+
+		return {
+			cacheHit: true,
+			durationSeconds: input.durationSeconds,
+			policy,
+			transcriptSegmentCount,
+			transcriptSource: input.transcriptSource,
+			transcriptText: cachedTranscriptText,
+		};
+	}
+
+	const transcriptSegments = await fetchYouTubeTranscript(
+		input.providerVideoId,
+	);
+	const lastTranscriptSegment = transcriptSegments.at(-1);
+	const transcriptEndSeconds = lastTranscriptSegment
+		? lastTranscriptSegment.startSeconds + lastTranscriptSegment.durationSeconds
+		: null;
+	const durationSeconds = input.durationSeconds ?? transcriptEndSeconds;
+	const policy = getChapterGenerationPolicy(
+		durationSeconds,
+		transcriptSegments.length,
+	);
+	const transcriptText = transcriptSegmentsToText(transcriptSegments, {
+		durationSeconds,
+		policy,
+	});
+
+	return {
+		cacheHit: false,
+		durationSeconds,
+		policy,
+		transcriptSegmentCount: transcriptSegments.length,
+		transcriptSource: "youtube_captions" as const,
+		transcriptText,
+	};
+}
+
+function estimateCachedTranscriptSegmentCount(transcriptText: string) {
+	return transcriptText.split(/\r?\n/).filter((line) => line.trim().length > 0)
+		.length;
+}
 
 export const retryGenerationJob = createServerFn({ method: "POST" })
 	.inputValidator((input) => retryGenerationJobRequestV1Schema.parse(input))

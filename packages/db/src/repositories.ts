@@ -11,6 +11,7 @@ import type {
 	CoursePlayerDataDTO,
 	CourseProgressDTO,
 	LearningPreferencesDTO,
+	TranscriptSource,
 	VideoDTO,
 	VideoProvider,
 } from "@benkyou/types";
@@ -46,6 +47,8 @@ type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 export interface VideoGenerationContextDTO extends VideoDTO {
 	description: string | null;
+	transcriptSource: TranscriptSource | null;
+	transcriptText: string | null;
 	rawMetadata: Record<string, unknown> | null;
 }
 
@@ -251,6 +254,8 @@ function mapVideoGenerationContext(
 	return {
 		...mapVideo(row),
 		description: row.description,
+		transcriptSource: row.transcriptSource,
+		transcriptText: row.transcriptText,
 		rawMetadata: row.rawMetadata ?? null,
 	};
 }
@@ -370,6 +375,7 @@ export async function upsertVideoByProvider(
 	providerVideoId: string,
 	input: UpsertVideoInput,
 ): Promise<VideoDTO> {
+	const transcriptUpdate = getTranscriptUpdate(input);
 	const [row] = await db
 		.insert(videos)
 		.values({
@@ -398,9 +404,8 @@ export async function upsertVideoByProvider(
 				channelName: input.channelName,
 				channelUrl: input.channelUrl,
 				durationSeconds: input.durationSeconds,
-				transcriptSource: input.transcriptSource,
-				transcriptText: input.transcriptText,
 				rawMetadata: input.rawMetadata ?? undefined,
+				...transcriptUpdate,
 				updatedAt: new Date(),
 			},
 		})
@@ -409,10 +414,34 @@ export async function upsertVideoByProvider(
 	return mapVideo(row);
 }
 
+export async function getExistingCourseByProviderVideo(
+	provider: VideoProvider,
+	providerVideoId: string,
+	ownerId: UserId,
+): Promise<CourseDTO | null> {
+	const [row] = await db
+		.select({ course: courses })
+		.from(courses)
+		.innerJoin(videos, eq(courses.videoId, videos.id))
+		.where(
+			and(
+				eq(videos.provider, provider),
+				eq(videos.providerVideoId, providerVideoId),
+				userMatches(courses.ownerId, ownerId),
+				isNull(courses.deletedAt),
+			),
+		)
+		.orderBy(desc(courses.updatedAt))
+		.limit(1);
+
+	return row ? mapCourse(row.course) : null;
+}
+
 export async function createCourseFromUrlRecord(
 	input: CreateCourseFromUrlRecordInput,
 ): Promise<CreateCourseFromUrlRecordResult> {
 	return db.transaction(async (tx) => {
+		const transcriptUpdate = getTranscriptUpdate(input);
 		const [videoRow] = await tx
 			.insert(videos)
 			.values({
@@ -441,9 +470,8 @@ export async function createCourseFromUrlRecord(
 					channelName: input.channelName,
 					channelUrl: input.channelUrl,
 					durationSeconds: input.durationSeconds,
-					transcriptSource: input.transcriptSource,
-					transcriptText: input.transcriptText,
 					rawMetadata: input.rawMetadata ?? undefined,
+					...transcriptUpdate,
 					updatedAt: new Date(),
 				},
 			})
@@ -490,6 +518,20 @@ export async function createCourseFromUrlRecord(
 			reusedExistingCourse,
 		};
 	});
+}
+
+function getTranscriptUpdate(input: {
+	transcriptSource?: TranscriptSource | null;
+	transcriptText?: string | null;
+}): Partial<typeof videos.$inferInsert> {
+	return {
+		...(input.transcriptSource !== undefined
+			? { transcriptSource: input.transcriptSource }
+			: {}),
+		...(input.transcriptText !== undefined
+			? { transcriptText: input.transcriptText }
+			: {}),
+	};
 }
 
 export async function getCoursePlayerData(

@@ -40,6 +40,11 @@ function NewCourseForm() {
 
 			try {
 				const result = await createCourse({ data: { url: value.url } });
+				if (result.reusedExistingCourse || result.generationJobId === null) {
+					await navigate({ href: `/courses/${result.courseId}` });
+					return;
+				}
+
 				await navigate({ href: `/courses/new/${result.generationJobId}` });
 			} catch (error) {
 				setFormError(toErrorMessage(error));
