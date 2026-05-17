@@ -414,6 +414,29 @@ export async function upsertVideoByProvider(
 	return mapVideo(row);
 }
 
+export async function getExistingCourseByProviderVideo(
+	provider: VideoProvider,
+	providerVideoId: string,
+	ownerId: UserId,
+): Promise<CourseDTO | null> {
+	const [row] = await db
+		.select({ course: courses })
+		.from(courses)
+		.innerJoin(videos, eq(courses.videoId, videos.id))
+		.where(
+			and(
+				eq(videos.provider, provider),
+				eq(videos.providerVideoId, providerVideoId),
+				userMatches(courses.ownerId, ownerId),
+				isNull(courses.deletedAt),
+			),
+		)
+		.orderBy(desc(courses.updatedAt))
+		.limit(1);
+
+	return row ? mapCourse(row.course) : null;
+}
+
 export async function createCourseFromUrlRecord(
 	input: CreateCourseFromUrlRecordInput,
 ): Promise<CreateCourseFromUrlRecordResult> {

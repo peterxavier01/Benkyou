@@ -177,6 +177,57 @@ test("repository helpers upsert learning data into DTO-compatible course data", 
 			reusedCachedVideo.video.transcriptText,
 			"[0s] Cached transcript.",
 		);
+		assert.equal(
+			(
+				await modules.getExistingCourseByProviderVideo(
+					"youtube",
+					providerVideoId,
+					userId,
+				)
+			)?.id,
+			reusedCachedVideo.course.id,
+		);
+		assert.equal(
+			await modules.getExistingCourseByProviderVideo(
+				"youtube",
+				providerVideoId,
+				"other-user",
+			),
+			null,
+		);
+
+		const softDeleteLookupVideoId = `repository-soft-delete-lookup-${randomUUID()}`;
+		const softDeleteLookup = await modules.createCourseFromUrlRecord({
+			ownerId: userId,
+			provider: "youtube",
+			providerVideoId: softDeleteLookupVideoId,
+			sourceUrl: `https://www.youtube.com/watch?v=${softDeleteLookupVideoId}`,
+			canonicalUrl: `https://www.youtube.com/watch?v=${softDeleteLookupVideoId}`,
+			title: "Repository Soft Delete Lookup Course",
+		});
+		extraCourseIds.push(softDeleteLookup.course.id);
+		assert.equal(
+			(
+				await modules.getExistingCourseByProviderVideo(
+					"youtube",
+					softDeleteLookupVideoId,
+					userId,
+				)
+			)?.id,
+			softDeleteLookup.course.id,
+		);
+		assert.equal(
+			await modules.softDeleteCourse(softDeleteLookup.course.id, userId),
+			true,
+		);
+		assert.equal(
+			await modules.getExistingCourseByProviderVideo(
+				"youtube",
+				softDeleteLookupVideoId,
+				userId,
+			),
+			null,
+		);
 
 		const cancellable = await modules.createCourseFromUrlRecord({
 			ownerId: userId,

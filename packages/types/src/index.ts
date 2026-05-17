@@ -142,7 +142,7 @@ export interface CreateCourseFromUrlRequestV1 {
 
 export interface CreateCourseFromUrlResponseV1 {
 	courseId: string;
-	generationJobId: string;
+	generationJobId: string | null;
 	reusedExistingCourse: boolean;
 }
 

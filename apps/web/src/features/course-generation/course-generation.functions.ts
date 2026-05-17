@@ -30,6 +30,7 @@ import {
 	createCourseFromUrlRecord,
 	createRetryGenerationJob,
 	failGenerationJob,
+	getExistingCourseByProviderVideo,
 	getGenerationJobDetailRecord,
 	getSampleCourse,
 	markGenerationJobTranscriptReady,
@@ -58,6 +59,20 @@ export const createCourseFromUrl = createServerFn({ method: "POST" })
 
 		const headers = getHeaders();
 		const ownerId = await getOptionalUserId(headers);
+		const existingCourse = await getExistingCourseByProviderVideo(
+			parsedUrl.value.provider,
+			parsedUrl.value.providerVideoId,
+			ownerId,
+		);
+
+		if (existingCourse) {
+			return {
+				courseId: existingCourse.id,
+				generationJobId: null,
+				reusedExistingCourse: true,
+			};
+		}
+
 		await assertGenerationRateLimit(headers, ownerId);
 		const metadata = await safeFetchMetadata(
 			parsedUrl.value.providerVideoId,
