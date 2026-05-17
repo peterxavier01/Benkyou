@@ -1,10 +1,42 @@
 import type { ChapterGenerationPolicy } from "@benkyou/core";
-import { fetchTranscript } from "youtube-transcript";
+import {
+	fetchTranscript,
+	YoutubeTranscriptDisabledError,
+	YoutubeTranscriptNotAvailableError,
+	YoutubeTranscriptNotAvailableLanguageError,
+	YoutubeTranscriptTooManyRequestError,
+	YoutubeTranscriptVideoUnavailableError,
+} from "youtube-transcript";
 
 export interface TranscriptSegment {
 	text: string;
 	startSeconds: number;
 	durationSeconds: number;
+}
+
+export type YouTubeTranscriptFailureCode =
+	| "disabled"
+	| "empty"
+	| "language_unavailable"
+	| "not_available"
+	| "too_many_requests"
+	| "unavailable"
+	| "unknown";
+
+export class YouTubeTranscriptFetchError extends Error {
+	readonly code: YouTubeTranscriptFailureCode;
+	readonly providerVideoId: string;
+
+	constructor(
+		providerVideoId: string,
+		code: YouTubeTranscriptFailureCode,
+		cause?: unknown,
+	) {
+		super(getYouTubeTranscriptFailureMessage(providerVideoId, code), { cause });
+		this.name = "YouTubeTranscriptFetchError";
+		this.code = code;
+		this.providerVideoId = providerVideoId;
+	}
 }
 
 export interface YouTubeMetadata {
@@ -23,15 +55,31 @@ export interface YouTubeMetadata {
 export async function fetchYouTubeTranscript(
 	providerVideoId: string,
 ): Promise<TranscriptSegment[]> {
-	const transcript = await fetchTranscript(providerVideoId);
+	let transcript: Awaited<ReturnType<typeof fetchTranscript>>;
 
-	return transcript
+	try {
+		transcript = await fetchTranscript(providerVideoId);
+	} catch (error) {
+		throw new YouTubeTranscriptFetchError(
+			providerVideoId,
+			getYouTubeTranscriptFailureCode(error),
+			error,
+		);
+	}
+
+	const segments = transcript
 		.map((segment) => ({
 			text: segment.text.trim(),
 			startSeconds: normalizeTranscriptSeconds(segment.offset),
 			durationSeconds: normalizeTranscriptSeconds(segment.duration),
 		}))
 		.filter((segment) => segment.text.length > 0);
+
+	if (segments.length === 0) {
+		throw new YouTubeTranscriptFetchError(providerVideoId, "empty");
+	}
+
+	return segments;
 }
 
 export async function fetchYouTubeDataApiMetadata(
@@ -264,6 +312,54 @@ function normalizeTranscriptSeconds(value: number) {
 	const seconds = value > 1000 ? value / 1000 : value;
 
 	return Math.max(0, Math.round(seconds));
+}
+
+function getYouTubeTranscriptFailureCode(
+	error: unknown,
+): YouTubeTranscriptFailureCode {
+	if (error instanceof YoutubeTranscriptTooManyRequestError) {
+		return "too_many_requests";
+	}
+
+	if (error instanceof YoutubeTranscriptVideoUnavailableError) {
+		return "unavailable";
+	}
+
+	if (error instanceof YoutubeTranscriptDisabledError) {
+		return "disabled";
+	}
+
+	if (error instanceof YoutubeTranscriptNotAvailableLanguageError) {
+		return "language_unavailable";
+	}
+
+	if (error instanceof YoutubeTranscriptNotAvailableError) {
+		return "not_available";
+	}
+
+	return "unknown";
+}
+
+function getYouTubeTranscriptFailureMessage(
+	providerVideoId: string,
+	code: YouTubeTranscriptFailureCode,
+) {
+	switch (code) {
+		case "too_many_requests":
+			return `YouTube transcript request was throttled for ${providerVideoId}.`;
+		case "unavailable":
+			return `YouTube video is unavailable for transcript fetch ${providerVideoId}.`;
+		case "disabled":
+			return `YouTube transcripts are disabled for ${providerVideoId}.`;
+		case "language_unavailable":
+			return `Requested YouTube transcript language is unavailable for ${providerVideoId}.`;
+		case "not_available":
+			return `YouTube transcript is not available for ${providerVideoId}.`;
+		case "empty":
+			return `YouTube transcript response was empty for ${providerVideoId}.`;
+		case "unknown":
+			return `YouTube transcript fetch failed for ${providerVideoId}.`;
+	}
 }
 
 function findNearestSegmentIndex(

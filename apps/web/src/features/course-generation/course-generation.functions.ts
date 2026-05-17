@@ -5,6 +5,7 @@ import {
 	fetchYouTubeTranscript,
 	generateCourseChapters,
 	transcriptSegmentsToText,
+	YouTubeTranscriptFetchError,
 } from "@benkyou/ai";
 import { getCurrentUserFromHeaders } from "@benkyou/auth/server";
 import {
@@ -176,12 +177,6 @@ export const processGenerationJob = createServerFn({ method: "POST" })
 				claimed.video.providerVideoId,
 			);
 
-			if (transcriptSegments.length === 0) {
-				throw new RetryableGenerationError(
-					"YouTube captions were not available for this video.",
-				);
-			}
-
 			const lastTranscriptSegment = transcriptSegments.at(-1);
 			const transcriptEndSeconds = lastTranscriptSegment
 				? lastTranscriptSegment.startSeconds +
@@ -236,15 +231,18 @@ export const processGenerationJob = createServerFn({ method: "POST" })
 
 			return { detail: toGenerationJobDetail(completed) };
 		} catch (error) {
+			logGenerationFailure({
+				error,
+				jobId: claimed.job.id,
+				providerVideoId: claimed.video.providerVideoId,
+			});
+
 			const failed = await failGenerationJob({
 				jobId: claimed.job.id,
 				failureReason: toUserSafeGenerationFailure(error),
 				retryable: true,
 				rawOutput: {
-					message:
-						error instanceof Error
-							? error.message
-							: "Unknown generation error.",
+					...serializeGenerationError(error),
 				},
 			});
 
@@ -420,7 +418,49 @@ function parsePositiveInteger(value: string | undefined, fallback: number) {
 	return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
-class RetryableGenerationError extends Error {}
+function logGenerationFailure(input: {
+	error: unknown;
+	jobId: string;
+	providerVideoId: string;
+}) {
+	console.error("Course generation failed", {
+		jobId: input.jobId,
+		providerVideoId: input.providerVideoId,
+		...serializeGenerationError(input.error),
+	});
+}
+
+function serializeGenerationError(error: unknown) {
+	const cause =
+		error instanceof Error && error.cause instanceof Error
+			? {
+					causeName: error.cause.name,
+					causeMessage: error.cause.message,
+				}
+			: {};
+
+	if (error instanceof YouTubeTranscriptFetchError) {
+		return {
+			message: error.message,
+			name: error.name,
+			transcriptFailureCode: error.code,
+			...cause,
+		};
+	}
+
+	if (error instanceof Error) {
+		return {
+			message: error.message,
+			name: error.name,
+			...cause,
+		};
+	}
+
+	return {
+		message: "Unknown generation error.",
+		name: "UnknownError",
+	};
+}
 
 async function classifyEducationalSuitabilityForVideo(video: {
 	title: string | null;
@@ -471,12 +511,12 @@ function getRecord(value: unknown) {
 }
 
 function toUserSafeGenerationFailure(error: unknown) {
-	if (error instanceof RetryableGenerationError) {
-		return error.message;
-	}
-
 	if (error instanceof Error && error.message.includes("AI_API_KEY")) {
 		return "Course generation is not configured yet.";
+	}
+
+	if (error instanceof YouTubeTranscriptFetchError) {
+		return "YouTube captions were not available for this video.";
 	}
 
 	if (error instanceof Error && error.message.includes("Transcript")) {
