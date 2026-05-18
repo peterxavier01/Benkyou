@@ -16,6 +16,7 @@ import {
 	upsertChapterNoteRequestV1Schema,
 	upsertChapterProgressRequestV1Schema,
 	upsertCourseProgressRequestV1Schema,
+	upsertPlaybackProgressRequestV1Schema,
 	validateChapterTimeRange,
 } from "@benkyou/core";
 import {
@@ -36,6 +37,7 @@ import {
 	upsertChapterProgress as upsertChapterProgressRecord,
 	upsertCourseProgress as upsertCourseProgressRecord,
 	upsertLearningPreferences as upsertLearningPreferencesRecord,
+	upsertPlaybackProgress as upsertPlaybackProgressRecord,
 } from "@benkyou/db";
 import type {
 	CreateBookmarkResponseV1,
@@ -55,6 +57,8 @@ import type {
 	UpsertChapterNoteResponseV1,
 	UpsertChapterProgressResponseV1,
 	UpsertCourseProgressResponseV1,
+	UpsertPlaybackProgressRequestV1,
+	UpsertPlaybackProgressResponseV1,
 } from "@benkyou/types";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
@@ -250,6 +254,14 @@ export const upsertCourseProgress = createServerFn({ method: "POST" })
 		return { progress };
 	});
 
+export const upsertPlaybackProgress = createServerFn({ method: "POST" })
+	.inputValidator((input) => upsertPlaybackProgressRequestV1Schema.parse(input))
+	.handler(async ({ data }): Promise<UpsertPlaybackProgressResponseV1> => {
+		const ownerId = await getOptionalUserId();
+
+		return upsertPlaybackProgressForOwner(ownerId, data);
+	});
+
 export const upsertChapterProgress = createServerFn({ method: "POST" })
 	.inputValidator((input) => upsertChapterProgressRequestV1Schema.parse(input))
 	.handler(async ({ data }): Promise<UpsertChapterProgressResponseV1> => {
@@ -352,6 +364,35 @@ export const deleteBookmark = createServerFn({ method: "POST" })
 
 		return { deleted };
 	});
+
+export async function upsertPlaybackProgressForOwner(
+	ownerId: string | null,
+	data: UpsertPlaybackProgressRequestV1,
+): Promise<UpsertPlaybackProgressResponseV1> {
+	const playerData = await getCoursePlayerDataRecord(data.courseId, ownerId);
+
+	if (!playerData || !canAccessCourse(playerData.course.ownerId, ownerId)) {
+		throw new Error("Course was not found.");
+	}
+
+	const allowedChapterIds = new Set(
+		playerData.chapters.map((chapter) => chapter.id),
+	);
+	const chapters = data.chapters.filter((chapter) =>
+		allowedChapterIds.has(chapter.chapterId),
+	);
+
+	if (chapters.length !== data.chapters.length) {
+		throw new Error("Chapter was not found.");
+	}
+
+	return upsertPlaybackProgressRecord(ownerId, {
+		courseId: data.courseId,
+		resumeSeconds: data.resumeSeconds,
+		completionPercent: data.completionPercent,
+		chapters,
+	});
+}
 
 export const deleteCourse = createServerFn({ method: "POST" })
 	.inputValidator((input) => deleteCourseRequestV1Schema.parse(input))

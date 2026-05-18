@@ -626,19 +626,19 @@ Goal: verify the MVP behaves like a serious learning tool before release.
 
 ## MVP Release Gate
 
-- [ ] Paste a valid YouTube URL.
-- [ ] Create a course and generation job.
+- [x] Paste a valid YouTube URL.
+- [x] Create a course and generation job.
 - [ ] Complete or simulate chapter generation.
-- [ ] Open generated course.
-- [ ] Play video and select chapters.
+- [x] Open generated course.
+- [x] Play video and select chapters.
 - [ ] Save progress.
 - [ ] Refresh and resume.
-- [ ] Write chapter notes.
+- [x] Write chapter notes.
 - [ ] Refresh and recover notes.
 - [x] Add, edit, jump to, and delete bookmark.
-- [ ] Find course in library.
+- [x] Find course in library.
 - [ ] Manage course title and chapter title.
-- [ ] Delete course.
-- [ ] Sign in and sign out.
+- [x] Delete course.
+- [x] Sign in and sign out.
 - [x] View privacy, terms, and self-hosting pages.
 - [ ] Pass build, type check, lint/check, and smoke tests.

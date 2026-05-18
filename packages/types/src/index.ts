@@ -300,6 +300,24 @@ export interface UpsertCourseProgressResponseV1 {
 	progress: CourseProgressDTO;
 }
 
+export interface UpsertPlaybackChapterProgressV1 {
+	chapterId: string;
+	watchedSeconds: number;
+	completed: boolean;
+}
+
+export interface UpsertPlaybackProgressRequestV1 {
+	courseId: string;
+	resumeSeconds: number;
+	completionPercent: number;
+	chapters: UpsertPlaybackChapterProgressV1[];
+}
+
+export interface UpsertPlaybackProgressResponseV1 {
+	progress: CourseProgressDTO;
+	chapterProgress: ChapterProgressDTO[];
+}
+
 export interface UpsertChapterProgressRequestV1 {
 	chapterId: string;
 	watchedSeconds: number;

@@ -10,6 +10,7 @@ import type {
 	ChapterProgressDTO,
 	CourseChapterDTO,
 	CoursePlayerDataDTO,
+	UpsertPlaybackProgressRequestV1,
 } from "@benkyou/types";
 import {
 	Button,
@@ -51,7 +52,7 @@ import {
 	getCoursePlayerData,
 	updateBookmark,
 	upsertChapterProgress,
-	upsertCourseProgress,
+	upsertPlaybackProgress,
 } from "../course-workspace.functions";
 import { BookmarkDialog, type BookmarkDialogValues } from "./bookmark-dialog";
 import { NotesEditor } from "./notes-editor";
@@ -73,7 +74,7 @@ function CoursePlayerScreen({
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
 	const getPlayerData = useServerFn(getCoursePlayerData);
-	const saveCourseProgress = useServerFn(upsertCourseProgress);
+	const savePlaybackProgress = useServerFn(upsertPlaybackProgress);
 	const saveChapterProgress = useServerFn(upsertChapterProgress);
 	const createBookmarkFn = useServerFn(createBookmark);
 	const updateBookmarkFn = useServerFn(updateBookmark);
@@ -123,6 +124,7 @@ function CoursePlayerScreen({
 		watchedByChapter,
 		completedByChapter,
 	});
+	const dirtyChapterIdsRef = useRef(new Set<string>());
 
 	const playerQuery = useQuery({
 		queryKey: ["course-player", courseId],
@@ -144,21 +146,43 @@ function CoursePlayerScreen({
 		(bookmark) => bookmark.chapterId === selectedChapter?.id,
 	);
 
-	const courseProgressMutation = useMutation({
-		mutationFn: (input: { resumeSeconds: number; completionPercent: number }) =>
-			saveCourseProgress({
-				data: {
-					courseId,
-					resumeSeconds: input.resumeSeconds,
-					completionPercent: input.completionPercent,
-				},
-			}),
-		onSuccess: (result) => {
+	function clearSavedDirtyChapters(
+		chapters: UpsertPlaybackProgressRequestV1["chapters"],
+	) {
+		const latest = latestProgressRef.current;
+
+		for (const chapter of chapters) {
+			if (
+				(latest.watchedByChapter[chapter.chapterId] ?? 0) ===
+					chapter.watchedSeconds &&
+				(latest.completedByChapter[chapter.chapterId] ?? false) ===
+					chapter.completed
+			) {
+				dirtyChapterIdsRef.current.delete(chapter.chapterId);
+			}
+		}
+	}
+
+	const playbackProgressMutation = useMutation({
+		mutationFn: (input: UpsertPlaybackProgressRequestV1) =>
+			savePlaybackProgress({ data: input }),
+		onSuccess: async (result, input) => {
 			queryClient.setQueryData<CoursePlayerDataDTO>(
 				["course-player", courseId],
 				(current) =>
-					current ? { ...current, progress: result.progress } : current,
+					current
+						? {
+								...current,
+								progress: result.progress,
+								chapterProgress: mergeChapterProgressList(
+									current.chapterProgress,
+									result.chapterProgress,
+								),
+							}
+						: current,
 			);
+			clearSavedDirtyChapters(input.chapters);
+			await queryClient.invalidateQueries({ queryKey: ["course-library"] });
 			setSaveError(null);
 		},
 		onError: () => setSaveError("Progress could not be saved."),
@@ -284,26 +308,39 @@ function CoursePlayerScreen({
 		},
 	});
 
+	const mutatePlaybackProgressRef = useRef(playbackProgressMutation.mutate);
+
+	useEffect(() => {
+		mutatePlaybackProgressRef.current = playbackProgressMutation.mutate;
+	});
+
+	const createProgressPayload =
+		useCallback((): UpsertPlaybackProgressRequestV1 => {
+			const latest = latestProgressRef.current;
+			const courseCompletion = calculateProgressPercent(
+				latest.currentSeconds,
+				latest.durationSeconds,
+			);
+
+			return {
+				courseId,
+				resumeSeconds: Math.floor(latest.currentSeconds),
+				completionPercent: courseCompletion,
+				chapters: Array.from(dirtyChapterIdsRef.current).map((chapterId) => ({
+					chapterId,
+					watchedSeconds: latest.watchedByChapter[chapterId] ?? 0,
+					completed: latest.completedByChapter[chapterId] ?? false,
+				})),
+			};
+		}, [courseId]);
+
 	const persistProgress = useCallback(() => {
-		const latest = latestProgressRef.current;
-		const courseCompletion = calculateProgressPercent(
-			latest.currentSeconds,
-			latest.durationSeconds,
-		);
+		mutatePlaybackProgressRef.current(createProgressPayload());
+	}, [createProgressPayload]);
 
-		courseProgressMutation.mutate({
-			resumeSeconds: latest.currentSeconds,
-			completionPercent: courseCompletion,
-		});
-
-		if (latest.selectedChapterId) {
-			chapterProgressMutation.mutate({
-				chapterId: latest.selectedChapterId,
-				watchedSeconds: latest.watchedByChapter[latest.selectedChapterId] ?? 0,
-				completed: latest.completedByChapter[latest.selectedChapterId] ?? false,
-			});
-		}
-	}, [chapterProgressMutation, courseProgressMutation]);
+	const persistProgressOnUnload = useCallback(() => {
+		sendProgressBeacon(createProgressPayload());
+	}, [createProgressPayload]);
 
 	useEffect(() => {
 		latestProgressRef.current = {
@@ -331,15 +368,34 @@ function CoursePlayerScreen({
 	}, [persistProgress]);
 
 	useEffect(() => {
-		const handleBeforeUnload = () => persistProgress();
-		window.addEventListener("beforeunload", handleBeforeUnload);
+		const handleBeforeUnload = () => persistProgressOnUnload();
+		const handlePageHide = () => persistProgressOnUnload();
+		const handleVisibilityChange = () => {
+			if (document.visibilityState === "hidden") {
+				persistProgressOnUnload();
+			}
+		};
 
-		return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-	}, [persistProgress]);
+		window.addEventListener("beforeunload", handleBeforeUnload);
+		window.addEventListener("pagehide", handlePageHide);
+		document.addEventListener("visibilitychange", handleVisibilityChange);
+
+		return () => {
+			persistProgressOnUnload();
+			window.removeEventListener("beforeunload", handleBeforeUnload);
+			window.removeEventListener("pagehide", handlePageHide);
+			document.removeEventListener("visibilitychange", handleVisibilityChange);
+		};
+	}, [persistProgressOnUnload]);
 
 	const selectChapter = useCallback(
 		(chapter: CourseChapterDTO, seek = true) => {
+			persistProgress();
 			setSelectedChapterId(chapter.id);
+			latestProgressRef.current = {
+				...latestProgressRef.current,
+				selectedChapterId: chapter.id,
+			};
 			if (seek) {
 				setSeekToSeconds(chapter.startSeconds);
 			}
@@ -350,7 +406,7 @@ function CoursePlayerScreen({
 				replace: true,
 			});
 		},
-		[courseId, navigate],
+		[courseId, navigate, persistProgress],
 	);
 
 	const jumpToBookmark = useCallback(
@@ -362,6 +418,11 @@ function CoursePlayerScreen({
 
 			if (chapter) {
 				setSelectedChapterId(chapter.id);
+				latestProgressRef.current = {
+					...latestProgressRef.current,
+					selectedChapterId: chapter.id,
+					currentSeconds: bookmark.timestampSeconds,
+				};
 				void navigate({
 					to: "/courses/$courseId",
 					params: { courseId },
@@ -386,6 +447,13 @@ function CoursePlayerScreen({
 
 			setCurrentSeconds(timeSeconds);
 			setDurationSeconds(duration);
+			latestProgressRef.current = {
+				...latestProgressRef.current,
+				currentSeconds: timeSeconds,
+				durationSeconds: duration,
+				selectedChapterId:
+					activeChapter?.id ?? latestProgressRef.current.selectedChapterId,
+			};
 
 			if (activeChapter && activeChapter.id !== selectedChapterId) {
 				setSelectedChapterId(activeChapter.id);
@@ -420,12 +488,30 @@ function CoursePlayerScreen({
 						Math.floor(watchedSeconds),
 					),
 				}));
+				latestProgressRef.current = {
+					...latestProgressRef.current,
+					watchedByChapter: {
+						...latestProgressRef.current.watchedByChapter,
+						[activeChapter.id]: Math.max(
+							latestProgressRef.current.watchedByChapter[activeChapter.id] ?? 0,
+							Math.floor(watchedSeconds),
+						),
+					},
+				};
 				if (completed) {
 					setCompletedByChapter((current) => ({
 						...current,
 						[activeChapter.id]: true,
 					}));
+					latestProgressRef.current = {
+						...latestProgressRef.current,
+						completedByChapter: {
+							...latestProgressRef.current.completedByChapter,
+							[activeChapter.id]: true,
+						},
+					};
 				}
+				dirtyChapterIdsRef.current.add(activeChapter.id);
 			}
 		},
 		[
@@ -443,6 +529,14 @@ function CoursePlayerScreen({
 			...current,
 			[chapter.id]: nextCompleted,
 		}));
+		latestProgressRef.current = {
+			...latestProgressRef.current,
+			completedByChapter: {
+				...latestProgressRef.current.completedByChapter,
+				[chapter.id]: nextCompleted,
+			},
+		};
+		dirtyChapterIdsRef.current.delete(chapter.id);
 		chapterProgressMutation.mutate({
 			chapterId: chapter.id,
 			watchedSeconds: watchedByChapter[chapter.id] ?? 0,
@@ -491,13 +585,21 @@ function CoursePlayerScreen({
 			action={
 				<div className="flex items-center gap-2">
 					<Button asChild size="sm" variant="outline">
-						<Link to="/courses/$courseId/manage" params={{ courseId }}>
+						<Link
+							to="/courses/$courseId/manage"
+							params={{ courseId }}
+							onClick={persistProgressOnUnload}
+						>
 							<HugeIcon name="settings" className="size-4" />
 							Manage
 						</Link>
 					</Button>
 					<Button asChild size="sm" variant="outline">
-						<Link to="/courses" search={{ q: "", filter: "all" }}>
+						<Link
+							to="/courses"
+							search={{ q: "", filter: "all" }}
+							onClick={persistProgressOnUnload}
+						>
 							<HugeIcon name="arrowLeft" className="size-4" />
 							Library
 						</Link>
@@ -1073,6 +1175,16 @@ function mergeChapterProgress(
 	return current.map((item, index) => (index === existingIndex ? next : item));
 }
 
+function mergeChapterProgressList(
+	current: ChapterProgressDTO[],
+	nextItems: ChapterProgressDTO[],
+) {
+	return nextItems.reduce(
+		(items, next) => mergeChapterProgress(items, next),
+		current,
+	);
+}
+
 function mergeBookmark(current: BookmarkDTO[], next: BookmarkDTO) {
 	const existingIndex = current.findIndex((item) => item.id === next.id);
 	const nextItems =
@@ -1081,6 +1193,30 @@ function mergeBookmark(current: BookmarkDTO[], next: BookmarkDTO) {
 			: current.map((item, index) => (index === existingIndex ? next : item));
 
 	return [...nextItems].sort((a, b) => a.timestampSeconds - b.timestampSeconds);
+}
+
+function sendProgressBeacon(payload: UpsertPlaybackProgressRequestV1) {
+	const body = JSON.stringify(payload);
+
+	if (navigator.sendBeacon) {
+		const sent = navigator.sendBeacon(
+			"/api/v1/progress/playback",
+			new Blob([body], { type: "application/json" }),
+		);
+
+		if (sent) {
+			return;
+		}
+	}
+
+	void fetch("/api/v1/progress/playback", {
+		method: "POST",
+		headers: {
+			"content-type": "application/json",
+		},
+		body,
+		keepalive: true,
+	});
 }
 
 export { CoursePlayerScreen };

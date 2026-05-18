@@ -8,6 +8,7 @@ import type {
 	UpsertChapterNoteRequestV1,
 	UpsertChapterProgressRequestV1,
 	UpsertCourseProgressRequestV1,
+	UpsertPlaybackProgressRequestV1,
 } from "@benkyou/types";
 import { z } from "zod";
 import {
@@ -34,6 +35,21 @@ export const upsertCourseProgressRequestV1Schema = z.object({
 	resumeSeconds: z.number().int().nonnegative(),
 	completionPercent: z.number().min(0).max(100),
 }) satisfies z.ZodType<UpsertCourseProgressRequestV1>;
+
+export const upsertPlaybackProgressRequestV1Schema = z.object({
+	courseId: z.uuid("Course id is invalid."),
+	resumeSeconds: z.number().int().nonnegative(),
+	completionPercent: z.number().min(0).max(100),
+	chapters: z
+		.array(
+			z.object({
+				chapterId: z.uuid("Chapter id is invalid."),
+				watchedSeconds: z.number().int().nonnegative(),
+				completed: z.boolean(),
+			}),
+		)
+		.max(100, "Too many chapter progress records."),
+}) satisfies z.ZodType<UpsertPlaybackProgressRequestV1>;
 
 export const upsertChapterProgressRequestV1Schema = z.object({
 	chapterId: z.uuid("Chapter id is invalid."),

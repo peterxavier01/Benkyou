@@ -460,6 +460,18 @@ test("repository helpers upsert learning data into DTO-compatible course data", 
 			watchedSeconds: 55,
 			completed: true,
 		});
+		await modules.upsertPlaybackProgress(null, {
+			courseId: course.id,
+			resumeSeconds: 20,
+			completionPercent: 10,
+			chapters: [
+				{
+					chapterId: firstChapter.id,
+					watchedSeconds: 12,
+					completed: false,
+				},
+			],
+		});
 		const initialNote = await modules.upsertChapterNote(
 			null,
 			firstChapter.id,
@@ -505,6 +517,8 @@ test("repository helpers upsert learning data into DTO-compatible course data", 
 			[firstChapter.id, secondChapter.id],
 		);
 		assert.equal(data?.progress?.resumeSeconds, 45);
+		assert.equal(data?.progress?.completionPercent, 50);
+		assert.equal(data?.chapterProgress[0]?.watchedSeconds, 55);
 		assert.equal(data?.chapterProgress[0]?.completed, true);
 		assert.equal(data?.notes[0]?.markdown, "A durable note.");
 		assert.equal(data?.bookmarks[0]?.title, "Updated timestamp");

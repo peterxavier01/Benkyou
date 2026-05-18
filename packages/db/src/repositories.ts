@@ -25,6 +25,7 @@ import {
 	inArray,
 	isNull,
 	or,
+	sql,
 } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
 
@@ -1482,8 +1483,8 @@ export async function upsertCourseProgress(
 		.onConflictDoUpdate({
 			target: [courseProgress.userId, courseProgress.courseId],
 			set: {
-				resumeSeconds: input.resumeSeconds,
-				completionPercent: input.completionPercent,
+				resumeSeconds: sql`greatest(${courseProgress.resumeSeconds}, ${input.resumeSeconds})`,
+				completionPercent: sql`greatest(${courseProgress.completionPercent}, ${input.completionPercent})`,
 				updatedAt: new Date(),
 			},
 		})
@@ -1496,7 +1497,19 @@ export async function upsertChapterProgress(
 	userId: UserId,
 	chapterId: string,
 	input: { watchedSeconds: number; completed: boolean },
+	options: { monotonic?: boolean } = {},
 ): Promise<ChapterProgressDTO> {
+	const update = options.monotonic
+		? {
+				watchedSeconds: sql`greatest(${chapterProgress.watchedSeconds}, ${input.watchedSeconds})`,
+				completed: sql`${chapterProgress.completed} or ${input.completed}`,
+				updatedAt: new Date(),
+			}
+		: {
+				watchedSeconds: input.watchedSeconds,
+				completed: input.completed,
+				updatedAt: new Date(),
+			};
 	const [row] = await db
 		.insert(chapterProgress)
 		.values({
@@ -1507,15 +1520,48 @@ export async function upsertChapterProgress(
 		})
 		.onConflictDoUpdate({
 			target: [chapterProgress.userId, chapterProgress.chapterId],
-			set: {
-				watchedSeconds: input.watchedSeconds,
-				completed: input.completed,
-				updatedAt: new Date(),
-			},
+			set: update,
 		})
 		.returning();
 
 	return mapChapterProgress(row);
+}
+
+export async function upsertPlaybackProgress(
+	userId: UserId,
+	input: {
+		courseId: string;
+		resumeSeconds: number;
+		completionPercent: number;
+		chapters: Array<{
+			chapterId: string;
+			watchedSeconds: number;
+			completed: boolean;
+		}>;
+	},
+): Promise<{
+	progress: CourseProgressDTO;
+	chapterProgress: ChapterProgressDTO[];
+}> {
+	const progress = await upsertCourseProgress(userId, input.courseId, {
+		resumeSeconds: input.resumeSeconds,
+		completionPercent: input.completionPercent,
+	});
+	const chapterRows = await Promise.all(
+		input.chapters.map((chapter) =>
+			upsertChapterProgress(
+				userId,
+				chapter.chapterId,
+				{
+					watchedSeconds: chapter.watchedSeconds,
+					completed: chapter.completed,
+				},
+				{ monotonic: true },
+			),
+		),
+	);
+
+	return { progress, chapterProgress: chapterRows };
 }
 
 export async function upsertChapterNote(
