@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { type Ref, useEffect, useImperativeHandle, useRef } from "react";
 
 declare global {
 	interface Window {
@@ -42,6 +42,7 @@ interface YouTubeStateChangeEvent {
 }
 
 interface YouTubePlayerProps {
+	ref?: Ref<YouTubePlayerHandle>;
 	providerVideoId: string;
 	initialSeconds: number;
 	seekToSeconds: number | null;
@@ -50,9 +51,19 @@ interface YouTubePlayerProps {
 	onPauseOrEnd: (timeSeconds: number, durationSeconds: number) => void;
 }
 
+interface YouTubePlaybackSnapshot {
+	timeSeconds: number;
+	durationSeconds: number;
+}
+
+interface YouTubePlayerHandle {
+	getPlaybackSnapshot: () => YouTubePlaybackSnapshot | null;
+}
+
 let apiPromise: Promise<YouTubeNamespace> | null = null;
 
 function YouTubePlayer({
+	ref,
 	providerVideoId,
 	initialSeconds,
 	seekToSeconds,
@@ -70,12 +81,32 @@ function YouTubePlayer({
 	});
 	const validVideoId = isValidYouTubeVideoId(providerVideoId);
 
-	if (initialPlaybackRef.current.providerVideoId !== providerVideoId) {
-		initialPlaybackRef.current = { providerVideoId, seconds: initialSeconds };
-		lastSeekRef.current = null;
-	}
+	useEffect(() => {
+		callbacksRef.current = { onReady, onTimeUpdate, onPauseOrEnd };
+	}, [onReady, onTimeUpdate, onPauseOrEnd]);
 
-	callbacksRef.current = { onReady, onTimeUpdate, onPauseOrEnd };
+	useEffect(() => {
+		if (initialPlaybackRef.current.providerVideoId !== providerVideoId) {
+			initialPlaybackRef.current = {
+				providerVideoId,
+				seconds: initialSeconds,
+			};
+			lastSeekRef.current = null;
+		}
+	}, [initialSeconds, providerVideoId]);
+
+	useImperativeHandle(ref, () => ({
+		getPlaybackSnapshot: () => {
+			if (!playerRef.current) {
+				return null;
+			}
+
+			return {
+				timeSeconds: safeTime(playerRef.current),
+				durationSeconds: safeDuration(playerRef.current),
+			};
+		},
+	}));
 
 	useEffect(() => {
 		let disposed = false;
@@ -86,61 +117,61 @@ function YouTubePlayer({
 		);
 
 		async function createPlayer() {
-			if (!validVideoId) {
+			const container = containerRef.current;
+
+			if (!validVideoId || !container) {
 				return;
 			}
 
 			const yt = await loadYouTubeIframeApi();
 
-			if (disposed || !containerRef.current) {
-				return;
-			}
-
-			try {
-				playerRef.current = new yt.Player(containerRef.current, {
-					videoId: providerVideoId,
-					playerVars: {
-						rel: 0,
-						modestbranding: 1,
-						playsinline: 1,
-						start: startSeconds,
-					},
-					events: {
-						onReady: (event) => {
-							const duration = safeDuration(event.target);
-							if (startSeconds > 0) {
-								event.target.seekTo(startSeconds, true);
-							}
-							callbacksRef.current.onReady(duration);
+			if (!disposed) {
+				try {
+					playerRef.current = new yt.Player(container, {
+						videoId: providerVideoId,
+						playerVars: {
+							rel: 0,
+							modestbranding: 1,
+							playsinline: 1,
+							start: startSeconds,
 						},
-						onStateChange: (event) => {
-							const duration = safeDuration(event.target);
-							if (
-								event.data === yt.PlayerState.PAUSED ||
-								event.data === yt.PlayerState.ENDED
-							) {
-								callbacksRef.current.onPauseOrEnd(
-									safeTime(event.target),
-									duration,
-								);
-							}
+						events: {
+							onReady: (event) => {
+								const duration = safeDuration(event.target);
+								if (startSeconds > 0) {
+									event.target.seekTo(startSeconds, true);
+								}
+								callbacksRef.current.onReady(duration);
+							},
+							onStateChange: (event) => {
+								const duration = safeDuration(event.target);
+								if (
+									event.data === yt.PlayerState.PAUSED ||
+									event.data === yt.PlayerState.ENDED
+								) {
+									callbacksRef.current.onPauseOrEnd(
+										safeTime(event.target),
+										duration,
+									);
+								}
+							},
 						},
-					},
-				});
-			} catch {
-				return;
-			}
-
-			intervalId = window.setInterval(() => {
-				if (!playerRef.current) {
+					});
+				} catch {
 					return;
 				}
 
-				callbacksRef.current.onTimeUpdate(
-					safeTime(playerRef.current),
-					safeDuration(playerRef.current),
-				);
-			}, 1000);
+				intervalId = window.setInterval(() => {
+					if (!playerRef.current) {
+						return;
+					}
+
+					callbacksRef.current.onTimeUpdate(
+						safeTime(playerRef.current),
+						safeDuration(playerRef.current),
+					);
+				}, 1000);
+			}
 		}
 
 		void createPlayer();
@@ -236,4 +267,8 @@ function safeDuration(player: YouTubePlayerInstance) {
 	}
 }
 
-export { YouTubePlayer };
+export {
+	YouTubePlayer,
+	type YouTubePlayerHandle,
+	type YouTubePlaybackSnapshot,
+};

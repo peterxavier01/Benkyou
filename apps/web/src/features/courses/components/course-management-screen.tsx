@@ -46,7 +46,7 @@ import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { WorkspacePage } from "#components/workspace-layout";
 import BetterAuthHeader from "../../../integrations/better-auth/header-user";
 import {
@@ -478,6 +478,19 @@ function ChapterEditDialog({
 		},
 		onSubmit: ({ value }) => onSubmit(value),
 	});
+
+	useEffect(() => {
+		if (!chapter) {
+			return;
+		}
+
+		form.reset({
+			title: chapter.title,
+			summary: chapter.summary ?? "",
+			startSeconds: chapter.startSeconds,
+			endSeconds: chapter.endSeconds ?? null,
+		});
+	}, [chapter, form]);
 
 	return (
 		<Dialog open={Boolean(chapter)} onOpenChange={onOpenChange}>

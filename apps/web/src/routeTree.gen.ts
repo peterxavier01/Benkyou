@@ -22,6 +22,7 @@ import { Route as WorkspaceBookmarksRouteImport } from './routes/_workspace/book
 import { Route as WorkspaceCoursesIndexRouteImport } from './routes/_workspace/courses/index'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as WorkspaceCoursesCourseIdRouteImport } from './routes/_workspace/courses/$courseId'
+import { Route as ApiV1ProgressPlaybackRouteImport } from './routes/api/v1/progress/playback'
 import { Route as WorkspaceCoursesNewJobIdRouteImport } from './routes/_workspace/courses/new/$jobId'
 import { Route as WorkspaceCoursesCourseIdManageRouteImport } from './routes/_workspace/courses/$courseId_.manage'
 
@@ -90,6 +91,11 @@ const WorkspaceCoursesCourseIdRoute =
     path: '/courses/$courseId',
     getParentRoute: () => WorkspaceRoute,
   } as any)
+const ApiV1ProgressPlaybackRoute = ApiV1ProgressPlaybackRouteImport.update({
+  id: '/api/v1/progress/playback',
+  path: '/api/v1/progress/playback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const WorkspaceCoursesNewJobIdRoute =
   WorkspaceCoursesNewJobIdRouteImport.update({
     id: '/courses/new/$jobId',
@@ -118,6 +124,7 @@ export interface FileRoutesByFullPath {
   '/courses/': typeof WorkspaceCoursesIndexRoute
   '/courses/$courseId/manage': typeof WorkspaceCoursesCourseIdManageRoute
   '/courses/new/$jobId': typeof WorkspaceCoursesNewJobIdRoute
+  '/api/v1/progress/playback': typeof ApiV1ProgressPlaybackRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -134,6 +141,7 @@ export interface FileRoutesByTo {
   '/courses': typeof WorkspaceCoursesIndexRoute
   '/courses/$courseId/manage': typeof WorkspaceCoursesCourseIdManageRoute
   '/courses/new/$jobId': typeof WorkspaceCoursesNewJobIdRoute
+  '/api/v1/progress/playback': typeof ApiV1ProgressPlaybackRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -152,6 +160,7 @@ export interface FileRoutesById {
   '/_workspace/courses/': typeof WorkspaceCoursesIndexRoute
   '/_workspace/courses/$courseId_/manage': typeof WorkspaceCoursesCourseIdManageRoute
   '/_workspace/courses/new/$jobId': typeof WorkspaceCoursesNewJobIdRoute
+  '/api/v1/progress/playback': typeof ApiV1ProgressPlaybackRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -170,6 +179,7 @@ export interface FileRouteTypes {
     | '/courses/'
     | '/courses/$courseId/manage'
     | '/courses/new/$jobId'
+    | '/api/v1/progress/playback'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -186,6 +196,7 @@ export interface FileRouteTypes {
     | '/courses'
     | '/courses/$courseId/manage'
     | '/courses/new/$jobId'
+    | '/api/v1/progress/playback'
   id:
     | '__root__'
     | '/'
@@ -203,6 +214,7 @@ export interface FileRouteTypes {
     | '/_workspace/courses/'
     | '/_workspace/courses/$courseId_/manage'
     | '/_workspace/courses/new/$jobId'
+    | '/api/v1/progress/playback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -215,6 +227,7 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiV1ProgressPlaybackRoute: typeof ApiV1ProgressPlaybackRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -310,6 +323,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkspaceCoursesCourseIdRouteImport
       parentRoute: typeof WorkspaceRoute
     }
+    '/api/v1/progress/playback': {
+      id: '/api/v1/progress/playback'
+      path: '/api/v1/progress/playback'
+      fullPath: '/api/v1/progress/playback'
+      preLoaderRoute: typeof ApiV1ProgressPlaybackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_workspace/courses/new/$jobId': {
       id: '/_workspace/courses/new/$jobId'
       path: '/courses/new/$jobId'
@@ -359,6 +379,7 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiV1ProgressPlaybackRoute: ApiV1ProgressPlaybackRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

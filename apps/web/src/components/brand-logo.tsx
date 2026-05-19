@@ -1,10 +1,11 @@
 import { PRODUCT_NAME } from "@benkyou/core";
 import { cn, HugeIcon } from "@benkyou/ui";
 import { Link } from "@tanstack/react-router";
-import type { ReactNode } from "react";
+import type { MouseEventHandler, ReactNode } from "react";
 
 type BrandLogoProps = {
 	className?: string;
+	onClick?: MouseEventHandler<HTMLAnchorElement>;
 	subtitle?: ReactNode;
 	showText?: boolean;
 	to?: "/";
@@ -12,6 +13,7 @@ type BrandLogoProps = {
 
 function BrandLogo({
 	className,
+	onClick,
 	subtitle = "Learning workspace",
 	showText = true,
 	to,
@@ -44,6 +46,7 @@ function BrandLogo({
 					"inline-flex min-w-0 items-center gap-2 no-underline",
 					className,
 				)}
+				onClick={onClick}
 			>
 				{content}
 			</Link>

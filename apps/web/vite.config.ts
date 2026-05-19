@@ -19,12 +19,12 @@ const config = defineConfig({
 	},
 	plugins: [
 		devtools(),
+		tailwindcss(),
+		tanstackStart(),
 		nitro({
 			rollupConfig: { external: [/^@sentry\//] },
 			traceDeps: ["tslib*"],
 		}),
-		tailwindcss(),
-		tanstackStart(),
 		viteReact(),
 		babel({ presets: [reactCompilerPreset()] }),
 	],
