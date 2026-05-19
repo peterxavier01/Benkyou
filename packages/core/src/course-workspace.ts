@@ -40,6 +40,7 @@ export const upsertPlaybackProgressRequestV1Schema = z.object({
 	courseId: z.uuid("Course id is invalid."),
 	resumeSeconds: z.number().int().nonnegative(),
 	completionPercent: z.number().min(0).max(100),
+	occurredAt: z.iso.datetime(),
 	chapters: z
 		.array(
 			z.object({

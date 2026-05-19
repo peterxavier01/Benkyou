@@ -310,6 +310,7 @@ export interface UpsertPlaybackProgressRequestV1 {
 	courseId: string;
 	resumeSeconds: number;
 	completionPercent: number;
+	occurredAt: string;
 	chapters: UpsertPlaybackChapterProgressV1[];
 }
 

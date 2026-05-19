@@ -455,6 +455,7 @@ test("repository helpers upsert learning data into DTO-compatible course data", 
 		await modules.upsertCourseProgress(null, course.id, {
 			resumeSeconds: 45,
 			completionPercent: 50,
+			occurredAt: new Date("2026-05-14T12:00:00.000Z"),
 		});
 		await modules.upsertChapterProgress(null, firstChapter.id, {
 			watchedSeconds: 55,
@@ -464,6 +465,7 @@ test("repository helpers upsert learning data into DTO-compatible course data", 
 			courseId: course.id,
 			resumeSeconds: 20,
 			completionPercent: 10,
+			occurredAt: new Date("2026-05-14T12:01:00.000Z"),
 			chapters: [
 				{
 					chapterId: firstChapter.id,
@@ -471,6 +473,20 @@ test("repository helpers upsert learning data into DTO-compatible course data", 
 					completed: false,
 				},
 			],
+		});
+		await modules.upsertPlaybackProgress(null, {
+			courseId: course.id,
+			resumeSeconds: 30,
+			completionPercent: 20,
+			occurredAt: new Date("2026-05-14T12:00:30.000Z"),
+			chapters: [],
+		});
+		await modules.upsertPlaybackProgress(null, {
+			courseId: course.id,
+			resumeSeconds: 25,
+			completionPercent: 25,
+			occurredAt: new Date("2026-05-14T12:02:00.000Z"),
+			chapters: [],
 		});
 		const initialNote = await modules.upsertChapterNote(
 			null,
@@ -516,7 +532,7 @@ test("repository helpers upsert learning data into DTO-compatible course data", 
 			data?.chapters.map((chapter) => chapter.id),
 			[firstChapter.id, secondChapter.id],
 		);
-		assert.equal(data?.progress?.resumeSeconds, 45);
+		assert.equal(data?.progress?.resumeSeconds, 25);
 		assert.equal(data?.progress?.completionPercent, 50);
 		assert.equal(data?.chapterProgress[0]?.watchedSeconds, 55);
 		assert.equal(data?.chapterProgress[0]?.completed, true);

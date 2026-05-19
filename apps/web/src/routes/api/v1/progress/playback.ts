@@ -1,4 +1,3 @@
-import { getCurrentUserFromHeaders } from "@benkyou/auth/server";
 import { upsertPlaybackProgressRequestV1Schema } from "@benkyou/core";
 import { createFileRoute } from "@tanstack/react-router";
 import { upsertPlaybackProgressForOwner } from "#/features/courses/course-workspace.functions";
@@ -10,6 +9,9 @@ export const Route = createFileRoute("/api/v1/progress/playback")({
 				try {
 					const input = upsertPlaybackProgressRequestV1Schema.parse(
 						await request.json(),
+					);
+					const { getCurrentUserFromHeaders } = await import(
+						"#/features/auth/auth.server"
 					);
 					const user = await getCurrentUserFromHeaders(request.headers);
 					const result = await upsertPlaybackProgressForOwner(

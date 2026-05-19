@@ -17,7 +17,15 @@ import {
 	TooltipProvider,
 } from "@benkyou/ui";
 import { Link, useRouterState } from "@tanstack/react-router";
-import type { ReactNode } from "react";
+import {
+	createContext,
+	type MouseEvent,
+	type ReactNode,
+	use,
+	useCallback,
+	useMemo,
+	useRef,
+} from "react";
 import { BrandLogo } from "./brand-logo";
 
 type WorkspaceLayoutProps = {
@@ -32,6 +40,16 @@ type WorkspacePageProps = {
 	maxWidth?: "default" | "wide" | "narrow" | "full";
 	title: ReactNode;
 };
+
+type WorkspaceNavigationFlush = () => void;
+
+type WorkspaceNavigationFlushContextValue = {
+	flushNavigation: () => void;
+	registerNavigationFlush: (callback: WorkspaceNavigationFlush) => () => void;
+};
+
+const WorkspaceNavigationFlushContext =
+	createContext<WorkspaceNavigationFlushContextValue | null>(null);
 
 const navItems = [
 	{ icon: "home", label: "Home", to: "/" },
@@ -51,49 +69,94 @@ function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
 	const pathname = useRouterState({
 		select: (state) => state.location.pathname,
 	});
+	const navigationFlushCallbacksRef = useRef(
+		new Set<WorkspaceNavigationFlush>(),
+	);
+	const registerNavigationFlush = useCallback(
+		(callback: WorkspaceNavigationFlush) => {
+			navigationFlushCallbacksRef.current.add(callback);
+
+			return () => {
+				navigationFlushCallbacksRef.current.delete(callback);
+			};
+		},
+		[],
+	);
+	const flushNavigation = useCallback(() => {
+		for (const callback of navigationFlushCallbacksRef.current) {
+			callback();
+		}
+	}, []);
+	const navigationFlushContext = useMemo(
+		() => ({ flushNavigation, registerNavigationFlush }),
+		[flushNavigation, registerNavigationFlush],
+	);
+	const handleWorkspaceNavigation = (event: MouseEvent<HTMLAnchorElement>) => {
+		if (
+			event.defaultPrevented ||
+			event.metaKey ||
+			event.altKey ||
+			event.ctrlKey ||
+			event.shiftKey ||
+			event.button !== 0
+		) {
+			return;
+		}
+
+		flushNavigation();
+	};
 
 	return (
-		<TooltipProvider>
-			<SidebarProvider>
-				<Sidebar collapsible="icon" variant="sidebar">
-					<SidebarHeader className="border-sidebar-border border-b p-3">
-						<BrandLogo to="/" className="px-1 py-0.5" />
-					</SidebarHeader>
-					<SidebarContent>
-						<SidebarGroup>
-							<SidebarGroupContent>
-								<SidebarMenu>
-									{navItems.map((item) => {
-										const destination = item.to;
-										const active = isActivePath(pathname, destination);
+		<WorkspaceNavigationFlushContext.Provider value={navigationFlushContext}>
+			<TooltipProvider>
+				<SidebarProvider>
+					<Sidebar collapsible="icon" variant="sidebar">
+						<SidebarHeader className="border-sidebar-border border-b p-3">
+							<BrandLogo
+								to="/"
+								className="px-1 py-0.5"
+								onClick={handleWorkspaceNavigation}
+							/>
+						</SidebarHeader>
+						<SidebarContent>
+							<SidebarGroup>
+								<SidebarGroupContent>
+									<SidebarMenu>
+										{navItems.map((item) => {
+											const destination = item.to;
+											const active = isActivePath(pathname, destination);
 
-										return (
-											<SidebarMenuItem key={destination}>
-												<SidebarMenuButton
-													asChild
-													isActive={active}
-													tooltip={item.label}
-													className="h-9 text-sidebar-foreground/75 data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground data-active:shadow-[inset_0_0_0_1px_var(--sidebar-border)]"
-												>
-													<Link to={item.to}>
-														<HugeIcon name={item.icon} className="size-4" />
-														<span>{item.label}</span>
-													</Link>
-												</SidebarMenuButton>
-											</SidebarMenuItem>
-										);
-									})}
-								</SidebarMenu>
-							</SidebarGroupContent>
-						</SidebarGroup>
-					</SidebarContent>
-					<SidebarRail />
-				</Sidebar>
-				<SidebarInset className="min-w-0 bg-background">
-					{children}
-				</SidebarInset>
-			</SidebarProvider>
-		</TooltipProvider>
+											return (
+												<SidebarMenuItem key={destination}>
+													<SidebarMenuButton
+														asChild
+														isActive={active}
+														tooltip={item.label}
+														className="h-9 text-sidebar-foreground/75 data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground data-active:shadow-[inset_0_0_0_1px_var(--sidebar-border)]"
+													>
+														<Link
+															to={item.to}
+															onClick={handleWorkspaceNavigation}
+														>
+															<HugeIcon name={item.icon} className="size-4" />
+															<span>{item.label}</span>
+														</Link>
+													</SidebarMenuButton>
+												</SidebarMenuItem>
+											);
+										})}
+									</SidebarMenu>
+								</SidebarGroupContent>
+							</SidebarGroup>
+						</SidebarContent>
+						<SidebarRail />
+					</Sidebar>
+					<SidebarInset className="min-w-0 bg-background">
+						{children}
+					</SidebarInset>
+				</SidebarProvider>
+			</TooltipProvider>
+		</WorkspaceNavigationFlushContext.Provider>
 	);
 }
 
@@ -145,4 +208,16 @@ function isActivePath(pathname: string, to: string) {
 	return pathname === to || pathname.startsWith(`${to}/`);
 }
 
-export { WorkspaceLayout, WorkspacePage };
+function useWorkspaceNavigationFlush() {
+	const context = use(WorkspaceNavigationFlushContext);
+
+	if (!context) {
+		throw new Error(
+			"useWorkspaceNavigationFlush must be used within WorkspaceLayout.",
+		);
+	}
+
+	return context;
+}
+
+export { WorkspaceLayout, WorkspacePage, useWorkspaceNavigationFlush };

@@ -43,7 +43,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { WorkspacePage } from "#components/workspace-layout";
+import {
+	useWorkspaceNavigationFlush,
+	WorkspacePage,
+} from "#components/workspace-layout";
 import BetterAuthHeader from "../../../integrations/better-auth/header-user";
 import { retryGenerationJob } from "../../course-generation/course-generation.functions";
 import {
@@ -56,7 +59,7 @@ import {
 } from "../course-workspace.functions";
 import { BookmarkDialog, type BookmarkDialogValues } from "./bookmark-dialog";
 import { NotesEditor } from "./notes-editor";
-import { YouTubePlayer } from "./youtube-player";
+import { YouTubePlayer, type YouTubePlayerHandle } from "./youtube-player";
 
 interface CoursePlayerScreenProps {
 	initialData: CoursePlayerDataDTO;
@@ -73,6 +76,7 @@ function CoursePlayerScreen({
 }: CoursePlayerScreenProps) {
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
+	const { registerNavigationFlush } = useWorkspaceNavigationFlush();
 	const getPlayerData = useServerFn(getCoursePlayerData);
 	const savePlaybackProgress = useServerFn(upsertPlaybackProgress);
 	const saveChapterProgress = useServerFn(upsertChapterProgress);
@@ -80,37 +84,46 @@ function CoursePlayerScreen({
 	const updateBookmarkFn = useServerFn(updateBookmark);
 	const deleteBookmarkFn = useServerFn(deleteBookmark);
 	const retryJob = useServerFn(retryGenerationJob);
+	const playerQueryKey = useMemo(
+		() => ["course-player", courseId] as const,
+		[courseId],
+	);
+	const startData = useMemo(
+		() =>
+			chooseNewestPlayerData(
+				initialData,
+				queryClient.getQueryData<CoursePlayerDataDTO>(playerQueryKey),
+			),
+		[initialData, playerQueryKey, queryClient],
+	);
 	const initialBookmark = useMemo(
 		() =>
 			initialBookmarkId
-				? (initialData.bookmarks.find(
+				? (startData.bookmarks.find(
 						(bookmark) => bookmark.id === initialBookmarkId,
 					) ?? null)
 				: null,
-		[initialBookmarkId, initialData.bookmarks],
+		[initialBookmarkId, startData.bookmarks],
 	);
 	const initialSelectedChapterId = useMemo(
-		() =>
-			resolveInitialChapterId(initialData, initialChapterId, initialBookmark),
-		[initialData, initialBookmark, initialChapterId],
+		() => resolveInitialChapterId(startData, initialChapterId, initialBookmark),
+		[startData, initialBookmark, initialChapterId],
 	);
 	const [selectedChapterId, setSelectedChapterId] = useState(
 		initialSelectedChapterId,
 	);
 	const [seekToSeconds, setSeekToSeconds] = useState<number | null>(null);
 	const [currentSeconds, setCurrentSeconds] = useState(
-		initialBookmark?.timestampSeconds ??
-			initialData.progress?.resumeSeconds ??
-			0,
+		initialBookmark?.timestampSeconds ?? startData.progress?.resumeSeconds ?? 0,
 	);
 	const [durationSeconds, setDurationSeconds] = useState(
-		initialData.video.durationSeconds ?? 0,
+		startData.video.durationSeconds ?? 0,
 	);
 	const [watchedByChapter, setWatchedByChapter] = useState(() =>
-		toWatchedMap(initialData.chapterProgress),
+		toWatchedMap(startData.chapterProgress),
 	);
 	const [completedByChapter, setCompletedByChapter] = useState(() =>
-		toCompletedMap(initialData.chapterProgress),
+		toCompletedMap(startData.chapterProgress),
 	);
 	const [saveError, setSaveError] = useState<string | null>(null);
 	const [bookmarkDialogOpen, setBookmarkDialogOpen] = useState(false);
@@ -125,14 +138,15 @@ function CoursePlayerScreen({
 		completedByChapter,
 	});
 	const dirtyChapterIdsRef = useRef(new Set<string>());
+	const youtubePlayerRef = useRef<YouTubePlayerHandle | null>(null);
 
 	const playerQuery = useQuery({
-		queryKey: ["course-player", courseId],
+		queryKey: playerQueryKey,
 		queryFn: async () => {
 			const response = await getPlayerData({ data: { courseId } });
 			return response.data;
 		},
-		initialData,
+		initialData: startData,
 	});
 	const data = playerQuery.data;
 	const selectedChapter =
@@ -163,17 +177,54 @@ function CoursePlayerScreen({
 		}
 	}
 
+	const applyProgressPayloadToCache = useCallback(
+		(payload: UpsertPlaybackProgressRequestV1) => {
+			queryClient.setQueryData<CoursePlayerDataDTO>(
+				playerQueryKey,
+				(current) => {
+					if (!current) {
+						return current;
+					}
+
+					return {
+						...current,
+						progress: {
+							id: current.progress?.id ?? "optimistic-progress",
+							userId: current.progress?.userId ?? current.course.ownerId,
+							courseId,
+							resumeSeconds: payload.resumeSeconds,
+							completionPercent: Math.max(
+								current.progress?.completionPercent ?? 0,
+								payload.completionPercent,
+							),
+							updatedAt: payload.occurredAt,
+						},
+						chapterProgress: mergeChapterProgressPayload(
+							current.chapterProgress,
+							payload.chapters,
+							payload.occurredAt,
+						),
+					};
+				},
+			);
+		},
+		[courseId, playerQueryKey, queryClient],
+	);
+
 	const playbackProgressMutation = useMutation({
 		mutationFn: (input: UpsertPlaybackProgressRequestV1) =>
 			savePlaybackProgress({ data: input }),
 		onSuccess: async (result, input) => {
 			queryClient.setQueryData<CoursePlayerDataDTO>(
-				["course-player", courseId],
+				playerQueryKey,
 				(current) =>
 					current
 						? {
 								...current,
-								progress: result.progress,
+								progress: mergeCourseProgress(
+									current.progress,
+									result.progress,
+								),
 								chapterProgress: mergeChapterProgressList(
 									current.chapterProgress,
 									result.chapterProgress,
@@ -196,7 +247,7 @@ function CoursePlayerScreen({
 		}) => saveChapterProgress({ data: input }),
 		onSuccess: (result) => {
 			queryClient.setQueryData<CoursePlayerDataDTO>(
-				["course-player", courseId],
+				playerQueryKey,
 				(current) =>
 					current
 						? {
@@ -225,7 +276,7 @@ function CoursePlayerScreen({
 			}),
 		onSuccess: async (result) => {
 			queryClient.setQueryData<CoursePlayerDataDTO>(
-				["course-player", courseId],
+				playerQueryKey,
 				(current) =>
 					current
 						? {
@@ -253,7 +304,7 @@ function CoursePlayerScreen({
 			}),
 		onSuccess: async (result) => {
 			queryClient.setQueryData<CoursePlayerDataDTO>(
-				["course-player", courseId],
+				playerQueryKey,
 				(current) =>
 					current
 						? {
@@ -280,7 +331,7 @@ function CoursePlayerScreen({
 			}
 
 			queryClient.setQueryData<CoursePlayerDataDTO>(
-				["course-player", courseId],
+				playerQueryKey,
 				(current) =>
 					current
 						? {
@@ -302,7 +353,7 @@ function CoursePlayerScreen({
 			retryJob({ data: { generationJobId } }),
 		onSuccess: async (result) => {
 			await queryClient.invalidateQueries({
-				queryKey: ["course-player", courseId],
+				queryKey: playerQueryKey,
 			});
 			await navigate({ href: `/courses/new/${result.generationJobId}` });
 		},
@@ -314,8 +365,95 @@ function CoursePlayerScreen({
 		mutatePlaybackProgressRef.current = playbackProgressMutation.mutate;
 	});
 
+	const applyPlaybackSnapshot = useCallback(
+		(timeSeconds: number, playerDurationSeconds: number) => {
+			const duration = playerDurationSeconds || data.video.durationSeconds || 0;
+			const activeChapter = findChapterAtTime(data.chapters, timeSeconds);
+			const latest = latestProgressRef.current;
+			let nextWatchedByChapter = latest.watchedByChapter;
+			let nextCompletedByChapter = latest.completedByChapter;
+
+			setCurrentSeconds(timeSeconds);
+			setDurationSeconds(duration);
+
+			if (activeChapter) {
+				if (activeChapter.id !== latest.selectedChapterId) {
+					setSelectedChapterId(activeChapter.id);
+				}
+
+				const chapterDuration = getChapterDuration(
+					activeChapter,
+					data.chapters,
+					duration,
+				);
+				const watchedSeconds = Math.max(
+					0,
+					Math.min(chapterDuration, timeSeconds - activeChapter.startSeconds),
+				);
+				const watchedSecondsFloor = Math.floor(watchedSeconds);
+				const nextWatchedSeconds = Math.max(
+					latest.watchedByChapter[activeChapter.id] ?? 0,
+					watchedSecondsFloor,
+				);
+				const completed = isChapterCompleteByWatchTime(
+					watchedSeconds,
+					chapterDuration,
+					DEFAULT_CHAPTER_COMPLETION_THRESHOLD,
+				);
+
+				nextWatchedByChapter = {
+					...latest.watchedByChapter,
+					[activeChapter.id]: nextWatchedSeconds,
+				};
+				setWatchedByChapter((current) => ({
+					...current,
+					[activeChapter.id]: Math.max(
+						current[activeChapter.id] ?? 0,
+						watchedSecondsFloor,
+					),
+				}));
+
+				if (completed) {
+					nextCompletedByChapter = {
+						...latest.completedByChapter,
+						[activeChapter.id]: true,
+					};
+					setCompletedByChapter((current) => ({
+						...current,
+						[activeChapter.id]: true,
+					}));
+				}
+
+				dirtyChapterIdsRef.current.add(activeChapter.id);
+			}
+
+			latestProgressRef.current = {
+				currentSeconds: timeSeconds,
+				durationSeconds: duration,
+				selectedChapterId:
+					activeChapter?.id ?? latestProgressRef.current.selectedChapterId,
+				watchedByChapter: nextWatchedByChapter,
+				completedByChapter: nextCompletedByChapter,
+			};
+
+			return activeChapter;
+		},
+		[data.chapters, data.video.durationSeconds],
+	);
+
+	const refreshLatestProgressFromPlayer = useCallback(() => {
+		const snapshot = youtubePlayerRef.current?.getPlaybackSnapshot();
+
+		if (!snapshot) {
+			return;
+		}
+
+		applyPlaybackSnapshot(snapshot.timeSeconds, snapshot.durationSeconds);
+	}, [applyPlaybackSnapshot]);
+
 	const createProgressPayload =
 		useCallback((): UpsertPlaybackProgressRequestV1 => {
+			refreshLatestProgressFromPlayer();
 			const latest = latestProgressRef.current;
 			const courseCompletion = calculateProgressPercent(
 				latest.currentSeconds,
@@ -326,21 +464,26 @@ function CoursePlayerScreen({
 				courseId,
 				resumeSeconds: Math.floor(latest.currentSeconds),
 				completionPercent: courseCompletion,
+				occurredAt: new Date().toISOString(),
 				chapters: Array.from(dirtyChapterIdsRef.current).map((chapterId) => ({
 					chapterId,
 					watchedSeconds: latest.watchedByChapter[chapterId] ?? 0,
 					completed: latest.completedByChapter[chapterId] ?? false,
 				})),
 			};
-		}, [courseId]);
+		}, [courseId, refreshLatestProgressFromPlayer]);
 
 	const persistProgress = useCallback(() => {
-		mutatePlaybackProgressRef.current(createProgressPayload());
-	}, [createProgressPayload]);
+		const payload = createProgressPayload();
+		applyProgressPayloadToCache(payload);
+		mutatePlaybackProgressRef.current(payload);
+	}, [applyProgressPayloadToCache, createProgressPayload]);
 
 	const persistProgressOnUnload = useCallback(() => {
-		sendProgressBeacon(createProgressPayload());
-	}, [createProgressPayload]);
+		const payload = createProgressPayload();
+		applyProgressPayloadToCache(payload);
+		sendProgressBeacon(payload);
+	}, [applyProgressPayloadToCache, createProgressPayload]);
 
 	useEffect(() => {
 		latestProgressRef.current = {
@@ -366,6 +509,11 @@ function CoursePlayerScreen({
 
 		return () => window.clearInterval(intervalId);
 	}, [persistProgress]);
+
+	useEffect(
+		() => registerNavigationFlush(persistProgressOnUnload),
+		[registerNavigationFlush, persistProgressOnUnload],
+	);
 
 	useEffect(() => {
 		const handleBeforeUnload = () => persistProgressOnUnload();
@@ -442,18 +590,10 @@ function CoursePlayerScreen({
 
 	const handleTimeUpdate = useCallback(
 		(timeSeconds: number, playerDurationSeconds: number) => {
-			const duration = playerDurationSeconds || data.video.durationSeconds || 0;
-			const activeChapter = findChapterAtTime(data.chapters, timeSeconds);
-
-			setCurrentSeconds(timeSeconds);
-			setDurationSeconds(duration);
-			latestProgressRef.current = {
-				...latestProgressRef.current,
-				currentSeconds: timeSeconds,
-				durationSeconds: duration,
-				selectedChapterId:
-					activeChapter?.id ?? latestProgressRef.current.selectedChapterId,
-			};
+			const activeChapter = applyPlaybackSnapshot(
+				timeSeconds,
+				playerDurationSeconds,
+			);
 
 			if (activeChapter && activeChapter.id !== selectedChapterId) {
 				setSelectedChapterId(activeChapter.id);
@@ -464,63 +604,8 @@ function CoursePlayerScreen({
 					replace: true,
 				});
 			}
-
-			if (activeChapter) {
-				const chapterDuration = getChapterDuration(
-					activeChapter,
-					data.chapters,
-					duration,
-				);
-				const watchedSeconds = Math.max(
-					0,
-					Math.min(chapterDuration, timeSeconds - activeChapter.startSeconds),
-				);
-				const completed = isChapterCompleteByWatchTime(
-					watchedSeconds,
-					chapterDuration,
-					DEFAULT_CHAPTER_COMPLETION_THRESHOLD,
-				);
-
-				setWatchedByChapter((current) => ({
-					...current,
-					[activeChapter.id]: Math.max(
-						current[activeChapter.id] ?? 0,
-						Math.floor(watchedSeconds),
-					),
-				}));
-				latestProgressRef.current = {
-					...latestProgressRef.current,
-					watchedByChapter: {
-						...latestProgressRef.current.watchedByChapter,
-						[activeChapter.id]: Math.max(
-							latestProgressRef.current.watchedByChapter[activeChapter.id] ?? 0,
-							Math.floor(watchedSeconds),
-						),
-					},
-				};
-				if (completed) {
-					setCompletedByChapter((current) => ({
-						...current,
-						[activeChapter.id]: true,
-					}));
-					latestProgressRef.current = {
-						...latestProgressRef.current,
-						completedByChapter: {
-							...latestProgressRef.current.completedByChapter,
-							[activeChapter.id]: true,
-						},
-					};
-				}
-				dirtyChapterIdsRef.current.add(activeChapter.id);
-			}
 		},
-		[
-			courseId,
-			data.chapters,
-			data.video.durationSeconds,
-			navigate,
-			selectedChapterId,
-		],
+		[applyPlaybackSnapshot, courseId, navigate, selectedChapterId],
 	);
 
 	const toggleChapterComplete = (chapter: CourseChapterDTO) => {
@@ -670,6 +755,7 @@ function CoursePlayerScreen({
 					<div className="flex flex-col gap-3">
 						<PlayerVideoFrame className="lg:shadow-sm">
 							<YouTubePlayer
+								ref={youtubePlayerRef}
 								providerVideoId={data.video.providerVideoId}
 								initialSeconds={currentSeconds}
 								seekToSeconds={seekToSeconds}
@@ -1175,6 +1261,29 @@ function mergeChapterProgress(
 	return current.map((item, index) => (index === existingIndex ? next : item));
 }
 
+function mergeCourseProgress(
+	current: CoursePlayerDataDTO["progress"],
+	next: NonNullable<CoursePlayerDataDTO["progress"]>,
+) {
+	if (!current) {
+		return next;
+	}
+
+	const currentUpdatedAt = Date.parse(current.updatedAt);
+	const nextUpdatedAt = Date.parse(next.updatedAt);
+	const useNextResume =
+		(Number.isFinite(nextUpdatedAt) ? nextUpdatedAt : 0) >=
+		(Number.isFinite(currentUpdatedAt) ? currentUpdatedAt : 0);
+
+	return {
+		...(useNextResume ? next : current),
+		completionPercent: Math.max(
+			current.completionPercent,
+			next.completionPercent,
+		),
+	};
+}
+
 function mergeChapterProgressList(
 	current: ChapterProgressDTO[],
 	nextItems: ChapterProgressDTO[],
@@ -1185,6 +1294,29 @@ function mergeChapterProgressList(
 	);
 }
 
+function mergeChapterProgressPayload(
+	current: ChapterProgressDTO[],
+	nextItems: UpsertPlaybackProgressRequestV1["chapters"],
+	updatedAt: string,
+) {
+	return current.map((item) => {
+		const next = nextItems.find(
+			(candidate) => candidate.chapterId === item.chapterId,
+		);
+
+		if (!next) {
+			return item;
+		}
+
+		return {
+			...item,
+			watchedSeconds: Math.max(item.watchedSeconds, next.watchedSeconds),
+			completed: item.completed || next.completed,
+			updatedAt,
+		};
+	});
+}
+
 function mergeBookmark(current: BookmarkDTO[], next: BookmarkDTO) {
 	const existingIndex = current.findIndex((item) => item.id === next.id);
 	const nextItems =
@@ -1193,6 +1325,23 @@ function mergeBookmark(current: BookmarkDTO[], next: BookmarkDTO) {
 			: current.map((item, index) => (index === existingIndex ? next : item));
 
 	return [...nextItems].sort((a, b) => a.timestampSeconds - b.timestampSeconds);
+}
+
+function chooseNewestPlayerData(
+	initialData: CoursePlayerDataDTO,
+	cachedData: CoursePlayerDataDTO | undefined,
+) {
+	if (!cachedData) {
+		return initialData;
+	}
+
+	const initialProgressTime = Date.parse(initialData.progress?.updatedAt ?? "");
+	const cachedProgressTime = Date.parse(cachedData.progress?.updatedAt ?? "");
+
+	return (Number.isFinite(cachedProgressTime) ? cachedProgressTime : 0) >
+		(Number.isFinite(initialProgressTime) ? initialProgressTime : 0)
+		? cachedData
+		: initialData;
 }
 
 function sendProgressBeacon(payload: UpsertPlaybackProgressRequestV1) {

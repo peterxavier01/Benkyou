@@ -1,14 +1,4 @@
 import {
-	classifyEducationalSuitability,
-	fetchYouTubeDataApiMetadata,
-	fetchYouTubeOEmbedMetadata,
-	fetchYouTubeTranscript,
-	generateCourseChapters,
-	transcriptSegmentsToText,
-	YouTubeTranscriptFetchError,
-} from "@benkyou/ai";
-import { getCurrentUserFromHeaders } from "@benkyou/auth/server";
-import {
 	cancelGenerationJobRequestV1Schema,
 	createCourseFromUrlRequestV1Schema,
 	EDUCATIONAL_SUITABILITY_REJECTION_MESSAGE,
@@ -22,20 +12,6 @@ import {
 	retryGenerationJobRequestV1Schema,
 	toGenerationJobDetail,
 } from "@benkyou/core";
-import {
-	cancelGenerationJob as cancelGenerationJobRecord,
-	claimGenerationJob,
-	completeGenerationJob,
-	consumeCourseGenerationRateLimit,
-	createCourseFromUrlRecord,
-	createRetryGenerationJob,
-	failGenerationJob,
-	getExistingCourseByProviderVideo,
-	getGenerationJobDetailRecord,
-	getSampleCourse,
-	markGenerationJobTranscriptReady,
-	timeoutGenerationJob,
-} from "@benkyou/db";
 import type {
 	CancelGenerationJobResponseV1,
 	CreateCourseFromUrlResponseV1,
@@ -47,6 +23,19 @@ import type {
 } from "@benkyou/types";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
+
+type CourseGenerationServer = typeof import("./course-generation.server");
+type YouTubeMetadata = Awaited<
+	ReturnType<CourseGenerationServer["fetchYouTubeDataApiMetadata"]>
+>;
+
+let courseGenerationServerPromise: Promise<CourseGenerationServer> | null =
+	null;
+
+function getCourseGenerationServer() {
+	courseGenerationServerPromise ??= import("./course-generation.server");
+	return courseGenerationServerPromise;
+}
 
 export const createCourseFromUrl = createServerFn({ method: "POST" })
 	.inputValidator((input) => createCourseFromUrlRequestV1Schema.parse(input))
@@ -199,6 +188,7 @@ export const processGenerationJob = createServerFn({ method: "POST" })
 				transcriptInput;
 			await markGenerationJobTranscriptReady(claimed.job.id);
 
+			const { generateCourseChapters } = await getCourseGenerationServer();
 			const generated = await generateCourseChapters({
 				videoTitle: claimed.video.title ?? claimed.course.title,
 				canonicalUrl: claimed.video.canonicalUrl,
@@ -286,6 +276,8 @@ async function getTranscriptInputForGeneration(input: {
 		};
 	}
 
+	const { fetchYouTubeTranscript, transcriptSegmentsToText } =
+		await getCourseGenerationServer();
 	const transcriptSegments = await fetchYouTubeTranscript(
 		input.providerVideoId,
 	);
@@ -362,6 +354,92 @@ export const openSampleCourse = createServerFn({ method: "GET" }).handler(
 	},
 );
 
+async function cancelGenerationJobRecord(
+	...args: Parameters<CourseGenerationServer["cancelGenerationJobRecord"]>
+) {
+	return (await getCourseGenerationServer()).cancelGenerationJobRecord(...args);
+}
+
+async function claimGenerationJob(
+	...args: Parameters<CourseGenerationServer["claimGenerationJob"]>
+) {
+	return (await getCourseGenerationServer()).claimGenerationJob(...args);
+}
+
+async function completeGenerationJob(
+	...args: Parameters<CourseGenerationServer["completeGenerationJob"]>
+) {
+	return (await getCourseGenerationServer()).completeGenerationJob(...args);
+}
+
+async function consumeCourseGenerationRateLimit(
+	...args: Parameters<
+		CourseGenerationServer["consumeCourseGenerationRateLimit"]
+	>
+) {
+	return (await getCourseGenerationServer()).consumeCourseGenerationRateLimit(
+		...args,
+	);
+}
+
+async function createCourseFromUrlRecord(
+	...args: Parameters<CourseGenerationServer["createCourseFromUrlRecord"]>
+) {
+	return (await getCourseGenerationServer()).createCourseFromUrlRecord(...args);
+}
+
+async function createRetryGenerationJob(
+	...args: Parameters<CourseGenerationServer["createRetryGenerationJob"]>
+) {
+	return (await getCourseGenerationServer()).createRetryGenerationJob(...args);
+}
+
+async function failGenerationJob(
+	...args: Parameters<CourseGenerationServer["failGenerationJob"]>
+) {
+	return (await getCourseGenerationServer()).failGenerationJob(...args);
+}
+
+async function getExistingCourseByProviderVideo(
+	...args: Parameters<
+		CourseGenerationServer["getExistingCourseByProviderVideo"]
+	>
+) {
+	return (await getCourseGenerationServer()).getExistingCourseByProviderVideo(
+		...args,
+	);
+}
+
+async function getGenerationJobDetailRecord(
+	...args: Parameters<CourseGenerationServer["getGenerationJobDetailRecord"]>
+) {
+	return (await getCourseGenerationServer()).getGenerationJobDetailRecord(
+		...args,
+	);
+}
+
+async function getSampleCourse(
+	...args: Parameters<CourseGenerationServer["getSampleCourse"]>
+) {
+	return (await getCourseGenerationServer()).getSampleCourse(...args);
+}
+
+async function markGenerationJobTranscriptReady(
+	...args: Parameters<
+		CourseGenerationServer["markGenerationJobTranscriptReady"]
+	>
+) {
+	return (await getCourseGenerationServer()).markGenerationJobTranscriptReady(
+		...args,
+	);
+}
+
+async function timeoutGenerationJob(
+	...args: Parameters<CourseGenerationServer["timeoutGenerationJob"]>
+) {
+	return (await getCourseGenerationServer()).timeoutGenerationJob(...args);
+}
+
 async function getExistingDetail(
 	jobId: string,
 ): Promise<GenerationJobDetailV1> {
@@ -378,8 +456,9 @@ async function safeFetchMetadata(
 	providerVideoId: string,
 	canonicalUrl: string,
 ) {
-	let dataApiMetadata: Awaited<ReturnType<typeof fetchYouTubeDataApiMetadata>> =
-		null;
+	const { fetchYouTubeDataApiMetadata, fetchYouTubeOEmbedMetadata } =
+		await getCourseGenerationServer();
+	let dataApiMetadata: YouTubeMetadata = null;
 
 	try {
 		dataApiMetadata = await fetchYouTubeDataApiMetadata(providerVideoId);
@@ -399,6 +478,7 @@ async function safeFetchMetadata(
 }
 
 async function getOptionalUserId(headers = getHeaders()) {
+	const { getCurrentUserFromHeaders } = await getCourseGenerationServer();
 	const user = await getCurrentUserFromHeaders(headers);
 
 	return user?.id ?? null;
@@ -503,7 +583,7 @@ function serializeGenerationError(error: unknown) {
 				}
 			: {};
 
-	if (error instanceof YouTubeTranscriptFetchError) {
+	if (isYouTubeTranscriptFetchError(error)) {
 		return {
 			message: error.message,
 			name: error.name,
@@ -533,6 +613,7 @@ async function classifyEducationalSuitabilityForVideo(video: {
 	rawMetadata: Record<string, unknown> | null;
 }) {
 	const metadata = getSuitabilityMetadata(video.rawMetadata);
+	const { classifyEducationalSuitability } = await getCourseGenerationServer();
 	const result = await classifyEducationalSuitability({
 		videoTitle: video.title,
 		description: video.description,
@@ -579,7 +660,7 @@ function toUserSafeGenerationFailure(error: unknown) {
 		return "Course generation is not configured yet.";
 	}
 
-	if (error instanceof YouTubeTranscriptFetchError) {
+	if (isYouTubeTranscriptFetchError(error)) {
 		return "YouTube captions were not available for this video.";
 	}
 
@@ -588,4 +669,15 @@ function toUserSafeGenerationFailure(error: unknown) {
 	}
 
 	return "Benkyou could not generate chapters for this video.";
+}
+
+function isYouTubeTranscriptFetchError(
+	error: unknown,
+): error is Error & { code: string } {
+	return (
+		error instanceof Error &&
+		error.name === "YouTubeTranscriptFetchError" &&
+		"code" in error &&
+		typeof error.code === "string"
+	);
 }

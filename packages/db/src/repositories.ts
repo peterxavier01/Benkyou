@@ -1470,8 +1470,13 @@ export async function upsertLearningPreferences(
 export async function upsertCourseProgress(
 	userId: UserId,
 	courseId: string,
-	input: { resumeSeconds: number; completionPercent: number },
+	input: {
+		resumeSeconds: number;
+		completionPercent: number;
+		occurredAt?: Date;
+	},
 ): Promise<CourseProgressDTO> {
+	const occurredAt = input.occurredAt ?? new Date();
 	const [row] = await db
 		.insert(courseProgress)
 		.values({
@@ -1479,13 +1484,14 @@ export async function upsertCourseProgress(
 			courseId,
 			resumeSeconds: input.resumeSeconds,
 			completionPercent: input.completionPercent,
+			updatedAt: occurredAt,
 		})
 		.onConflictDoUpdate({
 			target: [courseProgress.userId, courseProgress.courseId],
 			set: {
-				resumeSeconds: sql`greatest(${courseProgress.resumeSeconds}, ${input.resumeSeconds})`,
+				resumeSeconds: sql`case when ${courseProgress.updatedAt} <= ${occurredAt} then ${input.resumeSeconds} else ${courseProgress.resumeSeconds} end`,
 				completionPercent: sql`greatest(${courseProgress.completionPercent}, ${input.completionPercent})`,
-				updatedAt: new Date(),
+				updatedAt: sql`greatest(${courseProgress.updatedAt}, ${occurredAt})`,
 			},
 		})
 		.returning();
@@ -1533,6 +1539,7 @@ export async function upsertPlaybackProgress(
 		courseId: string;
 		resumeSeconds: number;
 		completionPercent: number;
+		occurredAt?: Date;
 		chapters: Array<{
 			chapterId: string;
 			watchedSeconds: number;
@@ -1546,6 +1553,7 @@ export async function upsertPlaybackProgress(
 	const progress = await upsertCourseProgress(userId, input.courseId, {
 		resumeSeconds: input.resumeSeconds,
 		completionPercent: input.completionPercent,
+		occurredAt: input.occurredAt,
 	});
 	const chapterRows = await Promise.all(
 		input.chapters.map((chapter) =>

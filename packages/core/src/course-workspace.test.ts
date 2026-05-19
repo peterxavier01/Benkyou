@@ -8,6 +8,7 @@ test("upsert playback progress schema accepts batched course and chapter progres
 		courseId: "00000000-0000-4000-8000-000000000001",
 		resumeSeconds: 120,
 		completionPercent: 45,
+		occurredAt: "2026-05-19T12:00:00.000Z",
 		chapters: [
 			{
 				chapterId: "00000000-0000-4000-8000-000000000002",
@@ -27,6 +28,7 @@ test("upsert playback progress schema rejects invalid progress values", () => {
 			courseId: "00000000-0000-4000-8000-000000000001",
 			resumeSeconds: -1,
 			completionPercent: 101,
+			occurredAt: "2026-05-19T12:00:00.000Z",
 			chapters: [],
 		}),
 	);

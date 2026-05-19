@@ -1,4 +1,3 @@
-import { getCurrentUserFromHeaders } from "@benkyou/auth/server";
 import {
 	createBookmarkRequestV1Schema,
 	deleteBookmarkRequestV1Schema,
@@ -19,26 +18,6 @@ import {
 	upsertPlaybackProgressRequestV1Schema,
 	validateChapterTimeRange,
 } from "@benkyou/core";
-import {
-	createBookmark as createBookmarkRecord,
-	createRegenerationJob as createRegenerationJobRecord,
-	deleteBookmark as deleteBookmarkRecord,
-	getBookmarks as getBookmarkRecords,
-	getCourseByChapter,
-	getCourseLibrary as getCourseLibraryRecords,
-	getCourseManagementData as getCourseManagementDataRecord,
-	getCoursePlayerData as getCoursePlayerDataRecord,
-	getLearningPreferences as getLearningPreferencesRecord,
-	softDeleteCourse,
-	updateBookmark as updateBookmarkRecord,
-	updateChapter as updateChapterRecord,
-	updateCourseMetadata as updateCourseMetadataRecord,
-	upsertChapterNoteIfCurrent as upsertChapterNoteIfCurrentRecord,
-	upsertChapterProgress as upsertChapterProgressRecord,
-	upsertCourseProgress as upsertCourseProgressRecord,
-	upsertLearningPreferences as upsertLearningPreferencesRecord,
-	upsertPlaybackProgress as upsertPlaybackProgressRecord,
-} from "@benkyou/db";
 import type {
 	CreateBookmarkResponseV1,
 	DeleteBookmarkResponseV1,
@@ -60,8 +39,17 @@ import type {
 	UpsertPlaybackProgressRequestV1,
 	UpsertPlaybackProgressResponseV1,
 } from "@benkyou/types";
-import { createServerFn } from "@tanstack/react-start";
+import { createServerFn, createServerOnlyFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
+
+type CourseWorkspaceServer = typeof import("./course-workspace.server");
+
+let courseWorkspaceServerPromise: Promise<CourseWorkspaceServer> | null = null;
+
+const getCourseWorkspaceServer = createServerOnlyFn(() => {
+	courseWorkspaceServerPromise ??= import("./course-workspace.server");
+	return courseWorkspaceServerPromise;
+});
 
 export const getCourseLibrary = createServerFn({ method: "GET" }).handler(
 	async (): Promise<GetCourseLibraryResponseV1> => {
@@ -390,6 +378,7 @@ export async function upsertPlaybackProgressForOwner(
 		courseId: data.courseId,
 		resumeSeconds: data.resumeSeconds,
 		completionPercent: data.completionPercent,
+		occurredAt: new Date(data.occurredAt),
 		chapters,
 	});
 }
@@ -403,7 +392,130 @@ export const deleteCourse = createServerFn({ method: "POST" })
 		return { deleted };
 	});
 
+async function createBookmarkRecord(
+	...args: Parameters<CourseWorkspaceServer["createBookmarkRecord"]>
+) {
+	return (await getCourseWorkspaceServer()).createBookmarkRecord(...args);
+}
+
+async function createRegenerationJobRecord(
+	...args: Parameters<CourseWorkspaceServer["createRegenerationJobRecord"]>
+) {
+	return (await getCourseWorkspaceServer()).createRegenerationJobRecord(
+		...args,
+	);
+}
+
+async function deleteBookmarkRecord(
+	...args: Parameters<CourseWorkspaceServer["deleteBookmarkRecord"]>
+) {
+	return (await getCourseWorkspaceServer()).deleteBookmarkRecord(...args);
+}
+
+async function getBookmarkRecords(
+	...args: Parameters<CourseWorkspaceServer["getBookmarkRecords"]>
+) {
+	return (await getCourseWorkspaceServer()).getBookmarkRecords(...args);
+}
+
+async function getCourseByChapter(
+	...args: Parameters<CourseWorkspaceServer["getCourseByChapter"]>
+) {
+	return (await getCourseWorkspaceServer()).getCourseByChapter(...args);
+}
+
+async function getCourseLibraryRecords(
+	...args: Parameters<CourseWorkspaceServer["getCourseLibraryRecords"]>
+) {
+	return (await getCourseWorkspaceServer()).getCourseLibraryRecords(...args);
+}
+
+async function getCourseManagementDataRecord(
+	...args: Parameters<CourseWorkspaceServer["getCourseManagementDataRecord"]>
+) {
+	return (await getCourseWorkspaceServer()).getCourseManagementDataRecord(
+		...args,
+	);
+}
+
+async function getCoursePlayerDataRecord(
+	...args: Parameters<CourseWorkspaceServer["getCoursePlayerDataRecord"]>
+) {
+	return (await getCourseWorkspaceServer()).getCoursePlayerDataRecord(...args);
+}
+
+async function getLearningPreferencesRecord(
+	...args: Parameters<CourseWorkspaceServer["getLearningPreferencesRecord"]>
+) {
+	return (await getCourseWorkspaceServer()).getLearningPreferencesRecord(
+		...args,
+	);
+}
+
+async function softDeleteCourse(
+	...args: Parameters<CourseWorkspaceServer["softDeleteCourse"]>
+) {
+	return (await getCourseWorkspaceServer()).softDeleteCourse(...args);
+}
+
+async function updateBookmarkRecord(
+	...args: Parameters<CourseWorkspaceServer["updateBookmarkRecord"]>
+) {
+	return (await getCourseWorkspaceServer()).updateBookmarkRecord(...args);
+}
+
+async function updateChapterRecord(
+	...args: Parameters<CourseWorkspaceServer["updateChapterRecord"]>
+) {
+	return (await getCourseWorkspaceServer()).updateChapterRecord(...args);
+}
+
+async function updateCourseMetadataRecord(
+	...args: Parameters<CourseWorkspaceServer["updateCourseMetadataRecord"]>
+) {
+	return (await getCourseWorkspaceServer()).updateCourseMetadataRecord(...args);
+}
+
+async function upsertChapterNoteIfCurrentRecord(
+	...args: Parameters<CourseWorkspaceServer["upsertChapterNoteIfCurrentRecord"]>
+) {
+	return (await getCourseWorkspaceServer()).upsertChapterNoteIfCurrentRecord(
+		...args,
+	);
+}
+
+async function upsertChapterProgressRecord(
+	...args: Parameters<CourseWorkspaceServer["upsertChapterProgressRecord"]>
+) {
+	return (await getCourseWorkspaceServer()).upsertChapterProgressRecord(
+		...args,
+	);
+}
+
+async function upsertCourseProgressRecord(
+	...args: Parameters<CourseWorkspaceServer["upsertCourseProgressRecord"]>
+) {
+	return (await getCourseWorkspaceServer()).upsertCourseProgressRecord(...args);
+}
+
+async function upsertLearningPreferencesRecord(
+	...args: Parameters<CourseWorkspaceServer["upsertLearningPreferencesRecord"]>
+) {
+	return (await getCourseWorkspaceServer()).upsertLearningPreferencesRecord(
+		...args,
+	);
+}
+
+async function upsertPlaybackProgressRecord(
+	...args: Parameters<CourseWorkspaceServer["upsertPlaybackProgressRecord"]>
+) {
+	return (await getCourseWorkspaceServer()).upsertPlaybackProgressRecord(
+		...args,
+	);
+}
+
 async function getOptionalUserId() {
+	const { getCurrentUserFromHeaders } = await getCourseWorkspaceServer();
 	const user = await getCurrentUserFromHeaders(
 		new Headers(getRequestHeaders()),
 	);
