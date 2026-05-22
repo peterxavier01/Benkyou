@@ -26,6 +26,7 @@ Required values:
 - `DATABASE_URL`: Postgres connection string used by `@benkyou/db`.
 - `BETTER_AUTH_SECRET`: secret used by Better Auth.
 - `BETTER_AUTH_URL`: canonical app URL, for example `http://localhost:3000`.
+- `PUBLIC_SITE_URL`: public canonical URL for SEO metadata, robots, and sitemap.
 - `AI_PROVIDER`: set to `openai` when AI chapter fallback is enabled.
 - `AI_API_KEY`, `OPENAI_MODEL`, `YOUTUBE_API_KEY`: provider configuration.
 - `GENERATION_RATE_LIMIT_MAX`: optional generation quota, default `5`.

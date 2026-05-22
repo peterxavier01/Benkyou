@@ -110,6 +110,10 @@ function SelfHostingPage() {
 						value="Set to the canonical app URL, for example http://localhost:3000."
 					/>
 					<PublicMetadataRow
+						label="PUBLIC_SITE_URL"
+						value="Set to the public canonical URL used by metadata, robots.txt, and sitemap.xml."
+					/>
+					<PublicMetadataRow
 						label="AI_API_KEY"
 						value="Required for real AI generation. Keep it server-side."
 					/>
