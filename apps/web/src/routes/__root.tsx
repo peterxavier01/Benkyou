@@ -1,4 +1,3 @@
-import { CORE_PROMISE, PRODUCT_NAME } from "@benkyou/core";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import type { QueryClient } from "@tanstack/react-query";
 import {
@@ -9,6 +8,7 @@ import {
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { AppRecoveryScreen } from "#components/app-recovery-screen";
 import { GlobalErrorScreen } from "#components/global-error-screen";
+import { buildSeoHead } from "#lib/seo";
 import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
 import appCss from "../styles.css?url";
 
@@ -17,30 +17,29 @@ interface MyRouterContext {
 }
 
 export const Route = createRootRouteWithContext<MyRouterContext>()({
-	head: () => ({
-		meta: [
-			{
-				charSet: "utf-8",
-			},
-			{
-				name: "viewport",
-				content: "width=device-width, initial-scale=1",
-			},
-			{
-				title: PRODUCT_NAME,
-			},
-			{
-				name: "description",
-				content: CORE_PROMISE,
-			},
-		],
-		links: [
-			{
-				rel: "stylesheet",
-				href: appCss,
-			},
-		],
-	}),
+	head: () => {
+		const seo = buildSeoHead({ canonical: false });
+
+		return {
+			meta: [
+				{
+					charSet: "utf-8",
+				},
+				{
+					name: "viewport",
+					content: "width=device-width, initial-scale=1",
+				},
+				...seo.meta,
+			],
+			links: [
+				{
+					rel: "stylesheet",
+					href: appCss,
+				},
+				...seo.links,
+			],
+		};
+	},
 	errorComponent: GlobalErrorScreen,
 	notFoundComponent: NotFoundScreen,
 	shellComponent: RootDocument,

@@ -1,5 +1,5 @@
 import { PRODUCT_NAME } from "@benkyou/core";
-import { cn, HugeIcon } from "@benkyou/ui";
+import { cn } from "@benkyou/ui";
 import { Link } from "@tanstack/react-router";
 import type { MouseEventHandler, ReactNode } from "react";
 
@@ -20,16 +20,20 @@ function BrandLogo({
 }: BrandLogoProps) {
 	const content = (
 		<>
-			<span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-[inset_0_1px_0_oklch(1_0_0/0.18)]">
-				<HugeIcon name="bookOpenCheck" className="size-4" />
-			</span>
+			<div className="flex size-10 shrink-0 items-center justify-center">
+				<img
+					src="/logo.png"
+					alt={showText ? "" : `${PRODUCT_NAME} logo`}
+					className="block size-full object-contain"
+				/>
+			</div>
 			{showText ? (
-				<span className="min-w-0">
-					<span className="block truncate font-semibold text-current text-sm leading-5">
+				<span className="min-w-0 group-data-[collapsible=icon]:hidden">
+					<span className="block truncate font-semibold text-[15px] text-current leading-5 tracking-normal">
 						{PRODUCT_NAME}
 					</span>
 					{subtitle ? (
-						<span className="block truncate text-muted-foreground text-xs leading-4">
+						<span className="block truncate text-muted-foreground text-[11px] leading-4">
 							{subtitle}
 						</span>
 					) : null}
@@ -43,7 +47,7 @@ function BrandLogo({
 			<Link
 				to={to}
 				className={cn(
-					"inline-flex min-w-0 items-center gap-2 no-underline",
+					"inline-flex min-w-0 items-center gap-2 rounded-lg text-foreground no-underline outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0",
 					className,
 				)}
 				onClick={onClick}
@@ -54,7 +58,12 @@ function BrandLogo({
 	}
 
 	return (
-		<div className={cn("inline-flex min-w-0 items-center gap-2", className)}>
+		<div
+			className={cn(
+				"inline-flex min-w-0 items-center gap-2 text-foreground group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0",
+				className,
+			)}
+		>
 			{content}
 		</div>
 	);

@@ -1,5 +1,7 @@
 # Benkyou
 
+![Benkyou banner](./apps/web/public/banner.png)
+
 Benkyou turns video into a structured course: chapters, notes, bookmarks,
 progress, and resume state.
 
@@ -40,6 +42,7 @@ Fill in the values in `apps/web/.env.local`. For the first local run, set:
 - `DATABASE_URL`: Postgres connection string for the app database.
 - `BETTER_AUTH_SECRET`: secret used by Better Auth.
 - `BETTER_AUTH_URL`: local app URL, usually `http://localhost:3000`.
+- `PUBLIC_SITE_URL`: public canonical URL for SEO metadata, robots, and sitemap.
 - `GENERATION_RATE_LIMIT_MAX`: optional course generation quota, default `5`.
 - `GENERATION_RATE_LIMIT_WINDOW_HOURS`: optional quota window, default `24`.
 
