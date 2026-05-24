@@ -296,6 +296,10 @@ export function validateGeneratedChapterRanges(
 		return false;
 	}
 
+	if (chapters[0]?.startSeconds !== 0) {
+		return false;
+	}
+
 	for (const [index, chapter] of chapters.entries()) {
 		if (!Number.isInteger(chapter.startSeconds) || chapter.startSeconds < 0) {
 			return false;
@@ -331,20 +335,56 @@ export function validateGeneratedChapterRanges(
 			continue;
 		}
 
-		if (chapter.startSeconds < previous.startSeconds) {
+		if (chapter.startSeconds <= previous.startSeconds) {
 			return false;
 		}
 
 		if (
-			previous.endSeconds !== null &&
-			previous.endSeconds !== undefined &&
-			chapter.startSeconds < previous.endSeconds
+			previous.endSeconds === null ||
+			previous.endSeconds === undefined ||
+			chapter.startSeconds !== previous.endSeconds
 		) {
 			return false;
 		}
 	}
 
-	return true;
+	const finalChapter = chapters.at(-1);
+
+	if (!finalChapter) {
+		return false;
+	}
+
+	if (durationSeconds !== null && durationSeconds !== undefined) {
+		return finalChapter.endSeconds === durationSeconds;
+	}
+
+	return finalChapter.endSeconds === null;
+}
+
+export function normalizeGeneratedChapterRanges<
+	TChapter extends {
+		startSeconds: number;
+		endSeconds?: number | null;
+	},
+>(
+	chapters: TChapter[],
+	durationSeconds?: number | null,
+): Array<Omit<TChapter, "endSeconds"> & { endSeconds: number | null }> {
+	return chapters.map((chapter, index) => {
+		const nextChapter = chapters[index + 1];
+		const startSeconds = index === 0 ? 0 : chapter.startSeconds;
+		const endSeconds =
+			nextChapter?.startSeconds ??
+			(durationSeconds !== null && durationSeconds !== undefined
+				? durationSeconds
+				: null);
+
+		return {
+			...chapter,
+			startSeconds,
+			endSeconds,
+		};
+	});
 }
 
 function parseDescriptionChapterLine(

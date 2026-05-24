@@ -16,6 +16,7 @@ import {
 	getChapterGenerationPolicy,
 	isSampledTranscriptCacheIncomplete,
 	isEducationalSuitabilityAllowed,
+	normalizeGeneratedChapterRanges,
 	parseYouTubeDescriptionChapters,
 	processGenerationJobRequestV1Schema,
 	retryGenerationJobRequestV1Schema,
@@ -304,12 +305,80 @@ test("sampled transcript cache requires timeline coverage", () => {
 	);
 });
 
+test("generated chapter normalization fills gaps with named chapters", () => {
+	const chapters = normalizeGeneratedChapterRanges(
+		[
+			{
+				title: "Intro",
+				summary: "Sets context.",
+				startSeconds: 15,
+				endSeconds: 45,
+			},
+			{
+				title: "Main topic",
+				summary: "Explains the main topic.",
+				startSeconds: 90,
+				endSeconds: 120,
+			},
+			{
+				title: "Wrap-up",
+				summary: "Closes the lesson.",
+				startSeconds: 180,
+				endSeconds: 220,
+			},
+		],
+		240,
+	);
+
+	assert.deepEqual(chapters, [
+		{
+			title: "Intro",
+			summary: "Sets context.",
+			startSeconds: 0,
+			endSeconds: 90,
+		},
+		{
+			title: "Main topic",
+			summary: "Explains the main topic.",
+			startSeconds: 90,
+			endSeconds: 180,
+		},
+		{
+			title: "Wrap-up",
+			summary: "Closes the lesson.",
+			startSeconds: 180,
+			endSeconds: 240,
+		},
+	]);
+});
+
+test("generated chapter normalization keeps unknown final duration open", () => {
+	assert.deepEqual(
+		normalizeGeneratedChapterRanges(
+			[
+				{ title: "Intro", summary: "Starts.", startSeconds: 12, endSeconds: 20 },
+				{
+					title: "Next",
+					summary: "Continues.",
+					startSeconds: 40,
+					endSeconds: 80,
+				},
+			],
+			null,
+		),
+		[
+			{ title: "Intro", summary: "Starts.", startSeconds: 0, endSeconds: 40 },
+			{ title: "Next", summary: "Continues.", startSeconds: 40, endSeconds: null },
+		],
+	);
+});
+
 test("generated chapter ranges must be ordered and within duration", () => {
 	assert.equal(
 		validateGeneratedChapterRanges(
 			[
 				{ startSeconds: 0, endSeconds: 60 },
-				{ startSeconds: 60, endSeconds: null },
+				{ startSeconds: 60, endSeconds: 120 },
 			],
 			120,
 		),
@@ -327,10 +396,50 @@ test("generated chapter ranges must be ordered and within duration", () => {
 	);
 	assert.equal(
 		validateGeneratedChapterRanges(
+			[
+				{ startSeconds: 0, endSeconds: 60 },
+				{ startSeconds: 90, endSeconds: 120 },
+			],
+			120,
+		),
+		false,
+	);
+	assert.equal(
+		validateGeneratedChapterRanges(
+			[
+				{ startSeconds: 5, endSeconds: 60 },
+				{ startSeconds: 60, endSeconds: 120 },
+			],
+			120,
+		),
+		false,
+	);
+	assert.equal(
+		validateGeneratedChapterRanges(
 			[{ startSeconds: 125, endSeconds: null }],
 			120,
 		),
 		false,
+	);
+	assert.equal(
+		validateGeneratedChapterRanges(
+			[
+				{ startSeconds: 0, endSeconds: 60 },
+				{ startSeconds: 60, endSeconds: null },
+			],
+			120,
+		),
+		false,
+	);
+	assert.equal(
+		validateGeneratedChapterRanges(
+			[
+				{ startSeconds: 0, endSeconds: 60 },
+				{ startSeconds: 60, endSeconds: null },
+			],
+			null,
+		),
+		true,
 	);
 });
 

@@ -5,10 +5,16 @@ import {
 	DEFAULT_OPENAI_GENERATION_MODEL,
 	educationalSuitabilityResultV1Schema,
 	getChapterGenerationPolicy,
+	normalizeGeneratedChapterRanges,
 	validateGeneratedChapterRanges,
 } from "@benkyou/core";
 import type { EducationalSuitabilityResultV1 } from "@benkyou/types";
 import OpenAI from "openai";
+
+const EDUCATIONAL_SUITABILITY_REASON_MAX_LENGTH = 500;
+const EDUCATIONAL_SUITABILITY_CONTENT_TYPE_MAX_LENGTH = 120;
+const EDUCATIONAL_SUITABILITY_EVIDENCE_MAX_ITEMS = 8;
+const EDUCATIONAL_SUITABILITY_EVIDENCE_MAX_LENGTH = 160;
 
 const chapterSchema = {
 	type: "object",
@@ -49,12 +55,21 @@ const educationalSuitabilitySchema = {
 			enum: ["educational", "non_educational", "ambiguous"],
 		},
 		confidence: { type: "number", minimum: 0, maximum: 1 },
-		reason: { type: "string", maxLength: 500 },
-		contentType: { type: "string", maxLength: 120 },
+		reason: {
+			type: "string",
+			maxLength: EDUCATIONAL_SUITABILITY_REASON_MAX_LENGTH,
+		},
+		contentType: {
+			type: "string",
+			maxLength: EDUCATIONAL_SUITABILITY_CONTENT_TYPE_MAX_LENGTH,
+		},
 		evidence: {
 			type: "array",
-			maxItems: 8,
-			items: { type: "string" },
+			maxItems: EDUCATIONAL_SUITABILITY_EVIDENCE_MAX_ITEMS,
+			items: {
+				type: "string",
+				maxLength: EDUCATIONAL_SUITABILITY_EVIDENCE_MAX_LENGTH,
+			},
 		},
 	},
 } as const;
@@ -128,7 +143,8 @@ export async function generateCourseChapters(
 						? "For this very long video, create a high-level course map, not dense subchapters."
 						: "",
 					"Never invent timestamps outside the transcript or duration range.",
-					"Keep titles clear and summaries useful for study. Use transcript timestamps for startSeconds and endSeconds. The final chapter endSeconds may be null if the transcript does not provide a clean end.",
+					"Chapters must cover the whole video timeline continuously: start the first chapter at 0, set each chapter endSeconds to the next chapter startSeconds, and end the final chapter at the video duration when known.",
+					"Keep titles clear and summaries useful for study. Use transcript timestamps for startSeconds and endSeconds. The final chapter endSeconds may be null only when the video duration is unknown.",
 					"",
 					"Transcript:",
 					input.transcriptText.slice(0, policy.transcriptCharacterLimit),
@@ -148,14 +164,19 @@ export async function generateCourseChapters(
 	const generated = aiGeneratedCourseV1Schema.parse(
 		JSON.parse(response.output_text),
 	);
+	const chapters = normalizeGeneratedChapterRanges(
+		generated.chapters,
+		input.durationSeconds,
+	);
 
-	if (
-		!validateGeneratedChapterRanges(generated.chapters, input.durationSeconds)
-	) {
+	if (!validateGeneratedChapterRanges(chapters, input.durationSeconds)) {
 		throw new Error("AI generated chapter ranges were invalid.");
 	}
 
-	return generated;
+	return {
+		...generated,
+		chapters,
+	};
 }
 
 export async function classifyEducationalSuitability(
@@ -193,6 +214,7 @@ export async function classifyEducationalSuitability(
 					"Reject as non_educational: ASMR, music, reactions, entertainment, vlogs without instructional intent, ambience, compilations, gossip, pure gaming entertainment, and lifestyle content without teaching.",
 					"When evidence is weak or mixed, use ambiguous. Benkyou blocks ambiguous videos.",
 					"Treat YouTube category as weak evidence only.",
+					`Keep each evidence item at or below ${EDUCATIONAL_SUITABILITY_EVIDENCE_MAX_LENGTH} characters.`,
 					"",
 					`Title: ${input.videoTitle || "Untitled YouTube video"}`,
 					`Channel: ${input.channelName || "Unknown"}`,
@@ -221,6 +243,39 @@ export async function classifyEducationalSuitability(
 	});
 
 	return educationalSuitabilityResultV1Schema.parse(
-		JSON.parse(response.output_text),
+		normalizeEducationalSuitabilityOutput(JSON.parse(response.output_text)),
 	);
+}
+
+function normalizeEducationalSuitabilityOutput(output: unknown) {
+	if (!isRecord(output)) {
+		return output;
+	}
+
+	return {
+		...output,
+		reason: clampString(
+			output.reason,
+			EDUCATIONAL_SUITABILITY_REASON_MAX_LENGTH,
+		),
+		contentType: clampString(
+			output.contentType,
+			EDUCATIONAL_SUITABILITY_CONTENT_TYPE_MAX_LENGTH,
+		),
+		evidence: Array.isArray(output.evidence)
+			? output.evidence
+					.slice(0, EDUCATIONAL_SUITABILITY_EVIDENCE_MAX_ITEMS)
+					.map((item) =>
+						clampString(item, EDUCATIONAL_SUITABILITY_EVIDENCE_MAX_LENGTH),
+					)
+			: output.evidence,
+	};
+}
+
+function clampString(value: unknown, maxLength: number) {
+	return typeof value === "string" ? value.trim().slice(0, maxLength) : value;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
