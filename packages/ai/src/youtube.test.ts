@@ -2,11 +2,14 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+	fetchYouTubeTranscript,
 	parseYouTubeDataApiVideoMetadata,
 	parseYouTubeDuration,
+	resolveYouTubeTranscriptProvider,
 	sampleTranscriptSegmentsAcrossDuration,
 	type TranscriptSegment,
 	transcriptSegmentsToText,
+	YouTubeTranscriptFetchError,
 } from "./youtube";
 
 function makeSegments(
@@ -108,3 +111,221 @@ test("transcript text uses sampled windows for coarse fallback policy", () => {
 	assert.match(text, /\[30000s\] segment 500/);
 	assert.match(text, /\[59940s\] segment 999/);
 });
+
+test("auto transcript provider uses TranscriptAPI when a key is configured", () => {
+	assert.equal(
+		resolveYouTubeTranscriptProvider({
+			TRANSCRIPTAPI_API_KEY: "test-key",
+			YOUTUBE_TRANSCRIPT_PROVIDER: "auto",
+		}),
+		"transcriptapi",
+	);
+});
+
+test("auto transcript provider uses local package without a TranscriptAPI key", () => {
+	assert.equal(
+		resolveYouTubeTranscriptProvider({
+			YOUTUBE_TRANSCRIPT_PROVIDER: "auto",
+		}),
+		"local",
+	);
+});
+
+test("local transcript provider ignores TranscriptAPI key", () => {
+	assert.equal(
+		resolveYouTubeTranscriptProvider({
+			TRANSCRIPTAPI_API_KEY: "test-key",
+			YOUTUBE_TRANSCRIPT_PROVIDER: "local",
+		}),
+		"local",
+	);
+});
+
+test("forced TranscriptAPI provider requires an API key", async () => {
+	await assert.rejects(
+		() =>
+			fetchYouTubeTranscript("video-1", {
+				env: { YOUTUBE_TRANSCRIPT_PROVIDER: "transcriptapi" },
+				sleep: noopSleep,
+			}),
+		(error: unknown) =>
+			error instanceof YouTubeTranscriptFetchError &&
+			error.code === "configuration",
+	);
+});
+
+test("local transcript provider normalizes package transcript segments", async () => {
+	const transcript = await fetchYouTubeTranscript("video-1", {
+		env: {
+			TRANSCRIPTAPI_API_KEY: "test-key",
+			YOUTUBE_TRANSCRIPT_PROVIDER: "local",
+		},
+		localTranscriptFetcher: async () => [
+			{ text: " First ", offset: 0, duration: 1.2 },
+			{ text: "   ", offset: 1_200, duration: 800 },
+			{ text: "Second", offset: 2_000, duration: 1_200 },
+		],
+	});
+
+	assert.deepEqual(transcript, [
+		{ text: "First", startSeconds: 0, durationSeconds: 1 },
+		{ text: "Second", startSeconds: 2, durationSeconds: 1 },
+	]);
+});
+
+test("TranscriptAPI response maps JSON segments to transcript segments", async () => {
+	const requestedUrls: string[] = [];
+	const transcript = await fetchYouTubeTranscript("video-1", {
+		env: {
+			TRANSCRIPTAPI_API_KEY: "test-key",
+			YOUTUBE_TRANSCRIPT_PROVIDER: "transcriptapi",
+		},
+		fetchImpl: async (input) => {
+			requestedUrls.push(String(input));
+			return jsonResponse(200, {
+				transcript: [
+					{ text: " First ", start: 0, duration: 4.12 },
+					{ text: "Second", start: 4.12, duration: 3.85 },
+				],
+			});
+		},
+		sleep: noopSleep,
+	});
+
+	assert.deepEqual(transcript, [
+		{ text: "First", startSeconds: 0, durationSeconds: 4 },
+		{ text: "Second", startSeconds: 4, durationSeconds: 4 },
+	]);
+	assert.equal(requestedUrls.length, 1);
+	assert.match(requestedUrls[0], /video_url=video-1/);
+	assert.match(requestedUrls[0], /format=json/);
+	assert.match(requestedUrls[0], /include_timestamp=true/);
+});
+
+test("TranscriptAPI all-empty transcript maps to empty failure", async () => {
+	await assertTranscriptApiFailure({
+		code: "empty",
+		responses: [
+			jsonResponse(200, {
+				transcript: [{ text: "   ", start: 0, duration: 1 }],
+			}),
+		],
+	});
+});
+
+test("TranscriptAPI malformed transcript maps to provider unavailable", async () => {
+	await assertTranscriptApiFailure({
+		code: "provider_unavailable",
+		responses: [
+			jsonResponse(200, {
+				transcript: [{ text: "Missing duration", start: 0 }],
+			}),
+		],
+	});
+});
+
+test("TranscriptAPI 404 maps to not available", async () => {
+	await assertTranscriptApiFailure({
+		code: "not_available",
+		responses: [jsonResponse(404, { detail: "Not found" })],
+	});
+});
+
+test("TranscriptAPI 401 maps to configuration", async () => {
+	await assertTranscriptApiFailure({
+		code: "configuration",
+		responses: [jsonResponse(401, { detail: "Unauthorized" })],
+	});
+});
+
+test("TranscriptAPI 402 maps to payment required", async () => {
+	await assertTranscriptApiFailure({
+		code: "payment_required",
+		responses: [jsonResponse(402, { detail: "Payment required" })],
+	});
+});
+
+test("TranscriptAPI 429 retries using capped Retry-After then maps to throttled", async () => {
+	const sleeps: number[] = [];
+
+	await assertTranscriptApiFailure({
+		code: "too_many_requests",
+		responses: [
+			jsonResponse(429, { detail: "Slow down" }, { "Retry-After": "10" }),
+			jsonResponse(429, { detail: "Slow down" }, { "Retry-After": "2" }),
+			jsonResponse(429, { detail: "Slow down" }),
+		],
+		sleep: async (milliseconds) => {
+			sleeps.push(milliseconds);
+		},
+	});
+
+	assert.deepEqual(sleeps, [5_000, 2_000]);
+});
+
+test("TranscriptAPI 503 retries twice then maps to provider unavailable", async () => {
+	const sleeps: number[] = [];
+
+	await assertTranscriptApiFailure({
+		code: "provider_unavailable",
+		responses: [
+			jsonResponse(503, { detail: "Unavailable" }),
+			jsonResponse(408, { detail: "Timeout" }),
+			jsonResponse(503, { detail: "Unavailable" }),
+		],
+		sleep: async (milliseconds) => {
+			sleeps.push(milliseconds);
+		},
+	});
+
+	assert.deepEqual(sleeps, [1_000, 2_000]);
+});
+
+function jsonResponse(
+	status: number,
+	body: unknown,
+	headers?: Record<string, string>,
+) {
+	return new Response(JSON.stringify(body), {
+		headers: {
+			"Content-Type": "application/json",
+			...headers,
+		},
+		status,
+	});
+}
+
+async function noopSleep() {}
+
+async function assertTranscriptApiFailure(input: {
+	code: string;
+	responses: Response[];
+	sleep?: (milliseconds: number) => Promise<void>;
+}) {
+	const responses = [...input.responses];
+
+	await assert.rejects(
+		() =>
+			fetchYouTubeTranscript("video-1", {
+				env: {
+					TRANSCRIPTAPI_API_KEY: "test-key",
+					YOUTUBE_TRANSCRIPT_PROVIDER: "transcriptapi",
+				},
+				fetchImpl: async () => {
+					const response = responses.shift();
+
+					if (!response) {
+						throw new Error("No fake response configured.");
+					}
+
+					return response;
+				},
+				sleep: input.sleep ?? noopSleep,
+			}),
+		(error: unknown) =>
+			error instanceof YouTubeTranscriptFetchError &&
+			error.code === input.code,
+	);
+
+	assert.equal(responses.length, 0);
+}

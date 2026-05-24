@@ -29,8 +29,19 @@ Required values:
 - `PUBLIC_SITE_URL`: public canonical URL for SEO metadata, robots, and sitemap.
 - `AI_PROVIDER`: set to `openai` when AI chapter fallback is enabled.
 - `AI_API_KEY`, `OPENAI_MODEL`, `YOUTUBE_API_KEY`: provider configuration.
+- `YOUTUBE_TRANSCRIPT_PROVIDER`: optional transcript provider, default `auto`.
+- `TRANSCRIPTAPI_API_KEY`: optional TranscriptAPI key for reliable hosted
+  YouTube transcript fetching.
 - `GENERATION_RATE_LIMIT_MAX`: optional generation quota, default `5`.
 - `GENERATION_RATE_LIMIT_WINDOW_HOURS`: optional quota window, default `24`.
+
+`YOUTUBE_TRANSCRIPT_PROVIDER=auto` is self-hosting friendly: it uses
+TranscriptAPI when `TRANSCRIPTAPI_API_KEY` is present, otherwise it falls back
+to the free local `youtube-transcript` package. For hosted production, set
+`YOUTUBE_TRANSCRIPT_PROVIDER=transcriptapi` and `TRANSCRIPTAPI_API_KEY` so the
+app does not silently return to the local scraper path. Use
+`YOUTUBE_TRANSCRIPT_PROVIDER=local` for development or self-hosted installs
+that prefer the free local package.
 
 ## Deployment
 
