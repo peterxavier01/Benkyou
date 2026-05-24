@@ -14,6 +14,7 @@ import {
 	educationalSuitabilityResultV1Schema,
 	GENERATION_JOB_TIMEOUT_MS,
 	getChapterGenerationPolicy,
+	isSampledTranscriptCacheIncomplete,
 	isEducationalSuitabilityAllowed,
 	parseYouTubeDescriptionChapters,
 	processGenerationJobRequestV1Schema,
@@ -258,11 +259,14 @@ test("chapter generation policy follows duration-aware MVP defaults", () => {
 		getChapterGenerationPolicy(3 * 60 * 60, 10).targetChaptersLabel,
 		"18-35",
 	);
+	const threeHourPolicy = getChapterGenerationPolicy(3 * 60 * 60, 10);
+	assert.equal(threeHourPolicy.isCoarseFallback, false);
+	assert.equal(threeHourPolicy.transcriptMode, "sampled_windows");
 
-	const longPolicy = getChapterGenerationPolicy(12 * 60 * 60, 10);
-	assert.equal(longPolicy.targetChaptersLabel, "12-25");
-	assert.equal(longPolicy.isCoarseFallback, true);
-	assert.equal(longPolicy.transcriptMode, "sampled_windows");
+	const coarsePolicy = getChapterGenerationPolicy(5 * 60 * 60, 10);
+	assert.equal(coarsePolicy.targetChaptersLabel, "12-25");
+	assert.equal(coarsePolicy.isCoarseFallback, true);
+	assert.equal(coarsePolicy.transcriptMode, "sampled_windows");
 });
 
 test("transcript-backed duration replaces clearly compressed stored duration", () => {
@@ -271,6 +275,33 @@ test("transcript-backed duration replaces clearly compressed stored duration", (
 	assert.equal(resolveTranscriptBackedDurationSeconds(8_900, 9_079), 8_900);
 	assert.equal(resolveTranscriptBackedDurationSeconds(12 * 60 * 60, 9_079), 43_200);
 	assert.equal(resolveTranscriptBackedDurationSeconds(46, null), 46);
+});
+
+test("sampled transcript cache requires timeline coverage", () => {
+	assert.equal(
+		isSampledTranscriptCacheIncomplete({
+			durationSeconds: 10 * 60 * 60,
+			transcriptSegmentCount: 500,
+			transcriptText: "[0s] Intro\n[7200s] Early section",
+		}),
+		true,
+	);
+	assert.equal(
+		isSampledTranscriptCacheIncomplete({
+			durationSeconds: 10 * 60 * 60,
+			transcriptSegmentCount: 500,
+			transcriptText: "[0s] Intro\n[32000s] Final section",
+		}),
+		false,
+	);
+	assert.equal(
+		isSampledTranscriptCacheIncomplete({
+			durationSeconds: 90 * 60,
+			transcriptSegmentCount: 100,
+			transcriptText: "[0s] Intro\n[1200s] Short cache",
+		}),
+		false,
+	);
 });
 
 test("generated chapter ranges must be ordered and within duration", () => {

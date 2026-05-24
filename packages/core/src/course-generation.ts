@@ -108,8 +108,10 @@ export interface ChapterGenerationPolicy {
 
 const NORMAL_TRANSCRIPT_CHARACTER_LIMIT = 120_000;
 const LONG_VIDEO_TRANSCRIPT_CHARACTER_LIMIT = 120_000;
-const ELEVEN_HOURS_SECONDS = 11 * 60 * 60;
+const SAMPLED_TRANSCRIPT_SECONDS = 2 * 60 * 60;
+const COARSE_CHAPTER_SECONDS = 5 * 60 * 60;
 const COMPRESSED_DURATION_RATIO = 0.1;
+const SAMPLED_TRANSCRIPT_CACHE_COVERAGE_RATIO = 0.8;
 
 export function parseYouTubeDescriptionChapters(
 	description: string | null | undefined,
@@ -161,7 +163,11 @@ export function getChapterGenerationPolicy(
 	transcriptSegmentCount: number,
 ): ChapterGenerationPolicy {
 	const duration = durationSeconds ?? 0;
-	const isCoarseFallback = duration >= ELEVEN_HOURS_SECONDS;
+	const isCoarseFallback = duration >= COARSE_CHAPTER_SECONDS;
+	const transcriptMode =
+		duration >= SAMPLED_TRANSCRIPT_SECONDS
+			? "sampled_windows"
+			: "full_window";
 	const transcriptCharacterLimit =
 		isCoarseFallback && transcriptSegmentCount > 0
 			? LONG_VIDEO_TRANSCRIPT_CHARACTER_LIMIT
@@ -173,7 +179,7 @@ export function getChapterGenerationPolicy(
 			maxChapters: 5,
 			targetChaptersLabel: "3-5",
 			isCoarseFallback,
-			transcriptMode: "full_window",
+			transcriptMode,
 			transcriptCharacterLimit,
 		};
 	}
@@ -184,7 +190,7 @@ export function getChapterGenerationPolicy(
 			maxChapters: 8,
 			targetChaptersLabel: "5-8",
 			isCoarseFallback,
-			transcriptMode: "full_window",
+			transcriptMode,
 			transcriptCharacterLimit,
 		};
 	}
@@ -195,7 +201,7 @@ export function getChapterGenerationPolicy(
 			maxChapters: 12,
 			targetChaptersLabel: "8-12",
 			isCoarseFallback,
-			transcriptMode: "full_window",
+			transcriptMode,
 			transcriptCharacterLimit,
 		};
 	}
@@ -206,18 +212,18 @@ export function getChapterGenerationPolicy(
 			maxChapters: 18,
 			targetChaptersLabel: "12-18",
 			isCoarseFallback,
-			transcriptMode: "full_window",
+			transcriptMode,
 			transcriptCharacterLimit,
 		};
 	}
 
-	if (duration < ELEVEN_HOURS_SECONDS) {
+	if (duration < COARSE_CHAPTER_SECONDS) {
 		return {
 			minChapters: 18,
 			maxChapters: 35,
 			targetChaptersLabel: "18-35",
 			isCoarseFallback,
-			transcriptMode: "full_window",
+			transcriptMode,
 			transcriptCharacterLimit,
 		};
 	}
@@ -227,7 +233,7 @@ export function getChapterGenerationPolicy(
 		maxChapters: 25,
 		targetChaptersLabel: "12-25",
 		isCoarseFallback: true,
-		transcriptMode: "sampled_windows",
+		transcriptMode,
 		transcriptCharacterLimit,
 	};
 }
@@ -257,6 +263,26 @@ export function resolveTranscriptBackedDurationSeconds(
 	}
 
 	return durationSeconds;
+}
+
+export function isSampledTranscriptCacheIncomplete(input: {
+	durationSeconds: number | null | undefined;
+	transcriptSegmentCount: number;
+	transcriptText: string;
+}) {
+	const duration = input.durationSeconds ?? 0;
+	const policy = getChapterGenerationPolicy(duration, input.transcriptSegmentCount);
+
+	if (duration <= 0 || policy.transcriptMode !== "sampled_windows") {
+		return false;
+	}
+
+	const maxTimestamp = getMaxCachedTranscriptTimestamp(input.transcriptText);
+
+	return (
+		maxTimestamp === null ||
+		maxTimestamp < duration * SAMPLED_TRANSCRIPT_CACHE_COVERAGE_RATIO
+	);
 }
 
 export function validateGeneratedChapterRanges(
@@ -361,6 +387,24 @@ function parseTimestamp(timestamp: string): number | null {
 	}
 
 	return hours * 3600 + minutes * 60 + seconds;
+}
+
+function getMaxCachedTranscriptTimestamp(transcriptText: string) {
+	let maxTimestamp: number | null = null;
+
+	for (const line of transcriptText.split(/\r?\n/)) {
+		const match = line.match(/^\[(\d+)s\]/);
+		const timestamp = match ? Number.parseInt(match[1], 10) : Number.NaN;
+
+		if (Number.isNaN(timestamp)) {
+			continue;
+		}
+
+		maxTimestamp =
+			maxTimestamp === null ? timestamp : Math.max(maxTimestamp, timestamp);
+	}
+
+	return maxTimestamp;
 }
 
 export function buildGenerationTimeline(

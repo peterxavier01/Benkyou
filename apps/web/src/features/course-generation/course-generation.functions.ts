@@ -5,6 +5,7 @@ import {
 	GENERATION_JOB_TIMEOUT_MS,
 	getChapterGenerationPolicy,
 	getParseVideoUrlErrorMessage,
+	isSampledTranscriptCacheIncomplete,
 	isEducationalSuitabilityAllowed,
 	parseVideoUrl,
 	parseYouTubeDescriptionChapters,
@@ -355,7 +356,6 @@ function estimateCachedTranscriptSegmentCount(transcriptText: string) {
 const SUSPICIOUS_SHORT_DURATION_SECONDS = 2 * 60;
 const SUSPICIOUS_DENSE_TRANSCRIPT_DURATION_SECONDS = 10 * 60;
 const SUSPICIOUS_CACHED_TRANSCRIPT_SEGMENT_COUNT = 100;
-const VERY_LONG_VIDEO_SECONDS = 11 * 60 * 60;
 
 function shouldRefreshVideoMetadata(input: {
 	durationSeconds: number | null;
@@ -387,7 +387,11 @@ function shouldRefetchCachedTranscript(input: {
 
 	if (
 		isDenseShortTranscript(input.durationSeconds, segmentCount) ||
-		hasCompressedLongVideoTranscript(input.durationSeconds, input.transcriptText)
+		isSampledTranscriptCacheIncomplete({
+			durationSeconds: input.durationSeconds,
+			transcriptSegmentCount: segmentCount,
+			transcriptText: input.transcriptText,
+		})
 	) {
 		return true;
 	}
@@ -419,37 +423,6 @@ function isDenseShortTranscript(durationSeconds: number, segmentCount: number) {
 		durationSeconds < SUSPICIOUS_DENSE_TRANSCRIPT_DURATION_SECONDS &&
 		segmentCount >= SUSPICIOUS_CACHED_TRANSCRIPT_SEGMENT_COUNT
 	);
-}
-
-function hasCompressedLongVideoTranscript(
-	durationSeconds: number,
-	transcriptText: string,
-) {
-	if (durationSeconds < VERY_LONG_VIDEO_SECONDS) {
-		return false;
-	}
-
-	const maxTimestamp = getMaxCachedTranscriptTimestamp(transcriptText);
-
-	return maxTimestamp !== null && maxTimestamp < durationSeconds / 10;
-}
-
-function getMaxCachedTranscriptTimestamp(transcriptText: string) {
-	let maxTimestamp: number | null = null;
-
-	for (const line of transcriptText.split(/\r?\n/)) {
-		const match = line.match(/^\[(\d+)s\]/);
-		const timestamp = match ? Number.parseInt(match[1], 10) : Number.NaN;
-
-		if (Number.isNaN(timestamp)) {
-			continue;
-		}
-
-		maxTimestamp =
-			maxTimestamp === null ? timestamp : Math.max(maxTimestamp, timestamp);
-	}
-
-	return maxTimestamp;
 }
 
 export const retryGenerationJob = createServerFn({ method: "POST" })
