@@ -123,11 +123,12 @@ async function fetchTranscriptFromLocalPackage(
 		);
 	}
 
+	const timeUnit = inferLocalTranscriptTimeUnit(transcript);
 	const segments = transcript
 		.map((segment) => ({
 			text: segment.text.trim(),
-			startSeconds: normalizeTranscriptSeconds(segment.offset),
-			durationSeconds: normalizeTranscriptSeconds(segment.duration),
+			startSeconds: normalizeTranscriptTime(segment.offset, timeUnit),
+			durationSeconds: normalizeTranscriptTime(segment.duration, timeUnit),
 		}))
 		.filter((segment) => segment.text.length > 0);
 
@@ -247,8 +248,8 @@ async function parseTranscriptApiResponse(
 
 		segments.push({
 			text,
-			startSeconds: normalizeTranscriptSeconds(start),
-			durationSeconds: normalizeTranscriptSeconds(duration),
+			startSeconds: normalizeTranscriptTime(start, "seconds"),
+			durationSeconds: normalizeTranscriptTime(duration, "seconds"),
 		});
 	}
 
@@ -485,9 +486,18 @@ export function parseYouTubeDuration(duration: string): number | null {
 	);
 }
 
-function normalizeTranscriptSeconds(value: number) {
-	const seconds = value > 1000 ? value / 1000 : value;
+type TranscriptTimeUnit = "seconds" | "milliseconds";
 
+function inferLocalTranscriptTimeUnit(
+	transcript: Awaited<ReturnType<typeof fetchTranscript>>,
+): TranscriptTimeUnit {
+	return transcript.some((segment) => segment.duration > 100)
+		? "milliseconds"
+		: "seconds";
+}
+
+function normalizeTranscriptTime(value: number, unit: TranscriptTimeUnit) {
+	const seconds = unit === "milliseconds" ? value / 1000 : value;
 	return Math.max(0, Math.round(seconds));
 }
 

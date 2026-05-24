@@ -18,6 +18,7 @@ import {
 	parseYouTubeDescriptionChapters,
 	processGenerationJobRequestV1Schema,
 	retryGenerationJobRequestV1Schema,
+	resolveTranscriptBackedDurationSeconds,
 	toGenerationJobDetail,
 	validateGeneratedChapterRanges,
 } from "./course-generation";
@@ -262,6 +263,14 @@ test("chapter generation policy follows duration-aware MVP defaults", () => {
 	assert.equal(longPolicy.targetChaptersLabel, "12-25");
 	assert.equal(longPolicy.isCoarseFallback, true);
 	assert.equal(longPolicy.transcriptMode, "sampled_windows");
+});
+
+test("transcript-backed duration replaces clearly compressed stored duration", () => {
+	assert.equal(resolveTranscriptBackedDurationSeconds(null, 9_079), 9_079);
+	assert.equal(resolveTranscriptBackedDurationSeconds(46, 9_079), 9_079);
+	assert.equal(resolveTranscriptBackedDurationSeconds(8_900, 9_079), 8_900);
+	assert.equal(resolveTranscriptBackedDurationSeconds(12 * 60 * 60, 9_079), 43_200);
+	assert.equal(resolveTranscriptBackedDurationSeconds(46, null), 46);
 });
 
 test("generated chapter ranges must be ordered and within duration", () => {

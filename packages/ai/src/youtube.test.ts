@@ -161,7 +161,7 @@ test("local transcript provider normalizes package transcript segments", async (
 			YOUTUBE_TRANSCRIPT_PROVIDER: "local",
 		},
 		localTranscriptFetcher: async () => [
-			{ text: " First ", offset: 0, duration: 1.2 },
+			{ text: " First ", offset: 0, duration: 1_200 },
 			{ text: "   ", offset: 1_200, duration: 800 },
 			{ text: "Second", offset: 2_000, duration: 1_200 },
 		],
@@ -170,6 +170,40 @@ test("local transcript provider normalizes package transcript segments", async (
 	assert.deepEqual(transcript, [
 		{ text: "First", startSeconds: 0, durationSeconds: 1 },
 		{ text: "Second", startSeconds: 2, durationSeconds: 1 },
+	]);
+});
+
+test("local transcript provider preserves long second-based offsets", async () => {
+	const transcript = await fetchYouTubeTranscript("video-1", {
+		env: {
+			YOUTUBE_TRANSCRIPT_PROVIDER: "local",
+		},
+		localTranscriptFetcher: async () => [
+			{ text: "Start", offset: 0, duration: 4 },
+			{ text: "Near end", offset: 46_000, duration: 30 },
+		],
+	});
+
+	assert.deepEqual(transcript, [
+		{ text: "Start", startSeconds: 0, durationSeconds: 4 },
+		{ text: "Near end", startSeconds: 46_000, durationSeconds: 30 },
+	]);
+});
+
+test("local transcript provider converts millisecond-based segments", async () => {
+	const transcript = await fetchYouTubeTranscript("video-1", {
+		env: {
+			YOUTUBE_TRANSCRIPT_PROVIDER: "local",
+		},
+		localTranscriptFetcher: async () => [
+			{ text: "Start", offset: 0, duration: 4_120 },
+			{ text: "Near end", offset: 46_000_000, duration: 30_000 },
+		],
+	});
+
+	assert.deepEqual(transcript, [
+		{ text: "Start", startSeconds: 0, durationSeconds: 4 },
+		{ text: "Near end", startSeconds: 46_000, durationSeconds: 30 },
 	]);
 });
 
@@ -200,6 +234,28 @@ test("TranscriptAPI response maps JSON segments to transcript segments", async (
 	assert.match(requestedUrls[0], /video_url=video-1/);
 	assert.match(requestedUrls[0], /format=json/);
 	assert.match(requestedUrls[0], /include_timestamp=true/);
+});
+
+test("TranscriptAPI response preserves long second-based timestamps", async () => {
+	const transcript = await fetchYouTubeTranscript("video-1", {
+		env: {
+			TRANSCRIPTAPI_API_KEY: "test-key",
+			YOUTUBE_TRANSCRIPT_PROVIDER: "transcriptapi",
+		},
+		fetchImpl: async () =>
+			jsonResponse(200, {
+				transcript: [
+					{ text: "Start", start: 0, duration: 4.12 },
+					{ text: "Near end", start: 46_000, duration: 30 },
+				],
+			}),
+		sleep: noopSleep,
+	});
+
+	assert.deepEqual(transcript, [
+		{ text: "Start", startSeconds: 0, durationSeconds: 4 },
+		{ text: "Near end", startSeconds: 46_000, durationSeconds: 30 },
+	]);
 });
 
 test("TranscriptAPI all-empty transcript maps to empty failure", async () => {

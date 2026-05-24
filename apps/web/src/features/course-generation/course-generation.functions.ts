@@ -9,6 +9,7 @@ import {
 	parseVideoUrl,
 	parseYouTubeDescriptionChapters,
 	processGenerationJobRequestV1Schema,
+	resolveTranscriptBackedDurationSeconds,
 	retryGenerationJobRequestV1Schema,
 	toGenerationJobDetail,
 } from "@benkyou/core";
@@ -28,6 +29,10 @@ type CourseGenerationServer = typeof import("./course-generation.server");
 type YouTubeMetadata = Awaited<
 	ReturnType<CourseGenerationServer["fetchYouTubeDataApiMetadata"]>
 >;
+type ClaimedGenerationJob = NonNullable<
+	Awaited<ReturnType<CourseGenerationServer["claimGenerationJob"]>>
+>;
+type GenerationVideoInput = ClaimedGenerationJob["video"];
 
 let courseGenerationServerPromise: Promise<CourseGenerationServer> | null =
 	null;
@@ -124,8 +129,9 @@ export const processGenerationJob = createServerFn({ method: "POST" })
 		}
 
 		try {
+			const generationVideo = await getVideoInputForGeneration(claimed.video);
 			const educationalSuitability =
-				await classifyEducationalSuitabilityForVideo(claimed.video);
+				await classifyEducationalSuitabilityForVideo(generationVideo);
 
 			if (!isEducationalSuitabilityAllowed(educationalSuitability.result)) {
 				const failed = await failGenerationJob({
@@ -147,8 +153,8 @@ export const processGenerationJob = createServerFn({ method: "POST" })
 			}
 
 			const creatorChapters = parseYouTubeDescriptionChapters(
-				claimed.video.description,
-				claimed.video.durationSeconds,
+				generationVideo.description,
+				generationVideo.durationSeconds,
 			);
 
 			if (creatorChapters.length > 0) {
@@ -157,7 +163,7 @@ export const processGenerationJob = createServerFn({ method: "POST" })
 					title: claimed.course.title,
 					description: claimed.course.description,
 					transcriptSource: null,
-					durationSeconds: claimed.video.durationSeconds,
+					durationSeconds: generationVideo.durationSeconds,
 					rawOutput: {
 						chapterSource: "creator_timestamps",
 						chapterCount: creatorChapters.length,
@@ -179,10 +185,10 @@ export const processGenerationJob = createServerFn({ method: "POST" })
 			}
 
 			const transcriptInput = await getTranscriptInputForGeneration({
-				providerVideoId: claimed.video.providerVideoId,
-				durationSeconds: claimed.video.durationSeconds,
-				transcriptSource: claimed.video.transcriptSource,
-				transcriptText: claimed.video.transcriptText,
+				providerVideoId: generationVideo.providerVideoId,
+				durationSeconds: generationVideo.durationSeconds,
+				transcriptSource: generationVideo.transcriptSource,
+				transcriptText: generationVideo.transcriptText,
 			});
 			const { durationSeconds, policy, transcriptSource, transcriptText } =
 				transcriptInput;
@@ -190,8 +196,8 @@ export const processGenerationJob = createServerFn({ method: "POST" })
 
 			const { generateCourseChapters } = await getCourseGenerationServer();
 			const generated = await generateCourseChapters({
-				videoTitle: claimed.video.title ?? claimed.course.title,
-				canonicalUrl: claimed.video.canonicalUrl,
+				videoTitle: generationVideo.title ?? claimed.course.title,
+				canonicalUrl: generationVideo.canonicalUrl,
 				transcriptText,
 				durationSeconds,
 				transcriptSegmentCount: transcriptInput.transcriptSegmentCount,
@@ -258,7 +264,15 @@ async function getTranscriptInputForGeneration(input: {
 }) {
 	const cachedTranscriptText = input.transcriptText?.trim();
 
-	if (input.transcriptSource && cachedTranscriptText) {
+	if (
+		input.transcriptSource &&
+		cachedTranscriptText &&
+		!shouldRefetchCachedTranscript({
+			durationSeconds: input.durationSeconds,
+			transcriptSource: input.transcriptSource,
+			transcriptText: cachedTranscriptText,
+		})
+	) {
 		const transcriptSegmentCount =
 			estimateCachedTranscriptSegmentCount(cachedTranscriptText);
 		const policy = getChapterGenerationPolicy(
@@ -285,7 +299,10 @@ async function getTranscriptInputForGeneration(input: {
 	const transcriptEndSeconds = lastTranscriptSegment
 		? lastTranscriptSegment.startSeconds + lastTranscriptSegment.durationSeconds
 		: null;
-	const durationSeconds = input.durationSeconds ?? transcriptEndSeconds;
+	const durationSeconds = resolveTranscriptBackedDurationSeconds(
+		input.durationSeconds,
+		transcriptEndSeconds,
+	);
 	const policy = getChapterGenerationPolicy(
 		durationSeconds,
 		transcriptSegments.length,
@@ -305,9 +322,134 @@ async function getTranscriptInputForGeneration(input: {
 	};
 }
 
+async function getVideoInputForGeneration(video: GenerationVideoInput) {
+	if (!shouldRefreshVideoMetadata(video)) {
+		return video;
+	}
+
+	const metadata = await safeFetchMetadata(
+		video.providerVideoId,
+		video.canonicalUrl,
+	);
+
+	if (!metadata) {
+		return video;
+	}
+
+	return {
+		...video,
+		title: metadata.title ?? video.title,
+		description: metadata.description ?? video.description,
+		channelTitle: metadata.channelName ?? video.channelTitle,
+		thumbnailUrl: metadata.thumbnailUrl ?? video.thumbnailUrl,
+		durationSeconds: metadata.durationSeconds ?? video.durationSeconds,
+		rawMetadata: metadata.rawMetadata ?? video.rawMetadata,
+	};
+}
+
 function estimateCachedTranscriptSegmentCount(transcriptText: string) {
 	return transcriptText.split(/\r?\n/).filter((line) => line.trim().length > 0)
 		.length;
+}
+
+const SUSPICIOUS_SHORT_DURATION_SECONDS = 2 * 60;
+const SUSPICIOUS_DENSE_TRANSCRIPT_DURATION_SECONDS = 10 * 60;
+const SUSPICIOUS_CACHED_TRANSCRIPT_SEGMENT_COUNT = 100;
+const VERY_LONG_VIDEO_SECONDS = 11 * 60 * 60;
+
+function shouldRefreshVideoMetadata(input: {
+	durationSeconds: number | null;
+	transcriptText: string | null;
+}) {
+	return (
+		input.durationSeconds === null ||
+		isSuspiciouslyShortTranscriptDuration(
+			input.durationSeconds,
+			input.transcriptText,
+		)
+	);
+}
+
+function shouldRefetchCachedTranscript(input: {
+	durationSeconds: number | null;
+	transcriptSource: TranscriptSource;
+	transcriptText: string;
+}) {
+	if (input.transcriptSource !== "youtube_captions") {
+		return false;
+	}
+
+	if (input.durationSeconds === null) {
+		return true;
+	}
+
+	const segmentCount = estimateCachedTranscriptSegmentCount(input.transcriptText);
+
+	if (
+		isDenseShortTranscript(input.durationSeconds, segmentCount) ||
+		hasCompressedLongVideoTranscript(input.durationSeconds, input.transcriptText)
+	) {
+		return true;
+	}
+
+	return false;
+}
+
+function isSuspiciouslyShortTranscriptDuration(
+	durationSeconds: number,
+	transcriptText: string | null,
+) {
+	if (durationSeconds > 0 && durationSeconds < SUSPICIOUS_SHORT_DURATION_SECONDS) {
+		return true;
+	}
+
+	if (!transcriptText) {
+		return false;
+	}
+
+	return isDenseShortTranscript(
+		durationSeconds,
+		estimateCachedTranscriptSegmentCount(transcriptText),
+	);
+}
+
+function isDenseShortTranscript(durationSeconds: number, segmentCount: number) {
+	return (
+		durationSeconds > 0 &&
+		durationSeconds < SUSPICIOUS_DENSE_TRANSCRIPT_DURATION_SECONDS &&
+		segmentCount >= SUSPICIOUS_CACHED_TRANSCRIPT_SEGMENT_COUNT
+	);
+}
+
+function hasCompressedLongVideoTranscript(
+	durationSeconds: number,
+	transcriptText: string,
+) {
+	if (durationSeconds < VERY_LONG_VIDEO_SECONDS) {
+		return false;
+	}
+
+	const maxTimestamp = getMaxCachedTranscriptTimestamp(transcriptText);
+
+	return maxTimestamp !== null && maxTimestamp < durationSeconds / 10;
+}
+
+function getMaxCachedTranscriptTimestamp(transcriptText: string) {
+	let maxTimestamp: number | null = null;
+
+	for (const line of transcriptText.split(/\r?\n/)) {
+		const match = line.match(/^\[(\d+)s\]/);
+		const timestamp = match ? Number.parseInt(match[1], 10) : Number.NaN;
+
+		if (Number.isNaN(timestamp)) {
+			continue;
+		}
+
+		maxTimestamp =
+			maxTimestamp === null ? timestamp : Math.max(maxTimestamp, timestamp);
+	}
+
+	return maxTimestamp;
 }
 
 export const retryGenerationJob = createServerFn({ method: "POST" })

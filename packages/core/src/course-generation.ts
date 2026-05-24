@@ -109,6 +109,7 @@ export interface ChapterGenerationPolicy {
 const NORMAL_TRANSCRIPT_CHARACTER_LIMIT = 120_000;
 const LONG_VIDEO_TRANSCRIPT_CHARACTER_LIMIT = 120_000;
 const ELEVEN_HOURS_SECONDS = 11 * 60 * 60;
+const COMPRESSED_DURATION_RATIO = 0.1;
 
 export function parseYouTubeDescriptionChapters(
 	description: string | null | undefined,
@@ -229,6 +230,33 @@ export function getChapterGenerationPolicy(
 		transcriptMode: "sampled_windows",
 		transcriptCharacterLimit,
 	};
+}
+
+export function resolveTranscriptBackedDurationSeconds(
+	durationSeconds: number | null | undefined,
+	transcriptEndSeconds: number | null | undefined,
+) {
+	if (
+		transcriptEndSeconds === null ||
+		transcriptEndSeconds === undefined ||
+		transcriptEndSeconds <= 0
+	) {
+		return durationSeconds ?? null;
+	}
+
+	if (
+		durationSeconds === null ||
+		durationSeconds === undefined ||
+		durationSeconds <= 0
+	) {
+		return transcriptEndSeconds;
+	}
+
+	if (durationSeconds < transcriptEndSeconds * COMPRESSED_DURATION_RATIO) {
+		return transcriptEndSeconds;
+	}
+
+	return durationSeconds;
 }
 
 export function validateGeneratedChapterRanges(
