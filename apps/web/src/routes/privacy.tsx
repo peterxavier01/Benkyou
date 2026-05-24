@@ -8,7 +8,7 @@ export const Route = createFileRoute("/privacy")({
 			path: "/privacy",
 			title: "Privacy | Benkyou",
 			description:
-				"See what Benkyou stores, how local-first study state works, and when YouTube or AI providers are used to generate course structure.",
+				"See what Benkyou stores, how local-first study state works, and when video or AI providers are used to prepare study structure.",
 		}),
 	component: PrivacyPage,
 });

@@ -35,8 +35,9 @@ function AuthIntroPanel() {
 						{CORE_PROMISE}
 					</h1>
 					<p className="max-w-xl text-muted-foreground text-sm leading-6">
-						Use Benkyou locally right away. Sign in when you want your study
-						state to follow you across sessions.
+						Use Benkyou locally right away. Sign in when you want notes,
+						bookmarks, progress, and generated structure to follow you across
+						sessions.
 					</p>
 				</div>
 			</div>

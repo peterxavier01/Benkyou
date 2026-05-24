@@ -101,8 +101,8 @@ function NewCourseForm() {
 												disabled={state.isSubmitting}
 											>
 												{state.isSubmitting
-													? "Generating..."
-													: "Generate course"}
+													? "Creating..."
+													: "Create study workspace"}
 												<HugeIcon name="arrowRight" className="size-4" />
 											</Button>
 										)}

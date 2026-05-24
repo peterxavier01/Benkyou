@@ -1,9 +1,9 @@
 import { PRODUCT_NAME } from "@benkyou/core";
 
 const DEFAULT_SITE_URL = "http://localhost:3000";
-const DEFAULT_TITLE = "Benkyou | Turn video into structured study";
+const DEFAULT_TITLE = "Benkyou | Focused study workspaces for long videos";
 const DEFAULT_DESCRIPTION =
-	"Turn a YouTube video into a focused study workspace with chapters, notes, bookmarks, and resumable progress.";
+	"Study tutorials, lectures, talks, and walkthroughs with chapters, notes, bookmarks, and progress in one recoverable workspace.";
 const DEFAULT_IMAGE_PATH = "/social-card.png";
 const DEFAULT_THEME_COLOR = "#00694c";
 

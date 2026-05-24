@@ -35,7 +35,7 @@ function CoursePlayerPendingRoute() {
 	return (
 		<WorkspacePage
 			title="Course player"
-			description="Loading course workspace."
+			description="Loading study workspace."
 			maxWidth="full"
 			className="p-0 sm:p-0"
 		>

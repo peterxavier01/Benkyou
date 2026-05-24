@@ -2,7 +2,7 @@ import type { VideoProvider } from "@benkyou/types";
 
 export const PRODUCT_NAME = "Benkyou";
 
-export const CORE_PROMISE = "Turn a video into a structured course.";
+export const CORE_PROMISE = "Turn long videos into focused study workspaces.";
 
 export const SUPPORTED_VIDEO_PROVIDERS = [
 	"youtube",

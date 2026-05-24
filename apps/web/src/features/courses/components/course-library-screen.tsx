@@ -108,7 +108,7 @@ function CourseLibraryScreen({
 	return (
 		<WorkspacePage
 			title="Courses"
-			description="Resume generated courses and recover jobs in progress."
+			description="Resume saved study workspaces and recover jobs in progress."
 			action={
 				<div className="flex items-center gap-2">
 					<Button asChild size="sm">
@@ -123,7 +123,7 @@ function CourseLibraryScreen({
 					<div>
 						<h1 className="font-semibold text-2xl tracking-normal">Courses</h1>
 						<p className="mt-1 text-muted-foreground text-sm">
-							Resume generated courses and recover jobs in progress.
+							Resume saved study workspaces and recover jobs in progress.
 						</p>
 					</div>
 					<div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -235,7 +235,8 @@ function EmptyState({
 					</EmptyMedia>
 					<EmptyTitle>No courses yet</EmptyTitle>
 					<EmptyDescription>
-						Create a course from a YouTube URL or open the seeded sample.
+						Create a study workspace from a YouTube URL or open the seeded
+						sample.
 					</EmptyDescription>
 				</EmptyHeader>
 				<EmptyContent>

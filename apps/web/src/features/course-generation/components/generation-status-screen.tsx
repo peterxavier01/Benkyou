@@ -124,7 +124,7 @@ function GenerationStatusScreen({
 	return (
 		<WorkspacePage
 			title="Generation"
-			description="Convert this video into a structured course."
+			description="Prepare this video as a study workspace."
 			className="lg:grid-cols-[minmax(0,1fr)_360px]"
 			action={<BetterAuthHeader />}
 		>
@@ -154,7 +154,7 @@ function GenerationStatusScreen({
 								<AlertTitle>Generation failed</AlertTitle>
 								<AlertDescription>
 									{detail.job.failureReason ??
-										"Benkyou could not generate this course."}
+										"Benkyou could not prepare this study workspace."}
 								</AlertDescription>
 							</Alert>
 						) : null}
@@ -348,11 +348,11 @@ function getStatusCopy(status: GenerationJobStatus) {
 	}
 
 	if (status === "processing") {
-		return "Captions are being converted into a structured course outline.";
+		return "Captions are being converted into a chapter outline.";
 	}
 
 	if (status === "completed") {
-		return "Your course is ready to open in the player.";
+		return "Your study workspace is ready to open.";
 	}
 
 	if (status === "failed") {

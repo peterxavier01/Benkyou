@@ -8,7 +8,7 @@ export const Route = createFileRoute("/about")({
 			path: "/about",
 			title: "About Benkyou | Focused study from long-form video",
 			description:
-				"Learn how Benkyou helps self-directed learners turn tutorials, lectures, walkthroughs, and talks into structured course workspaces.",
+				"Learn how Benkyou helps self-directed learners turn tutorials, lectures, walkthroughs, and talks into focused study workspaces.",
 		}),
 	component: AboutPage,
 });

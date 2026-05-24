@@ -373,7 +373,7 @@ export function buildGenerationTimeline(
 				processing: job.status === "queued" && !metadataReady,
 			}),
 			description:
-				"Read the source details and prepare a private course shell.",
+				"Read the source details and prepare a private study workspace shell.",
 		},
 		{
 			key: "transcript",
@@ -398,7 +398,7 @@ export function buildGenerationTimeline(
 					(transcriptReady || transcriptSkipped) &&
 					!chaptersReady,
 			}),
-			description: "Generate and validate the structured course outline.",
+			description: "Generate and validate the chapter outline.",
 		},
 		{
 			key: "player",
@@ -408,7 +408,7 @@ export function buildGenerationTimeline(
 				failed: failedStep === "player",
 				processing: processing && chaptersReady && !playerReady,
 			}),
-			description: "Save chapters so the course can open in the player.",
+			description: "Save chapters so the study workspace can open.",
 		},
 	];
 }

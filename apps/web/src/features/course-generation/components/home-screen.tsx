@@ -6,7 +6,7 @@ import { PublicFooter } from "#components/public-trust-links";
 import BetterAuthHeader from "../../../integrations/better-auth/header-user";
 import { NewCourseForm } from "./new-course-form";
 
-const learningLoopSteps = ["Outline", "Chapters", "Notes", "Bookmarks"];
+const learningLoopSteps = ["Chapters", "Notes", "Bookmarks", "Progress"];
 
 function HomeScreen() {
 	return (
@@ -17,17 +17,37 @@ function HomeScreen() {
 				<div className="flex min-h-[500px] items-center rounded-lg border border-border bg-card px-4 py-8 text-card-foreground sm:px-8 lg:min-h-[560px]">
 					<div className="max-w-3xl">
 						<StatusBadge className="px-4 py-0.5" tone="success">
-							Local-first MVP
+							Open Beta
 						</StatusBadge>
 						<h1 className="mt-5 max-w-2xl font-semibold text-3xl leading-tight tracking-normal sm:text-5xl">
 							{CORE_PROMISE}
 						</h1>
 						<p className="mt-5 max-w-2xl text-base text-muted-foreground leading-7">
-							Paste a YouTube URL, then study with chapters, notes, bookmarks,
-							and progress in one recoverable workspace.
+							Benkyou helps serious learners study tutorials, lectures, talks,
+							and walkthroughs with chapters, notes, bookmarks, and progress in
+							one recoverable workspace.
 						</p>
 
 						<NewCourseForm />
+
+						<div className="mt-7 max-w-2xl rounded-lg border border-border bg-muted/35 p-4">
+							<div className="flex items-start gap-3">
+								<span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md border border-border bg-background text-primary">
+									<HugeIcon name="playCircle" className="size-4" />
+								</span>
+								<div className="min-w-0">
+									<h2 className="font-semibold text-base leading-6">
+										Video platforms are built for watching. Benkyou is built for
+										studying.
+									</h2>
+									<p className="mt-2 text-muted-foreground text-sm leading-6">
+										YouTube and other video platforms supply the source
+										material. Benkyou gives the videos you care about a study
+										system for organizing, resuming, and reviewing what matters.
+									</p>
+								</div>
+							</div>
+						</div>
 					</div>
 				</div>
 
@@ -35,7 +55,7 @@ function HomeScreen() {
 					<div className="flex items-start justify-between gap-4">
 						<div className="flex items-center gap-2">
 							<HugeIcon name="list" className="size-5 text-primary" />
-							<h2 className="font-semibold text-base">Course workspace</h2>
+							<h2 className="font-semibold text-base">Study workspace</h2>
 						</div>
 						<span className="text-muted-foreground text-xs">Preview</span>
 					</div>
@@ -68,8 +88,8 @@ function HomeScreen() {
 								</StatusBadge>
 							</div>
 							<p className="mt-2 text-muted-foreground text-sm leading-6">
-								Benkyou opens a course player with chapter navigation, Markdown
-								notes, bookmarks, and resumable progress.
+								Benkyou opens a study workspace with chapter navigation,
+								Markdown notes, bookmarks, and resumable progress.
 							</p>
 						</div>
 					</div>
