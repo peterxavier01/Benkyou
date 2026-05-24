@@ -299,7 +299,7 @@ function CourseManagementScreen({
 						</metadataForm.Field>
 						<div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
 							<p className="min-w-0 text-muted-foreground text-xs">
-								Public and unlisted visibility are disabled for the MVP.
+								Public and unlisted visibility are disabled for the Open Beta.
 							</p>
 							<Button type="submit" disabled={metadataMutation.isPending}>
 								{metadataMutation.isPending ? "Saving..." : "Save metadata"}

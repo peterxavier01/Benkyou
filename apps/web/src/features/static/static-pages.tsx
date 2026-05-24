@@ -15,15 +15,15 @@ function AboutPage() {
 					<ProductName /> turns long-form video into a focused study workspace.
 				</>
 			}
-			description="Benkyou helps learners move from passive watching to structured progress with chapters, notes, bookmarks, and resume state."
+			description="Benkyou helps serious learners study tutorials, lectures, talks, and walkthroughs with chapters, notes, bookmarks, and progress in one recoverable workspace."
 		>
 			<PublicSection
 				title="Mission"
-				description="Video is useful, but it is easy to lose the structure of what you learned."
+				description="Long videos are useful, but self-study gets messy when notes, timestamps, tabs, and memory all live apart."
 			>
 				<p>
 					Benkyou exists for serious self-directed study. Paste a supported
-					YouTube URL, generate a course outline, then work through the material
+					YouTube URL, create a study workspace, then work through the material
 					with chapter navigation, Markdown notes, saved timestamps, and
 					progress that can be resumed later.
 				</p>
@@ -34,12 +34,24 @@ function AboutPage() {
 				</p>
 			</PublicSection>
 
+			<PublicSection
+				title="Why not just the video platform?"
+				description="Video platforms supply the source material. Benkyou supplies the study system."
+			>
+				<p>
+					YouTube and other video platforms are great for finding and watching
+					content. Benkyou helps you organize the videos you choose to study,
+					attach notes and bookmarks to the material, and return without
+					rebuilding context.
+				</p>
+			</PublicSection>
+
 			<PublicSection title="Open-source ethos">
 				<p>
-					The MVP is built as a local-first learning tool. The core workflow
-					should remain useful before account creation, and the project is
-					structured so product logic, shared contracts, UI, and database code
-					stay in clear package boundaries.
+					The Open Beta is built as a local-first learning tool. The core
+					workflow should remain useful before account creation, and the project
+					is structured so product logic, shared contracts, UI, and database
+					code stay in clear package boundaries.
 				</p>
 				<PublicCallout>
 					Benkyou should be understandable to run, inspect, and adapt. Hosted
@@ -55,11 +67,11 @@ function AboutPage() {
 					/>
 					<PublicMetadataRow
 						label="Core loop"
-						value="Create a course, study chapters, write notes, save bookmarks, and resume later."
+						value="Create a study workspace, study chapters, write notes, save bookmarks, and resume later."
 					/>
 					<PublicMetadataRow
-						label="MVP scope"
-						value="Single-video courses from YouTube URLs with notes, bookmarks, progress, and basic account readiness."
+						label="Open Beta scope"
+						value="Single-video study workspaces from YouTube URLs with notes, bookmarks, progress, and basic account readiness."
 					/>
 				</dl>
 			</PublicSection>
@@ -195,7 +207,7 @@ function PrivacyPage() {
 		<PublicContentPage
 			eyebrow="Privacy"
 			title="Benkyou keeps the learning loop local-first and explicit."
-			description="This MVP privacy summary explains what the app stores, when external providers are involved, and how learner data is used."
+			description="This Open Beta privacy summary explains what the app stores, when external providers are involved, and how learner data is used."
 		>
 			<PublicSection title="What Benkyou stores">
 				<p>
@@ -232,10 +244,10 @@ function PrivacyPage() {
 
 			<PublicSection title="External video providers">
 				<p>
-					The MVP supports YouTube URLs. Benkyou may request video metadata,
-					thumbnails, descriptions, and transcript or caption data needed to
-					create the course workspace. Playback remains handled by the external
-					video provider.
+					The Open Beta currently supports YouTube URLs. Benkyou may request
+					video metadata, thumbnails, descriptions, and transcript or caption
+					data needed to create the study workspace. Playback remains handled by
+					the external video provider.
 				</p>
 			</PublicSection>
 		</PublicContentPage>
@@ -247,7 +259,7 @@ function TermsPage() {
 		<PublicContentPage
 			eyebrow="Terms"
 			title="Use Benkyou as a learning workspace and keep source material rights in mind."
-			description="These MVP terms are written in plain language so learners understand the boundaries of generated study materials."
+			description="These Open Beta terms are written in plain language so learners understand the boundaries of generated study materials."
 		>
 			<PublicSection title="Acceptable use">
 				<p>
@@ -280,10 +292,10 @@ function TermsPage() {
 
 			<PublicSection title="Service expectations">
 				<p>
-					The MVP is provided as an early learning tool. Availability, provider
-					integrations, transcript access, and AI generation can fail or change.
-					Recovery paths should keep your learning state understandable when a
-					failure happens.
+					The Open Beta is provided as an early learning tool. Availability,
+					provider integrations, transcript access, and AI generation can fail
+					or change. Recovery paths should keep your learning state
+					understandable when a failure happens.
 				</p>
 			</PublicSection>
 		</PublicContentPage>

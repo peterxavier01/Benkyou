@@ -8,20 +8,36 @@ import {
 	YoutubeTranscriptVideoUnavailableError,
 } from "youtube-transcript";
 
+const TRANSCRIPTAPI_BASE_URL = "https://transcriptapi.com/api/v2";
+const TRANSCRIPTAPI_MAX_RETRIES = 2;
+const TRANSCRIPTAPI_RETRY_AFTER_CAP_MS = 5_000;
+
 export interface TranscriptSegment {
 	text: string;
 	startSeconds: number;
 	durationSeconds: number;
 }
 
+export type YouTubeTranscriptProvider = "auto" | "local" | "transcriptapi";
+
 export type YouTubeTranscriptFailureCode =
+	| "configuration"
 	| "disabled"
 	| "empty"
 	| "language_unavailable"
 	| "not_available"
+	| "payment_required"
+	| "provider_unavailable"
 	| "too_many_requests"
 	| "unavailable"
 	| "unknown";
+
+export interface FetchYouTubeTranscriptOptions {
+	env?: NodeJS.ProcessEnv;
+	fetchImpl?: typeof fetch;
+	localTranscriptFetcher?: typeof fetchTranscript;
+	sleep?: (milliseconds: number) => Promise<void>;
+}
 
 export class YouTubeTranscriptFetchError extends Error {
 	readonly code: YouTubeTranscriptFailureCode;
@@ -54,11 +70,51 @@ export interface YouTubeMetadata {
 
 export async function fetchYouTubeTranscript(
 	providerVideoId: string,
+	options: FetchYouTubeTranscriptOptions = {},
 ): Promise<TranscriptSegment[]> {
+	const env = options.env ?? process.env;
+	const provider = resolveYouTubeTranscriptProvider(env);
+
+	if (provider === "transcriptapi") {
+		return fetchTranscriptFromTranscriptApi(providerVideoId, {
+			apiKey: env.TRANSCRIPTAPI_API_KEY,
+			fetchImpl: options.fetchImpl ?? fetch,
+			sleep: options.sleep ?? sleep,
+		});
+	}
+
+	return fetchTranscriptFromLocalPackage(
+		providerVideoId,
+		options.localTranscriptFetcher ?? fetchTranscript,
+	);
+}
+
+export function resolveYouTubeTranscriptProvider(
+	env: NodeJS.ProcessEnv = process.env,
+): Exclude<YouTubeTranscriptProvider, "auto"> {
+	const configuredProvider = normalizeYouTubeTranscriptProvider(
+		env.YOUTUBE_TRANSCRIPT_PROVIDER,
+	);
+
+	if (configuredProvider === "local") {
+		return "local";
+	}
+
+	if (configuredProvider === "transcriptapi") {
+		return "transcriptapi";
+	}
+
+	return env.TRANSCRIPTAPI_API_KEY ? "transcriptapi" : "local";
+}
+
+async function fetchTranscriptFromLocalPackage(
+	providerVideoId: string,
+	localTranscriptFetcher: typeof fetchTranscript,
+) {
 	let transcript: Awaited<ReturnType<typeof fetchTranscript>>;
 
 	try {
-		transcript = await fetchTranscript(providerVideoId);
+		transcript = await localTranscriptFetcher(providerVideoId);
 	} catch (error) {
 		throw new YouTubeTranscriptFetchError(
 			providerVideoId,
@@ -67,13 +123,135 @@ export async function fetchYouTubeTranscript(
 		);
 	}
 
+	const timeUnit = inferLocalTranscriptTimeUnit(transcript);
 	const segments = transcript
 		.map((segment) => ({
 			text: segment.text.trim(),
-			startSeconds: normalizeTranscriptSeconds(segment.offset),
-			durationSeconds: normalizeTranscriptSeconds(segment.duration),
+			startSeconds: normalizeTranscriptTime(segment.offset, timeUnit),
+			durationSeconds: normalizeTranscriptTime(segment.duration, timeUnit),
 		}))
 		.filter((segment) => segment.text.length > 0);
+
+	if (segments.length === 0) {
+		throw new YouTubeTranscriptFetchError(providerVideoId, "empty");
+	}
+
+	return segments;
+}
+
+async function fetchTranscriptFromTranscriptApi(
+	providerVideoId: string,
+	options: {
+		apiKey?: string;
+		fetchImpl: typeof fetch;
+		sleep: (milliseconds: number) => Promise<void>;
+	},
+) {
+	if (!options.apiKey) {
+		throw new YouTubeTranscriptFetchError(providerVideoId, "configuration");
+	}
+
+	let response: Response | null = null;
+
+	for (let attempt = 0; attempt <= TRANSCRIPTAPI_MAX_RETRIES; attempt += 1) {
+		try {
+			response = await options.fetchImpl(
+				getTranscriptApiUrl(providerVideoId),
+				{
+					headers: {
+						Authorization: `Bearer ${options.apiKey}`,
+					},
+				},
+			);
+		} catch (error) {
+			if (attempt >= TRANSCRIPTAPI_MAX_RETRIES) {
+				throw new YouTubeTranscriptFetchError(
+					providerVideoId,
+					"provider_unavailable",
+					error,
+				);
+			}
+
+			await options.sleep(getTranscriptApiBackoffMs(attempt));
+			continue;
+		}
+
+		if (response.ok) {
+			return parseTranscriptApiResponse(providerVideoId, response);
+		}
+
+		if (
+			isTranscriptApiRetryableStatus(response.status) &&
+			attempt < TRANSCRIPTAPI_MAX_RETRIES
+		) {
+			await options.sleep(getTranscriptApiRetryDelayMs(response, attempt));
+			continue;
+		}
+
+		throw new YouTubeTranscriptFetchError(
+			providerVideoId,
+			getTranscriptApiFailureCode(response.status),
+		);
+	}
+
+	throw new YouTubeTranscriptFetchError(
+		providerVideoId,
+		getTranscriptApiFailureCode(response?.status ?? 503),
+	);
+}
+
+async function parseTranscriptApiResponse(
+	providerVideoId: string,
+	response: Response,
+) {
+	let data: unknown;
+
+	try {
+		data = await response.json();
+	} catch (error) {
+		throw new YouTubeTranscriptFetchError(
+			providerVideoId,
+			"provider_unavailable",
+			error,
+		);
+	}
+
+	const record = getRecord(data);
+	const transcript = record?.transcript;
+
+	if (!Array.isArray(transcript)) {
+		throw new YouTubeTranscriptFetchError(
+			providerVideoId,
+			"provider_unavailable",
+		);
+	}
+
+	const segments: TranscriptSegment[] = [];
+
+	for (const rawSegment of transcript) {
+		const segment = getRecord(rawSegment);
+		const text = typeof segment?.text === "string" ? segment.text.trim() : "";
+
+		if (!text) {
+			continue;
+		}
+
+		const start = segment?.start;
+		const duration = segment?.duration;
+
+		if (typeof start !== "number" || typeof duration !== "number") {
+			throw new YouTubeTranscriptFetchError(
+				providerVideoId,
+				"provider_unavailable",
+			);
+		}
+
+		segments.push({
+			text,
+			startSeconds: normalizeTranscriptTime(start, "seconds"),
+			durationSeconds: normalizeTranscriptTime(duration, "seconds"),
+		});
+	}
 
 	if (segments.length === 0) {
 		throw new YouTubeTranscriptFetchError(providerVideoId, "empty");
@@ -308,10 +486,107 @@ export function parseYouTubeDuration(duration: string): number | null {
 	);
 }
 
-function normalizeTranscriptSeconds(value: number) {
-	const seconds = value > 1000 ? value / 1000 : value;
+type TranscriptTimeUnit = "seconds" | "milliseconds";
 
+function inferLocalTranscriptTimeUnit(
+	transcript: Awaited<ReturnType<typeof fetchTranscript>>,
+): TranscriptTimeUnit {
+	return transcript.some((segment) => segment.duration > 100)
+		? "milliseconds"
+		: "seconds";
+}
+
+function normalizeTranscriptTime(value: number, unit: TranscriptTimeUnit) {
+	const seconds = unit === "milliseconds" ? value / 1000 : value;
 	return Math.max(0, Math.round(seconds));
+}
+
+function normalizeYouTubeTranscriptProvider(
+	value: string | undefined,
+): YouTubeTranscriptProvider {
+	const normalized = value?.trim().toLowerCase();
+
+	if (normalized === "local" || normalized === "transcriptapi") {
+		return normalized;
+	}
+
+	return "auto";
+}
+
+function getTranscriptApiUrl(providerVideoId: string) {
+	const url = new URL(`${TRANSCRIPTAPI_BASE_URL}/youtube/transcript`);
+
+	url.searchParams.set("video_url", providerVideoId);
+	url.searchParams.set("format", "json");
+	url.searchParams.set("include_timestamp", "true");
+
+	return url;
+}
+
+function isTranscriptApiRetryableStatus(status: number) {
+	return status === 408 || status === 429 || status === 503;
+}
+
+function getTranscriptApiFailureCode(
+	status: number,
+): YouTubeTranscriptFailureCode {
+	switch (status) {
+		case 401:
+			return "configuration";
+		case 402:
+			return "payment_required";
+		case 404:
+			return "not_available";
+		case 429:
+			return "too_many_requests";
+		case 408:
+		case 503:
+			return "provider_unavailable";
+		default:
+			return "unknown";
+	}
+}
+
+function getTranscriptApiRetryDelayMs(response: Response, attempt: number) {
+	if (response.status === 429) {
+		return Math.min(
+			parseRetryAfterMs(response.headers.get("Retry-After")) ??
+				getTranscriptApiBackoffMs(attempt),
+			TRANSCRIPTAPI_RETRY_AFTER_CAP_MS,
+		);
+	}
+
+	return getTranscriptApiBackoffMs(attempt);
+}
+
+function getTranscriptApiBackoffMs(attempt: number) {
+	return (attempt + 1) * 1_000;
+}
+
+function parseRetryAfterMs(value: string | null) {
+	if (!value) {
+		return null;
+	}
+
+	const retryAfterSeconds = Number.parseFloat(value);
+
+	if (Number.isFinite(retryAfterSeconds) && retryAfterSeconds >= 0) {
+		return retryAfterSeconds * 1_000;
+	}
+
+	const retryAfterDate = Date.parse(value);
+
+	if (Number.isFinite(retryAfterDate)) {
+		return Math.max(0, retryAfterDate - Date.now());
+	}
+
+	return null;
+}
+
+function sleep(milliseconds: number) {
+	return new Promise<void>((resolve) => {
+		setTimeout(resolve, milliseconds);
+	});
 }
 
 function getYouTubeTranscriptFailureCode(
@@ -345,8 +620,14 @@ function getYouTubeTranscriptFailureMessage(
 	code: YouTubeTranscriptFailureCode,
 ) {
 	switch (code) {
+		case "configuration":
+			return `YouTube transcript provider is not configured for ${providerVideoId}.`;
 		case "too_many_requests":
 			return `YouTube transcript request was throttled for ${providerVideoId}.`;
+		case "payment_required":
+			return `YouTube transcript provider requires payment for ${providerVideoId}.`;
+		case "provider_unavailable":
+			return `YouTube transcript provider is unavailable for ${providerVideoId}.`;
 		case "unavailable":
 			return `YouTube video is unavailable for transcript fetch ${providerVideoId}.`;
 		case "disabled":
@@ -360,6 +641,12 @@ function getYouTubeTranscriptFailureMessage(
 		case "unknown":
 			return `YouTube transcript fetch failed for ${providerVideoId}.`;
 	}
+}
+
+function getRecord(value: unknown) {
+	return value && typeof value === "object" && !Array.isArray(value)
+		? (value as Record<string, unknown>)
+		: null;
 }
 
 function findNearestSegmentIndex(

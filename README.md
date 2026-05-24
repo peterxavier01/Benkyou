@@ -2,11 +2,12 @@
 
 ![Benkyou banner](./apps/web/public/banner.png)
 
-Benkyou turns video into a structured course: chapters, notes, bookmarks,
-progress, and resume state.
+Benkyou turns long videos into focused study workspaces: chapters, notes,
+bookmarks, progress, and resume state.
 
-The MVP is a local-first learning workspace. The first screen is the app itself:
-paste a YouTube URL, generate or open a sample course, and start learning.
+The Open Beta is a local-first learning workspace. The first screen is the app
+itself: paste a YouTube URL, create or open a sample study workspace, and start
+learning.
 
 ## Workspace
 
@@ -114,7 +115,7 @@ curl http://localhost:3000/api/health
 
 See [AGENTS.md](./AGENTS.md) for implementation rules and
 [docs/mvp-implementation-checklist.md](./docs/mvp-implementation-checklist.md)
-for the MVP execution plan.
+for the early execution plan.
 
 ## License
 

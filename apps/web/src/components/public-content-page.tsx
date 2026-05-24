@@ -1,4 +1,4 @@
-import { CORE_PROMISE, PRODUCT_NAME } from "@benkyou/core";
+import { PRODUCT_NAME } from "@benkyou/core";
 import { Button, ContentPanel, cn, HugeIcon, StatusBadge } from "@benkyou/ui";
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
@@ -37,7 +37,7 @@ function PublicContentPage({
 					<div className="hidden items-center gap-3 sm:flex">
 						<PublicTrustLinks />
 						<Button asChild size="sm">
-							<Link to="/">{CORE_PROMISE}</Link>
+							<Link to="/">Start studying</Link>
 						</Button>
 					</div>
 				}
@@ -59,7 +59,7 @@ function PublicContentPage({
 					</div>
 					<div className="flex flex-wrap gap-2">
 						<Button asChild>
-							<Link to="/">Create course</Link>
+							<Link to="/">Start studying</Link>
 						</Button>
 						<Button asChild variant="outline">
 							<Link to="/courses" search={{ q: "", filter: "all" }}>

@@ -13,14 +13,14 @@ save important timestamps, and resume without rebuilding context.
 
 ## Product Purpose
 
-Benkyou turns a video into a structured course: chapters, notes, bookmarks,
-progress, and resume state.
+Benkyou turns long videos into focused study workspaces: chapters, notes,
+bookmarks, progress, and resume state.
 
-The MVP proves a focused learning loop: paste a supported YouTube URL, generate
-or open a sample course, study through chapter navigation, write Markdown notes,
-save bookmarks, and return later with progress intact. The product is
-local-first so the learning loop remains useful before account creation, while
-hosted sync can layer on later.
+The Open Beta proves a focused learning loop: paste a supported YouTube URL,
+create or open a sample study workspace, study through chapter navigation, write
+Markdown notes, save bookmarks, and return later with progress intact. The
+product is local-first so the learning loop remains useful before account
+creation, while hosted sync can layer on later.
 
 Success looks like a learner moving from an unstructured video to a navigable,
 recoverable study workspace in minutes, with every interaction supporting the
@@ -29,9 +29,10 @@ next study action.
 ## Non-Goals
 
 Benkyou is not a general video hosting platform, LMS, social learning network,
-or entertainment discovery app. The MVP should avoid broad course marketplaces,
-instructor tooling, cohort management, public profiles, social feeds, and
-content discovery features unless they directly support the focused study loop.
+or entertainment discovery app. The Open Beta should avoid broad course
+marketplaces, instructor tooling, cohort management, public profiles, social
+feeds, and content discovery features unless they directly support the focused
+study loop.
 
 ## Self-Hosted Product Boundary
 

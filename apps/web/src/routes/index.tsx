@@ -6,9 +6,9 @@ export const Route = createFileRoute("/")({
 	head: () =>
 		buildSeoHead({
 			path: "/",
-			title: "Benkyou | Turn a video into a structured course",
+			title: "Benkyou | Turn long videos into focused study workspaces",
 			description:
-				"Paste a YouTube URL and study with generated chapters, Markdown notes, saved timestamps, and progress you can resume later.",
+				"Study tutorials, lectures, talks, and walkthroughs with chapters, notes, bookmarks, and progress in one recoverable workspace.",
 		}),
 	component: HomeScreen,
 });

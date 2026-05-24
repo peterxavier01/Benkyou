@@ -10,7 +10,7 @@ export const Route = createFileRoute("/sign-in")({
 	head: () =>
 		buildNoIndexHead(
 			"Sign in | Benkyou",
-			"Sign in to resume saved courses, notes, bookmarks, and learning preferences.",
+			"Sign in to resume saved study workspaces, notes, bookmarks, and learning preferences.",
 		),
 	component: SignInPage,
 });
