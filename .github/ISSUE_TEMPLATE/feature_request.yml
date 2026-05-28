@@ -1,0 +1,67 @@
+name: Feature request
+description: Suggest a roadmap-aligned improvement for Benkyou.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Benkyou is roadmap-led. Major features, new providers, auth changes, database changes, AI pipeline changes, public API changes, and redesigns need discussion before implementation.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What learner or self-hoster problem would this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the smallest useful version of the feature.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Project area
+      options:
+        - Course creation
+        - Chapter generation
+        - Player and progress
+        - Notes and bookmarks
+        - Export
+        - Accessibility
+        - Self-hosting and Docker
+        - Documentation
+        - Tests and reliability
+        - Other
+    validations:
+      required: true
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope check
+      options:
+        - label: This improves the self-hostable Benkyou learning workspace.
+          required: true
+        - label: This is not hosted-only business operations, billing, private infrastructure, internal analytics, or admin tooling.
+          required: true
+        - label: I understand maintainers may close requests outside the current product direction.
+          required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: What simpler or narrower options did you consider?
+  - type: dropdown
+    id: contribution
+    attributes:
+      label: Are you willing to open a pull request?
+      options:
+        - "Yes"
+        - "No"
+        - "Maybe, with guidance"
+    validations:
+      required: true

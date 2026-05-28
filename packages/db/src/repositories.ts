@@ -1398,7 +1398,7 @@ export async function getSampleCourse(): Promise<CourseDTO | null> {
 		.where(
 			and(
 				eq(videos.provider, "youtube"),
-				eq(videos.providerVideoId, "benkyou-sample-course"),
+				eq(videos.providerVideoId, "M7lc1UVf-VE"),
 				isNull(courses.ownerId),
 				isNull(courses.deletedAt),
 			),

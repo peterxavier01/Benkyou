@@ -117,12 +117,15 @@ function NewCourseForm() {
 				</form.Field>
 			</form>
 
-			<div className="mt-4">
+			<div className="mt-3 flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:justify-between">
+				<p className="text-muted-foreground">
+					No link handy? Open the sample workspace first.
+				</p>
 				<Button
 					type="button"
-					variant="ghost"
+					variant="outline"
 					size="sm"
-					className="h-7 justify-start px-4 text-primary hover:bg-transparent hover:text-primary/80"
+					className="justify-start sm:justify-center"
 					disabled={openingSample}
 					onClick={async () => {
 						setFormError(null);

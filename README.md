@@ -22,7 +22,6 @@ packages/
   ui/           Reusable React UI components
 
 docs/           Public product and implementation docs
-core-docs/      Private/internal planning docs
 ```
 
 ## Requirements
@@ -75,6 +74,22 @@ pnpm build
 ```
 
 Package-specific checks can be run with `pnpm --filter <package> <script>`.
+
+## Contributing
+
+Benkyou welcomes roadmap-aligned contributions to the self-hostable learning
+workspace.
+
+- Read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening issues or pull
+  requests.
+- Follow the [Code of Conduct](./CODE_OF_CONDUCT.md).
+- Use [SUPPORT.md](./SUPPORT.md) for questions, bugs, and support channels.
+- Report vulnerabilities privately using [SECURITY.md](./SECURITY.md).
+- See [ROADMAP.md](./ROADMAP.md) for the public product direction.
+
+Contributions should improve the self-hostable Benkyou learning workspace.
+Hosted-only business operations, billing, private infrastructure, internal
+analytics, and admin tooling are outside the scope of this repository.
 
 ## Self-hosting
 

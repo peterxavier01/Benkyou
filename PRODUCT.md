@@ -44,9 +44,6 @@ Keep billing, hosted quotas, internal operations, hosted telemetry, managed
 scaling, and SaaS growth flows out of the core product unless they have a
 self-hosted equivalent.
 
-See [core-docs/open-core-boundary.md](./core-docs/open-core-boundary.md) for the
-working boundary rules.
-
 ## Brand Personality
 
 Expert, organized, focused.

@@ -1,0 +1,62 @@
+name: Bug report
+description: Report a reproducible problem in Benkyou.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Please include enough detail for maintainers to reproduce it.
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: List the exact steps, commands, routes, or inputs that trigger the bug.
+      placeholder: |
+        1. Go to ...
+        2. Run ...
+        3. Click ...
+        4. See ...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: Paste relevant logs, stack traces, screenshots, or screen recordings.
+      render: shell
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and OS
+      placeholder: Chrome 126 on Windows 11
+  - type: input
+    id: runtime
+    attributes:
+      label: Node.js and pnpm versions
+      placeholder: Node 22.15.0, pnpm 10.33.4
+  - type: dropdown
+    id: contribution
+    attributes:
+      label: Are you willing to open a pull request?
+      options:
+        - "Yes"
+        - "No"
+        - "Maybe, with guidance"
+    validations:
+      required: true
