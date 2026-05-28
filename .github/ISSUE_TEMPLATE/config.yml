@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and ideas
+    url: https://github.com/peterxavier01/Benkyou/discussions
+    about: Use GitHub Discussions for setup help, product ideas, and broad roadmap discussion.
+  - name: Security report
+    url: https://github.com/peterxavier01/Benkyou/security/policy
+    about: Please report vulnerabilities privately. Do not open public security issues.
