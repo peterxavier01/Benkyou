@@ -20,6 +20,7 @@ interface YouTubeNamespace {
 		},
 	) => YouTubePlayerInstance;
 	PlayerState: {
+		PLAYING: number;
 		PAUSED: number;
 		ENDED: number;
 	};
@@ -29,7 +30,10 @@ interface YouTubePlayerInstance {
 	destroy: () => void;
 	getCurrentTime: () => number;
 	getDuration: () => number;
+	pauseVideo: () => void;
+	playVideo: () => void;
 	seekTo: (seconds: number, allowSeekAhead: boolean) => void;
+	setPlaybackRate?: (suggestedRate: number) => void;
 }
 
 interface YouTubePlayerEvent {
@@ -45,7 +49,9 @@ interface YouTubePlayerProps {
 	ref?: Ref<YouTubePlayerHandle>;
 	providerVideoId: string;
 	initialSeconds: number;
+	playbackRate?: number;
 	seekToSeconds: number | null;
+	onPlayingChange?: (playing: boolean) => void;
 	onReady: (durationSeconds: number) => void;
 	onTimeUpdate: (timeSeconds: number, durationSeconds: number) => void;
 	onPauseOrEnd: (timeSeconds: number, durationSeconds: number) => void;
@@ -58,7 +64,13 @@ interface YouTubePlaybackSnapshot {
 
 interface YouTubePlayerHandle {
 	getPlaybackSnapshot: () => YouTubePlaybackSnapshot | null;
+	pause: () => void;
+	play: () => void;
+	seekTo: (seconds: number, options?: { play?: boolean }) => void;
 }
+
+const PLAYBACK_POLL_INTERVAL_MS = 1000;
+const SEEK_SETTLE_TOLERANCE_SECONDS = 1;
 
 let apiPromise: Promise<YouTubeNamespace> | null = null;
 
@@ -66,7 +78,9 @@ function YouTubePlayer({
 	ref,
 	providerVideoId,
 	initialSeconds,
+	playbackRate = 1,
 	seekToSeconds,
+	onPlayingChange,
 	onReady,
 	onTimeUpdate,
 	onPauseOrEnd,
@@ -74,7 +88,16 @@ function YouTubePlayer({
 	const containerRef = useRef<HTMLDivElement | null>(null);
 	const playerRef = useRef<YouTubePlayerInstance | null>(null);
 	const lastSeekRef = useRef<number | null>(null);
-	const callbacksRef = useRef({ onReady, onTimeUpdate, onPauseOrEnd });
+	const pendingSeekSecondsRef = useRef<number | null>(
+		Math.max(0, Math.floor(initialSeconds)),
+	);
+	const playbackRateRef = useRef(playbackRate);
+	const callbacksRef = useRef({
+		onReady,
+		onTimeUpdate,
+		onPauseOrEnd,
+		onPlayingChange,
+	});
 	const initialPlaybackRef = useRef({
 		providerVideoId,
 		seconds: initialSeconds,
@@ -82,15 +105,26 @@ function YouTubePlayer({
 	const validVideoId = isValidYouTubeVideoId(providerVideoId);
 
 	useEffect(() => {
-		callbacksRef.current = { onReady, onTimeUpdate, onPauseOrEnd };
-	}, [onReady, onTimeUpdate, onPauseOrEnd]);
+		callbacksRef.current = {
+			onReady,
+			onTimeUpdate,
+			onPauseOrEnd,
+			onPlayingChange,
+		};
+	}, [onReady, onTimeUpdate, onPauseOrEnd, onPlayingChange]);
+
+	useEffect(() => {
+		playbackRateRef.current = playbackRate;
+	}, [playbackRate]);
 
 	useEffect(() => {
 		if (initialPlaybackRef.current.providerVideoId !== providerVideoId) {
+			const safeInitialSeconds = Math.max(0, Math.floor(initialSeconds));
 			initialPlaybackRef.current = {
 				providerVideoId,
-				seconds: initialSeconds,
+				seconds: safeInitialSeconds,
 			};
+			pendingSeekSecondsRef.current = safeInitialSeconds;
 			lastSeekRef.current = null;
 		}
 	}, [initialSeconds, providerVideoId]);
@@ -105,6 +139,12 @@ function YouTubePlayer({
 				timeSeconds: safeTime(playerRef.current),
 				durationSeconds: safeDuration(playerRef.current),
 			};
+		},
+		pause: () => playerRef.current?.pauseVideo(),
+		play: () => playerRef.current?.playVideo(),
+		seekTo: (seconds: number, options: { play?: boolean } = {}) => {
+			seekPlayer(playerRef.current, seconds, options);
+			pendingSeekSecondsRef.current = Math.max(0, Math.floor(seconds));
 		},
 	}));
 
@@ -133,11 +173,13 @@ function YouTubePlayer({
 							rel: 0,
 							modestbranding: 1,
 							playsinline: 1,
+							controls: 0,
 							start: startSeconds,
 						},
 						events: {
 							onReady: (event) => {
 								const duration = safeDuration(event.target);
+								event.target.setPlaybackRate?.(playbackRateRef.current);
 								if (startSeconds > 0) {
 									event.target.seekTo(startSeconds, true);
 								}
@@ -145,10 +187,18 @@ function YouTubePlayer({
 							},
 							onStateChange: (event) => {
 								const duration = safeDuration(event.target);
-								if (
-									event.data === yt.PlayerState.PAUSED ||
-									event.data === yt.PlayerState.ENDED
-								) {
+								if (event.data === yt.PlayerState.PLAYING) {
+									callbacksRef.current.onPlayingChange?.(true);
+								}
+								if (event.data === yt.PlayerState.PAUSED) {
+									callbacksRef.current.onPlayingChange?.(false);
+									callbacksRef.current.onPauseOrEnd(
+										safeTime(event.target),
+										duration,
+									);
+								}
+								if (event.data === yt.PlayerState.ENDED) {
+									callbacksRef.current.onPlayingChange?.(false);
 									callbacksRef.current.onPauseOrEnd(
 										safeTime(event.target),
 										duration,
@@ -166,11 +216,20 @@ function YouTubePlayer({
 						return;
 					}
 
-					callbacksRef.current.onTimeUpdate(
-						safeTime(playerRef.current),
-						safeDuration(playerRef.current),
-					);
-				}, 1000);
+					const timeSeconds = safeTime(playerRef.current);
+					const durationSeconds = safeDuration(playerRef.current);
+					const pendingSeekSeconds = pendingSeekSecondsRef.current;
+
+					if (pendingSeekSeconds !== null) {
+						if (!hasReachedSeekTarget(timeSeconds, pendingSeekSeconds)) {
+							return;
+						}
+
+						pendingSeekSecondsRef.current = null;
+					}
+
+					callbacksRef.current.onTimeUpdate(timeSeconds, durationSeconds);
+				}, PLAYBACK_POLL_INTERVAL_MS);
 			}
 		}
 
@@ -187,12 +246,17 @@ function YouTubePlayer({
 	}, [providerVideoId, validVideoId]);
 
 	useEffect(() => {
+		playerRef.current?.setPlaybackRate?.(playbackRate);
+	}, [playbackRate]);
+
+	useEffect(() => {
 		if (seekToSeconds === null || lastSeekRef.current === seekToSeconds) {
 			return;
 		}
 
 		lastSeekRef.current = seekToSeconds;
-		playerRef.current?.seekTo(seekToSeconds, true);
+		pendingSeekSecondsRef.current = Math.max(0, Math.floor(seekToSeconds));
+		seekPlayer(playerRef.current, seekToSeconds);
 	}, [seekToSeconds]);
 
 	if (!validVideoId) {
@@ -264,6 +328,26 @@ function safeDuration(player: YouTubePlayerInstance) {
 		return Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
 	} catch {
 		return 0;
+	}
+}
+
+function hasReachedSeekTarget(timeSeconds: number, targetSeconds: number) {
+	return Math.abs(timeSeconds - targetSeconds) <= SEEK_SETTLE_TOLERANCE_SECONDS;
+}
+
+function seekPlayer(
+	player: YouTubePlayerInstance | null,
+	seconds: number,
+	options: { play?: boolean } = {},
+) {
+	if (!player) {
+		return;
+	}
+
+	player.seekTo(Math.max(0, Math.floor(seconds)), true);
+
+	if (options.play) {
+		window.setTimeout(() => player.playVideo(), 0);
 	}
 }
 

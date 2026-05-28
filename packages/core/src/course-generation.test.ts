@@ -14,13 +14,13 @@ import {
 	educationalSuitabilityResultV1Schema,
 	GENERATION_JOB_TIMEOUT_MS,
 	getChapterGenerationPolicy,
-	isSampledTranscriptCacheIncomplete,
 	isEducationalSuitabilityAllowed,
+	isSampledTranscriptCacheIncomplete,
 	normalizeGeneratedChapterRanges,
 	parseYouTubeDescriptionChapters,
 	processGenerationJobRequestV1Schema,
-	retryGenerationJobRequestV1Schema,
 	resolveTranscriptBackedDurationSeconds,
+	retryGenerationJobRequestV1Schema,
 	toGenerationJobDetail,
 	validateGeneratedChapterRanges,
 } from "./course-generation";
@@ -274,7 +274,10 @@ test("transcript-backed duration replaces clearly compressed stored duration", (
 	assert.equal(resolveTranscriptBackedDurationSeconds(null, 9_079), 9_079);
 	assert.equal(resolveTranscriptBackedDurationSeconds(46, 9_079), 9_079);
 	assert.equal(resolveTranscriptBackedDurationSeconds(8_900, 9_079), 8_900);
-	assert.equal(resolveTranscriptBackedDurationSeconds(12 * 60 * 60, 9_079), 43_200);
+	assert.equal(
+		resolveTranscriptBackedDurationSeconds(12 * 60 * 60, 9_079),
+		43_200,
+	);
 	assert.equal(resolveTranscriptBackedDurationSeconds(46, null), 46);
 });
 
@@ -356,7 +359,12 @@ test("generated chapter normalization keeps unknown final duration open", () => 
 	assert.deepEqual(
 		normalizeGeneratedChapterRanges(
 			[
-				{ title: "Intro", summary: "Starts.", startSeconds: 12, endSeconds: 20 },
+				{
+					title: "Intro",
+					summary: "Starts.",
+					startSeconds: 12,
+					endSeconds: 20,
+				},
 				{
 					title: "Next",
 					summary: "Continues.",
@@ -368,7 +376,12 @@ test("generated chapter normalization keeps unknown final duration open", () => 
 		),
 		[
 			{ title: "Intro", summary: "Starts.", startSeconds: 0, endSeconds: 40 },
-			{ title: "Next", summary: "Continues.", startSeconds: 40, endSeconds: null },
+			{
+				title: "Next",
+				summary: "Continues.",
+				startSeconds: 40,
+				endSeconds: null,
+			},
 		],
 	);
 });

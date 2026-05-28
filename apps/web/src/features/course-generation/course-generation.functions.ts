@@ -5,8 +5,8 @@ import {
 	GENERATION_JOB_TIMEOUT_MS,
 	getChapterGenerationPolicy,
 	getParseVideoUrlErrorMessage,
-	isSampledTranscriptCacheIncomplete,
 	isEducationalSuitabilityAllowed,
+	isSampledTranscriptCacheIncomplete,
 	parseVideoUrl,
 	parseYouTubeDescriptionChapters,
 	processGenerationJobRequestV1Schema,
@@ -383,7 +383,9 @@ function shouldRefetchCachedTranscript(input: {
 		return true;
 	}
 
-	const segmentCount = estimateCachedTranscriptSegmentCount(input.transcriptText);
+	const segmentCount = estimateCachedTranscriptSegmentCount(
+		input.transcriptText,
+	);
 
 	if (
 		isDenseShortTranscript(input.durationSeconds, segmentCount) ||
@@ -403,7 +405,10 @@ function isSuspiciouslyShortTranscriptDuration(
 	durationSeconds: number,
 	transcriptText: string | null,
 ) {
-	if (durationSeconds > 0 && durationSeconds < SUSPICIOUS_SHORT_DURATION_SECONDS) {
+	if (
+		durationSeconds > 0 &&
+		durationSeconds < SUSPICIOUS_SHORT_DURATION_SECONDS
+	) {
 		return true;
 	}
 

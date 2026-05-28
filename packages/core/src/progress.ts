@@ -8,8 +8,15 @@ export function clampProgressPercent(value: number) {
 	return Math.min(100, Math.max(0, value));
 }
 
-export function calculateProgressPercent(watchedSeconds: number, durationSeconds: number) {
-	if (!Number.isFinite(watchedSeconds) || !Number.isFinite(durationSeconds) || durationSeconds <= 0) {
+export function calculateProgressPercent(
+	watchedSeconds: number,
+	durationSeconds: number,
+) {
+	if (
+		!Number.isFinite(watchedSeconds) ||
+		!Number.isFinite(durationSeconds) ||
+		durationSeconds <= 0
+	) {
 		return 0;
 	}
 
@@ -25,5 +32,7 @@ export function isChapterCompleteByWatchTime(
 		return false;
 	}
 
-	return calculateProgressPercent(watchedSeconds, durationSeconds) >= threshold * 100;
+	return (
+		calculateProgressPercent(watchedSeconds, durationSeconds) >= threshold * 100
+	);
 }

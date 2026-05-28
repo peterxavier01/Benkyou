@@ -2,7 +2,11 @@ import {
 	calculateProgressPercent,
 	DEFAULT_CHAPTER_COMPLETION_THRESHOLD,
 	DEFAULT_PROGRESS_SAVE_INTERVAL_MS,
+	formatCompactDuration,
 	formatTimestamp,
+	getChapterDurationSeconds,
+	getChapterEndSeconds,
+	getDefaultLearningPreferences,
 	isChapterCompleteByWatchTime,
 } from "@benkyou/core";
 import type {
@@ -28,6 +32,7 @@ import {
 	PlayerVideoFrame,
 	PlayerWorkspace,
 	Progress,
+	Slider,
 	StatusBadge,
 	Tabs,
 	TabsContent,
@@ -42,6 +47,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
+import type { PointerEvent as ReactPointerEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	useWorkspaceNavigationFlush,
@@ -53,6 +59,7 @@ import {
 	createBookmark,
 	deleteBookmark,
 	getCoursePlayerData,
+	getLearningPreferences,
 	updateBookmark,
 	upsertChapterProgress,
 	upsertPlaybackProgress,
@@ -78,6 +85,7 @@ function CoursePlayerScreen({
 	const queryClient = useQueryClient();
 	const { registerNavigationFlush } = useWorkspaceNavigationFlush();
 	const getPlayerData = useServerFn(getCoursePlayerData);
+	const getPreferences = useServerFn(getLearningPreferences);
 	const savePlaybackProgress = useServerFn(upsertPlaybackProgress);
 	const saveChapterProgress = useServerFn(upsertChapterProgress);
 	const createBookmarkFn = useServerFn(createBookmark);
@@ -105,17 +113,19 @@ function CoursePlayerScreen({
 				: null,
 		[initialBookmarkId, startData.bookmarks],
 	);
-	const initialSelectedChapterId = useMemo(
-		() => resolveInitialChapterId(startData, initialChapterId, initialBookmark),
+	const initialCurrentSeconds = useMemo(
+		() => resolveInitialSeconds(startData, initialChapterId, initialBookmark),
 		[startData, initialBookmark, initialChapterId],
+	);
+	const initialSelectedChapterId = useMemo(
+		() => resolveInitialChapterId(startData, initialCurrentSeconds),
+		[startData, initialCurrentSeconds],
 	);
 	const [selectedChapterId, setSelectedChapterId] = useState(
 		initialSelectedChapterId,
 	);
 	const [seekToSeconds, setSeekToSeconds] = useState<number | null>(null);
-	const [currentSeconds, setCurrentSeconds] = useState(
-		initialBookmark?.timestampSeconds ?? startData.progress?.resumeSeconds ?? 0,
-	);
+	const [currentSeconds, setCurrentSeconds] = useState(initialCurrentSeconds);
 	const [durationSeconds, setDurationSeconds] = useState(
 		startData.video.durationSeconds ?? 0,
 	);
@@ -130,6 +140,7 @@ function CoursePlayerScreen({
 	const [editingBookmark, setEditingBookmark] = useState<BookmarkDTO | null>(
 		null,
 	);
+	const [playerPlaying, setPlayerPlaying] = useState(false);
 	const latestProgressRef = useRef({
 		currentSeconds,
 		durationSeconds,
@@ -139,6 +150,11 @@ function CoursePlayerScreen({
 	});
 	const dirtyChapterIdsRef = useRef(new Set<string>());
 	const youtubePlayerRef = useRef<YouTubePlayerHandle | null>(null);
+	const pendingSeekRef = useRef<{
+		chapterId: string;
+		targetSeconds: number;
+		direction: "backward" | "exact" | "forward";
+	} | null>(null);
 
 	const playerQuery = useQuery({
 		queryKey: playerQueryKey,
@@ -148,11 +164,38 @@ function CoursePlayerScreen({
 		},
 		initialData: startData,
 	});
+	const preferencesQuery = useQuery({
+		queryKey: ["learning-preferences"],
+		queryFn: () => getPreferences(),
+	});
+	const fallbackLearningPreferences = useMemo(
+		() => getDefaultLearningPreferences(),
+		[],
+	);
 	const data = playerQuery.data;
+	const learningPreferences =
+		preferencesQuery.data?.preferences ?? fallbackLearningPreferences;
 	const selectedChapter =
 		data.chapters.find((chapter) => chapter.id === selectedChapterId) ??
 		data.chapters[0] ??
 		null;
+	const selectedChapterEndSeconds = selectedChapter
+		? getChapterEndSeconds(
+				selectedChapter,
+				data.chapters,
+				durationSeconds || data.video.durationSeconds,
+			)
+		: null;
+	const selectedChapterCurrentSeconds = selectedChapter
+		? Math.min(
+				selectedChapterEndSeconds ?? currentSeconds,
+				Math.max(selectedChapter.startSeconds, currentSeconds),
+			)
+		: currentSeconds;
+	const courseProgressPercent = calculateProgressPercent(
+		currentSeconds,
+		durationSeconds || data.video.durationSeconds || 0,
+	);
 	const selectedNote = data.notes.find(
 		(note) => note.chapterId === selectedChapter?.id,
 	);
@@ -368,8 +411,13 @@ function CoursePlayerScreen({
 	const applyPlaybackSnapshot = useCallback(
 		(timeSeconds: number, playerDurationSeconds: number) => {
 			const duration = playerDurationSeconds || data.video.durationSeconds || 0;
-			const activeChapter = findChapterAtTime(data.chapters, timeSeconds);
 			const latest = latestProgressRef.current;
+			const activeChapter = findChapterAtTime(
+				data.chapters,
+				timeSeconds,
+				duration,
+				latest.selectedChapterId,
+			);
 			let nextWatchedByChapter = latest.watchedByChapter;
 			let nextCompletedByChapter = latest.completedByChapter;
 
@@ -381,7 +429,7 @@ function CoursePlayerScreen({
 					setSelectedChapterId(activeChapter.id);
 				}
 
-				const chapterDuration = getChapterDuration(
+				const chapterDuration = getChapterDurationSeconds(
 					activeChapter,
 					data.chapters,
 					duration,
@@ -395,11 +443,13 @@ function CoursePlayerScreen({
 					latest.watchedByChapter[activeChapter.id] ?? 0,
 					watchedSecondsFloor,
 				);
-				const completed = isChapterCompleteByWatchTime(
-					watchedSeconds,
-					chapterDuration,
-					DEFAULT_CHAPTER_COMPLETION_THRESHOLD,
-				);
+				const completed =
+					!learningPreferences.manualCompletionOnly &&
+					isChapterCompleteByWatchTime(
+						watchedSeconds,
+						chapterDuration,
+						DEFAULT_CHAPTER_COMPLETION_THRESHOLD,
+					);
 
 				nextWatchedByChapter = {
 					...latest.watchedByChapter,
@@ -438,7 +488,11 @@ function CoursePlayerScreen({
 
 			return activeChapter;
 		},
-		[data.chapters, data.video.durationSeconds],
+		[
+			data.chapters,
+			data.video.durationSeconds,
+			learningPreferences.manualCompletionOnly,
+		],
 	);
 
 	const refreshLatestProgressFromPlayer = useCallback(() => {
@@ -448,12 +502,78 @@ function CoursePlayerScreen({
 			return;
 		}
 
+		const pendingSeek = pendingSeekRef.current;
+		if (pendingSeek) {
+			const reachedPendingTarget = hasReachedPendingSeek(
+				snapshot.timeSeconds,
+				pendingSeek,
+			);
+			if (!reachedPendingTarget) {
+				return;
+			}
+
+			pendingSeekRef.current = null;
+		}
+
 		applyPlaybackSnapshot(snapshot.timeSeconds, snapshot.durationSeconds);
 	}, [applyPlaybackSnapshot]);
 
-	const createProgressPayload =
-		useCallback((): UpsertPlaybackProgressRequestV1 => {
-			refreshLatestProgressFromPlayer();
+	const completeChapterAtBoundary = useCallback(
+		(
+			chapter: CourseChapterDTO,
+			timeSeconds: number,
+			playerDurationSeconds: number,
+		) => {
+			const chapterDuration = getChapterDurationSeconds(
+				chapter,
+				data.chapters,
+				playerDurationSeconds || data.video.durationSeconds,
+			);
+			const completed = !learningPreferences.manualCompletionOnly;
+			const nextWatchedByChapter = {
+				...latestProgressRef.current.watchedByChapter,
+				[chapter.id]: chapterDuration,
+			};
+			const nextCompletedByChapter = {
+				...latestProgressRef.current.completedByChapter,
+				...(completed ? { [chapter.id]: true } : {}),
+			};
+
+			setWatchedByChapter((current) => ({
+				...current,
+				[chapter.id]: Math.max(current[chapter.id] ?? 0, chapterDuration),
+			}));
+			if (completed) {
+				setCompletedByChapter((current) => ({
+					...current,
+					[chapter.id]: true,
+				}));
+			}
+			dirtyChapterIdsRef.current.add(chapter.id);
+			latestProgressRef.current = {
+				...latestProgressRef.current,
+				currentSeconds: timeSeconds,
+				durationSeconds:
+					playerDurationSeconds || data.video.durationSeconds || 0,
+				watchedByChapter: nextWatchedByChapter,
+				completedByChapter: nextCompletedByChapter,
+			};
+		},
+		[
+			data.chapters,
+			data.video.durationSeconds,
+			learningPreferences.manualCompletionOnly,
+		],
+	);
+
+	const createProgressPayload = useCallback(
+		(
+			options: { refreshFromPlayer?: boolean } = {},
+		): UpsertPlaybackProgressRequestV1 => {
+			const { refreshFromPlayer = true } = options;
+			if (refreshFromPlayer) {
+				refreshLatestProgressFromPlayer();
+			}
 			const latest = latestProgressRef.current;
 			const courseCompletion = calculateProgressPercent(
 				latest.currentSeconds,
@@ -471,13 +591,18 @@ function CoursePlayerScreen({
 					completed: latest.completedByChapter[chapterId] ?? false,
 				})),
 			};
-		}, [courseId, refreshLatestProgressFromPlayer]);
+		},
+		[courseId, refreshLatestProgressFromPlayer],
+	);
 
-	const persistProgress = useCallback(() => {
-		const payload = createProgressPayload();
-		applyProgressPayloadToCache(payload);
-		mutatePlaybackProgressRef.current(payload);
-	}, [applyProgressPayloadToCache, createProgressPayload]);
+	const persistProgress = useCallback(
+		(options?: { refreshFromPlayer?: boolean }) => {
+			const payload = createProgressPayload(options);
+			applyProgressPayloadToCache(payload);
+			mutatePlaybackProgressRef.current(payload);
+		},
+		[applyProgressPayloadToCache, createProgressPayload],
+	);
 
 	const persistProgressOnUnload = useCallback(() => {
 		const payload = createProgressPayload();
@@ -537,15 +662,37 @@ function CoursePlayerScreen({
 	}, [persistProgressOnUnload]);
 
 	const selectChapter = useCallback(
-		(chapter: CourseChapterDTO, seek = true) => {
-			persistProgress();
+		(
+			chapter: CourseChapterDTO,
+			options: { seek?: boolean; persistBeforeSelect?: boolean } = {},
+		) => {
+			const { seek = true, persistBeforeSelect = true } = options;
+			if (persistBeforeSelect) {
+				persistProgress();
+			}
+			const nextSeconds = chapter.startSeconds;
+			const seekDirection = getSeekDirection(
+				data.chapters,
+				latestProgressRef.current.selectedChapterId,
+				chapter.id,
+				latestProgressRef.current.currentSeconds,
+				nextSeconds,
+			);
 			setSelectedChapterId(chapter.id);
+			setCurrentSeconds(nextSeconds);
 			latestProgressRef.current = {
 				...latestProgressRef.current,
 				selectedChapterId: chapter.id,
+				currentSeconds: nextSeconds,
 			};
 			if (seek) {
-				setSeekToSeconds(chapter.startSeconds);
+				pendingSeekRef.current = {
+					chapterId: chapter.id,
+					targetSeconds: nextSeconds,
+					direction: seekDirection,
+				};
+				setSeekToSeconds(nextSeconds);
+				youtubePlayerRef.current?.seekTo(nextSeconds);
 			}
 			void navigate({
 				to: "/courses/$courseId",
@@ -554,7 +701,7 @@ function CoursePlayerScreen({
 				replace: true,
 			});
 		},
-		[courseId, navigate, persistProgress],
+		[courseId, data.chapters, navigate, persistProgress],
 	);
 
 	const jumpToBookmark = useCallback(
@@ -570,6 +717,17 @@ function CoursePlayerScreen({
 					...latestProgressRef.current,
 					selectedChapterId: chapter.id,
 					currentSeconds: bookmark.timestampSeconds,
+				};
+				pendingSeekRef.current = {
+					chapterId: chapter.id,
+					targetSeconds: bookmark.timestampSeconds,
+					direction: getSeekDirection(
+						data.chapters,
+						latestProgressRef.current.selectedChapterId,
+						chapter.id,
+						latestProgressRef.current.currentSeconds,
+						bookmark.timestampSeconds,
+					),
 				};
 				void navigate({
 					to: "/courses/$courseId",
@@ -590,6 +748,54 @@ function CoursePlayerScreen({
 
 	const handleTimeUpdate = useCallback(
 		(timeSeconds: number, playerDurationSeconds: number) => {
+			const pendingSeek = pendingSeekRef.current;
+			if (pendingSeek) {
+				const reachedPendingTarget = hasReachedPendingSeek(
+					timeSeconds,
+					pendingSeek,
+				);
+				if (!reachedPendingTarget) {
+					return;
+				}
+
+				pendingSeekRef.current = null;
+			}
+
+			const latest = latestProgressRef.current;
+			const previousChapter = latest.selectedChapterId
+				? data.chapters.find(
+						(chapter) => chapter.id === latest.selectedChapterId,
+					)
+				: null;
+			const previousChapterEndSeconds = previousChapter
+				? getChapterEndSeconds(
+						previousChapter,
+						data.chapters,
+						playerDurationSeconds || data.video.durationSeconds,
+					)
+				: null;
+			if (
+				playerPlaying &&
+				previousChapter &&
+				previousChapterEndSeconds !== null &&
+				timeSeconds >= previousChapterEndSeconds
+			) {
+				completeChapterAtBoundary(
+					previousChapter,
+					previousChapterEndSeconds,
+					playerDurationSeconds,
+				);
+
+				if (!learningPreferences.autoplayNextChapter) {
+					youtubePlayerRef.current?.pause();
+					youtubePlayerRef.current?.seekTo(previousChapterEndSeconds);
+					setCurrentSeconds(previousChapterEndSeconds);
+					setPlayerPlaying(false);
+					persistProgress({ refreshFromPlayer: false });
+					return;
+				}
+			}
+
 			const activeChapter = applyPlaybackSnapshot(
 				timeSeconds,
 				playerDurationSeconds,
@@ -597,15 +803,99 @@ function CoursePlayerScreen({
 
 			if (activeChapter && activeChapter.id !== selectedChapterId) {
 				setSelectedChapterId(activeChapter.id);
-				void navigate({
-					to: "/courses/$courseId",
-					params: { courseId },
-					search: { chapter: activeChapter.id, bookmark: undefined },
-					replace: true,
-				});
 			}
 		},
-		[applyPlaybackSnapshot, courseId, navigate, selectedChapterId],
+		[
+			applyPlaybackSnapshot,
+			completeChapterAtBoundary,
+			data.chapters,
+			data.video.durationSeconds,
+			learningPreferences.autoplayNextChapter,
+			persistProgress,
+			playerPlaying,
+			selectedChapterId,
+		],
+	);
+
+	const togglePlayback = useCallback(() => {
+		if (playerPlaying) {
+			youtubePlayerRef.current?.pause();
+			setPlayerPlaying(false);
+			return;
+		}
+
+		youtubePlayerRef.current?.play();
+		setPlayerPlaying(true);
+	}, [playerPlaying]);
+
+	const previewSelectedChapterSeek = useCallback(
+		(values: number[]) => {
+			if (!selectedChapter) {
+				return;
+			}
+
+			const absoluteSeconds = Math.floor(
+				values[0] ?? selectedChapter.startSeconds,
+			);
+			setCurrentSeconds(absoluteSeconds);
+		},
+		[selectedChapter],
+	);
+
+	const seekWithinSelectedChapter = useCallback(
+		(values: number[]) => {
+			if (!selectedChapter) {
+				return;
+			}
+
+			const absoluteSeconds = Math.floor(
+				values[0] ?? selectedChapter.startSeconds,
+			);
+			pendingSeekRef.current = {
+				chapterId: selectedChapter.id,
+				targetSeconds: absoluteSeconds,
+				direction: getSeekDirection(
+					data.chapters,
+					latestProgressRef.current.selectedChapterId,
+					selectedChapter.id,
+					latestProgressRef.current.currentSeconds,
+					absoluteSeconds,
+				),
+			};
+			setCurrentSeconds(absoluteSeconds);
+			latestProgressRef.current = {
+				...latestProgressRef.current,
+				currentSeconds: absoluteSeconds,
+				selectedChapterId: selectedChapter.id,
+			};
+			setSeekToSeconds(absoluteSeconds);
+			youtubePlayerRef.current?.seekTo(absoluteSeconds);
+		},
+		[data.chapters, selectedChapter],
+	);
+
+	const seekSelectedChapterFromPointer = useCallback(
+		(event: ReactPointerEvent<HTMLDivElement>) => {
+			if (selectedChapterEndSeconds === null) {
+				return;
+			}
+
+			const rect = event.currentTarget.getBoundingClientRect();
+			const ratio =
+				rect.width > 0
+					? Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width))
+					: 0;
+			const absoluteSeconds =
+				(selectedChapter?.startSeconds ?? 0) +
+				ratio *
+					(selectedChapterEndSeconds - (selectedChapter?.startSeconds ?? 0));
+			seekWithinSelectedChapter([absoluteSeconds]);
+		},
+		[
+			seekWithinSelectedChapter,
+			selectedChapter?.startSeconds,
+			selectedChapterEndSeconds,
+		],
 	);
 
 	const toggleChapterComplete = (chapter: CourseChapterDTO) => {
@@ -704,10 +994,11 @@ function CoursePlayerScreen({
 										{data.chapters.length} chapters
 									</span>
 									<span className="text-muted-foreground text-xs">
-										{Math.round(
-											calculateProgressPercent(currentSeconds, durationSeconds),
-										)}
-										% complete
+										{selectedChapterEndSeconds === null
+											? "Chapter duration unknown"
+											: `${formatTimestamp(
+													selectedChapterCurrentSeconds,
+												)} / ${formatTimestamp(selectedChapterEndSeconds)}`}
 									</span>
 								</div>
 								<h1 className="mt-2 truncate font-semibold text-xl tracking-normal">
@@ -716,6 +1007,7 @@ function CoursePlayerScreen({
 								<p className="mt-1 text-muted-foreground text-sm">
 									{data.video.channelTitle ?? "YouTube"} -{" "}
 									{formatTimestamp(currentSeconds)}
+									{selectedChapter ? ` in ${selectedChapter.title}` : ""}
 								</p>
 							</div>
 							<MobileChapterDrawer
@@ -743,12 +1035,7 @@ function CoursePlayerScreen({
 							</span>
 						</div>
 						<div className="mt-3">
-							<Progress
-								value={calculateProgressPercent(
-									currentSeconds,
-									durationSeconds,
-								)}
-							/>
+							<Progress value={courseProgressPercent} />
 						</div>
 					</ContentPanel>
 
@@ -758,6 +1045,7 @@ function CoursePlayerScreen({
 								ref={youtubePlayerRef}
 								providerVideoId={data.video.providerVideoId}
 								initialSeconds={currentSeconds}
+								playbackRate={learningPreferences.playbackSpeed}
 								seekToSeconds={seekToSeconds}
 								onReady={(duration) => {
 									if (duration > 0) {
@@ -765,12 +1053,50 @@ function CoursePlayerScreen({
 									}
 								}}
 								onTimeUpdate={handleTimeUpdate}
+								onPlayingChange={setPlayerPlaying}
 								onPauseOrEnd={(time, duration) => {
 									handleTimeUpdate(time, duration);
 									persistProgress();
 								}}
 							/>
 						</PlayerVideoFrame>
+						<ContentPanel className="p-3">
+							<div className="grid gap-3 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center">
+								<Button
+									type="button"
+									size="icon-sm"
+									variant="outline"
+									onClick={togglePlayback}
+								>
+									<HugeIcon
+										name={playerPlaying ? "pause" : "play"}
+										className="size-4"
+									/>
+									<span className="sr-only">
+										{playerPlaying ? "Pause chapter" : "Play chapter"}
+									</span>
+								</Button>
+								<Slider
+									aria-label="Chapter playback position"
+									className="h-6 cursor-pointer **:data-[slot=slider-thumb]:size-4 **:data-[slot=slider-track]:h-2"
+									min={selectedChapter?.startSeconds ?? 0}
+									max={selectedChapterEndSeconds ?? currentSeconds}
+									step={1}
+									value={[selectedChapterCurrentSeconds]}
+									disabled={selectedChapterEndSeconds === null}
+									onPointerDownCapture={seekSelectedChapterFromPointer}
+									onValueChange={previewSelectedChapterSeek}
+									onValueCommit={seekWithinSelectedChapter}
+								/>
+								<span className="text-muted-foreground text-xs tabular-nums">
+									{selectedChapterEndSeconds === null
+										? "Duration unknown"
+										: `${formatTimestamp(
+												selectedChapterCurrentSeconds,
+											)} / ${formatTimestamp(selectedChapterEndSeconds)}`}
+								</span>
+							</div>
+						</ContentPanel>
 
 						<PlayerTabletStack>
 							<ChapterPanel
@@ -909,12 +1235,15 @@ function ChapterItem({
 	onSelect: (chapter: CourseChapterDTO) => void;
 	onToggleComplete: (chapter: CourseChapterDTO) => void;
 }) {
-	const chapterDuration = getChapterDuration(
+	const chapterDuration = getChapterDurationSeconds(
 		chapter,
 		chapters,
 		durationSeconds,
 	);
+	const chapterEnd = getChapterEndSeconds(chapter, chapters, durationSeconds);
 	const percent = calculateProgressPercent(watchedSeconds, chapterDuration);
+	const durationLabel =
+		chapterEnd === null ? null : formatCompactDuration(chapterDuration);
 
 	return (
 		<div
@@ -941,6 +1270,7 @@ function ChapterItem({
 								? ` - ${formatTimestamp(chapter.endSeconds)}`
 								: ""}
 						</span>
+						{durationLabel ? <span>{durationLabel}</span> : null}
 						{active ? (
 							<span className="font-medium text-primary">Now playing</span>
 						) : null}
@@ -1172,22 +1502,24 @@ function NoChaptersScreen({
 	);
 }
 
-function resolveInitialChapterId(
+function resolveInitialChapterId(data: CoursePlayerDataDTO, seconds: number) {
+	const resumeChapter = findChapterAtTime(data.chapters, seconds);
+
+	return resumeChapter?.id ?? data.chapters[0]?.id ?? null;
+}
+
+function resolveInitialSeconds(
 	data: CoursePlayerDataDTO,
 	chapterId: string | undefined,
 	bookmark: BookmarkDTO | null,
 ) {
-	if (chapterId && data.chapters.some((chapter) => chapter.id === chapterId)) {
-		return chapterId;
-	}
-
 	if (bookmark?.chapterId) {
 		const bookmarkedChapter = data.chapters.find(
 			(chapter) => chapter.id === bookmark.chapterId,
 		);
 
 		if (bookmarkedChapter) {
-			return bookmarkedChapter.id;
+			return bookmark.timestampSeconds;
 		}
 	}
 
@@ -1198,17 +1530,49 @@ function resolveInitialChapterId(
 		);
 
 		if (bookmarkedChapter) {
-			return bookmarkedChapter.id;
+			return bookmark.timestampSeconds;
 		}
 	}
 
-	const resumeSeconds = data.progress?.resumeSeconds ?? 0;
-	const resumeChapter = findChapterAtTime(data.chapters, resumeSeconds);
+	if (chapterId) {
+		const chapter = data.chapters.find(
+			(candidate) => candidate.id === chapterId,
+		);
 
-	return resumeChapter?.id ?? data.chapters[0]?.id ?? null;
+		if (chapter) {
+			return chapter.startSeconds;
+		}
+	}
+
+	return data.progress?.resumeSeconds ?? 0;
 }
 
-function findChapterAtTime(chapters: CourseChapterDTO[], seconds: number) {
+function findChapterAtTime(
+	chapters: CourseChapterDTO[],
+	seconds: number,
+	durationSeconds?: number | null,
+	preferredChapterId?: string | null,
+) {
+	const preferredChapter = preferredChapterId
+		? chapters.find((chapter) => chapter.id === preferredChapterId)
+		: null;
+
+	if (preferredChapter) {
+		const preferredEndSeconds = getChapterEndSeconds(
+			preferredChapter,
+			chapters,
+			durationSeconds,
+		);
+
+		if (
+			preferredEndSeconds !== null &&
+			seconds >= preferredChapter.startSeconds &&
+			seconds <= preferredEndSeconds
+		) {
+			return preferredChapter;
+		}
+	}
+
 	return (
 		chapters.find((chapter, index) => {
 			const nextChapter = chapters[index + 1];
@@ -1221,17 +1585,55 @@ function findChapterAtTime(chapters: CourseChapterDTO[], seconds: number) {
 	);
 }
 
-function getChapterDuration(
-	chapter: CourseChapterDTO,
+function getSeekDirection(
 	chapters: CourseChapterDTO[],
-	durationSeconds: number,
+	currentChapterId: string | null,
+	targetChapterId: string,
+	currentSeconds: number,
+	targetSeconds: number,
 ) {
-	const index = chapters.findIndex((candidate) => candidate.id === chapter.id);
-	const nextChapter = chapters[index + 1];
-	const endSeconds =
-		chapter.endSeconds ?? nextChapter?.startSeconds ?? durationSeconds;
+	const currentIndex = currentChapterId
+		? chapters.findIndex((chapter) => chapter.id === currentChapterId)
+		: -1;
+	const targetIndex = chapters.findIndex(
+		(chapter) => chapter.id === targetChapterId,
+	);
 
-	return Math.max(1, endSeconds - chapter.startSeconds);
+	if (currentIndex !== -1 && targetIndex !== -1) {
+		if (targetIndex > currentIndex) {
+			return "forward";
+		}
+		if (targetIndex < currentIndex) {
+			return "backward";
+		}
+	}
+
+	if (targetSeconds > currentSeconds) {
+		return "forward";
+	}
+	if (targetSeconds < currentSeconds) {
+		return "backward";
+	}
+
+	return "exact";
+}
+
+function hasReachedPendingSeek(
+	timeSeconds: number,
+	pendingSeek: {
+		direction: "backward" | "exact" | "forward";
+		targetSeconds: number;
+	},
+) {
+	if (pendingSeek.direction === "forward") {
+		return timeSeconds >= pendingSeek.targetSeconds;
+	}
+
+	if (pendingSeek.direction === "backward") {
+		return timeSeconds <= pendingSeek.targetSeconds;
+	}
+
+	return Math.abs(timeSeconds - pendingSeek.targetSeconds) <= 1;
 }
 
 function toWatchedMap(progress: ChapterProgressDTO[]) {
