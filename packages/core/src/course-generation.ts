@@ -165,9 +165,7 @@ export function getChapterGenerationPolicy(
 	const duration = durationSeconds ?? 0;
 	const isCoarseFallback = duration >= COARSE_CHAPTER_SECONDS;
 	const transcriptMode =
-		duration >= SAMPLED_TRANSCRIPT_SECONDS
-			? "sampled_windows"
-			: "full_window";
+		duration >= SAMPLED_TRANSCRIPT_SECONDS ? "sampled_windows" : "full_window";
 	const transcriptCharacterLimit =
 		isCoarseFallback && transcriptSegmentCount > 0
 			? LONG_VIDEO_TRANSCRIPT_CHARACTER_LIMIT
@@ -271,7 +269,10 @@ export function isSampledTranscriptCacheIncomplete(input: {
 	transcriptText: string;
 }) {
 	const duration = input.durationSeconds ?? 0;
-	const policy = getChapterGenerationPolicy(duration, input.transcriptSegmentCount);
+	const policy = getChapterGenerationPolicy(
+		duration,
+		input.transcriptSegmentCount,
+	);
 
 	if (duration <= 0 || policy.transcriptMode !== "sampled_windows") {
 		return false;

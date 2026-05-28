@@ -1,3 +1,4 @@
+export * from "./chapter-timing";
 export * from "./constants";
 export * from "./course-generation";
 export * from "./course-management";
