@@ -26,7 +26,7 @@ Use GitHub Issues for reproducible bugs. Please include:
 
 Do not report security issues in public issues or discussions.
 
-Send vulnerability reports to `security@benkyou.app`. See `SECURITY.md` for
+Send vulnerability reports to `security@benkyou.co`. See `SECURITY.md` for
 details.
 
 ## Contribution Scope
