@@ -30,10 +30,13 @@ interface YouTubePlayerInstance {
 	destroy: () => void;
 	getCurrentTime: () => number;
 	getDuration: () => number;
+	mute?: () => void;
 	pauseVideo: () => void;
 	playVideo: () => void;
 	seekTo: (seconds: number, allowSeekAhead: boolean) => void;
 	setPlaybackRate?: (suggestedRate: number) => void;
+	setVolume?: (volume: number) => void;
+	unMute?: () => void;
 }
 
 interface YouTubePlayerEvent {
@@ -49,8 +52,10 @@ interface YouTubePlayerProps {
 	ref?: Ref<YouTubePlayerHandle>;
 	providerVideoId: string;
 	initialSeconds: number;
+	muted?: boolean;
 	playbackRate?: number;
 	seekToSeconds: number | null;
+	volume?: number;
 	onPlayingChange?: (playing: boolean) => void;
 	onReady: (durationSeconds: number) => void;
 	onTimeUpdate: (timeSeconds: number, durationSeconds: number) => void;
@@ -64,9 +69,12 @@ interface YouTubePlaybackSnapshot {
 
 interface YouTubePlayerHandle {
 	getPlaybackSnapshot: () => YouTubePlaybackSnapshot | null;
+	mute: () => void;
 	pause: () => void;
 	play: () => void;
 	seekTo: (seconds: number, options?: { play?: boolean }) => void;
+	setVolume: (volume: number) => void;
+	unMute: () => void;
 }
 
 const PLAYBACK_POLL_INTERVAL_MS = 1000;
@@ -78,8 +86,10 @@ function YouTubePlayer({
 	ref,
 	providerVideoId,
 	initialSeconds,
+	muted = false,
 	playbackRate = 1,
 	seekToSeconds,
+	volume = 100,
 	onPlayingChange,
 	onReady,
 	onTimeUpdate,
@@ -92,6 +102,8 @@ function YouTubePlayer({
 		Math.max(0, Math.floor(initialSeconds)),
 	);
 	const playbackRateRef = useRef(playbackRate);
+	const volumeRef = useRef(volume);
+	const mutedRef = useRef(muted);
 	const callbacksRef = useRef({
 		onReady,
 		onTimeUpdate,
@@ -118,6 +130,11 @@ function YouTubePlayer({
 	}, [playbackRate]);
 
 	useEffect(() => {
+		volumeRef.current = volume;
+		mutedRef.current = muted;
+	}, [muted, volume]);
+
+	useEffect(() => {
 		if (initialPlaybackRef.current.providerVideoId !== providerVideoId) {
 			const safeInitialSeconds = Math.max(0, Math.floor(initialSeconds));
 			initialPlaybackRef.current = {
@@ -140,12 +157,17 @@ function YouTubePlayer({
 				durationSeconds: safeDuration(playerRef.current),
 			};
 		},
+		mute: () => playerRef.current?.mute?.(),
 		pause: () => playerRef.current?.pauseVideo(),
 		play: () => playerRef.current?.playVideo(),
 		seekTo: (seconds: number, options: { play?: boolean } = {}) => {
 			seekPlayer(playerRef.current, seconds, options);
 			pendingSeekSecondsRef.current = Math.max(0, Math.floor(seconds));
 		},
+		setVolume: (nextVolume: number) => {
+			playerRef.current?.setVolume?.(clampVolume(nextVolume));
+		},
+		unMute: () => playerRef.current?.unMute?.(),
 	}));
 
 	useEffect(() => {
@@ -180,6 +202,11 @@ function YouTubePlayer({
 							onReady: (event) => {
 								const duration = safeDuration(event.target);
 								event.target.setPlaybackRate?.(playbackRateRef.current);
+								applyVolumeState(
+									event.target,
+									volumeRef.current,
+									mutedRef.current,
+								);
 								if (startSeconds > 0) {
 									event.target.seekTo(startSeconds, true);
 								}
@@ -248,6 +275,14 @@ function YouTubePlayer({
 	useEffect(() => {
 		playerRef.current?.setPlaybackRate?.(playbackRate);
 	}, [playbackRate]);
+
+	useEffect(() => {
+		if (!playerRef.current) {
+			return;
+		}
+
+		applyVolumeState(playerRef.current, volume, muted);
+	}, [muted, volume]);
 
 	useEffect(() => {
 		if (seekToSeconds === null || lastSeekRef.current === seekToSeconds) {
@@ -329,6 +364,26 @@ function safeDuration(player: YouTubePlayerInstance) {
 	} catch {
 		return 0;
 	}
+}
+
+function applyVolumeState(
+	player: YouTubePlayerInstance,
+	volume: number,
+	muted: boolean,
+) {
+	const safeVolume = clampVolume(volume);
+
+	player.setVolume?.(safeVolume);
+	if (muted || safeVolume === 0) {
+		player.mute?.();
+		return;
+	}
+
+	player.unMute?.();
+}
+
+function clampVolume(volume: number) {
+	return Math.max(0, Math.min(100, Math.round(volume)));
 }
 
 function hasReachedSeekTarget(timeSeconds: number, targetSeconds: number) {

@@ -24,6 +24,9 @@ import {
 	Refresh01Icon,
 	Search01Icon,
 	Settings02Icon,
+	VolumeHighIcon,
+	VolumeLowIcon,
+	VolumeMute02Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon, type HugeiconsIconProps } from "@hugeicons/react";
 
@@ -53,6 +56,9 @@ const icons = {
 	refresh: Refresh01Icon,
 	search: Search01Icon,
 	settings: Settings02Icon,
+	volumeHigh: VolumeHighIcon,
+	volumeLow: VolumeLowIcon,
+	volumeMuted: VolumeMute02Icon,
 } as const;
 
 type HugeIconName = keyof typeof icons;

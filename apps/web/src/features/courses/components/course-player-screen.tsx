@@ -14,6 +14,8 @@ import type {
 	ChapterProgressDTO,
 	CourseChapterDTO,
 	CoursePlayerDataDTO,
+	GetLearningPreferencesResponseV1,
+	LearningPreferencesDTO,
 	UpsertPlaybackProgressRequestV1,
 } from "@benkyou/types";
 import {
@@ -49,6 +51,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { workspaceQueryKeys } from "#/features/workspace/workspace.queries";
 import {
 	useWorkspaceNavigationFlush,
 	WorkspacePage,
@@ -61,15 +64,22 @@ import {
 	getCoursePlayerData,
 	getLearningPreferences,
 	updateBookmark,
+	updateLearningPreferences,
 	upsertChapterProgress,
 	upsertPlaybackProgress,
 } from "../course-workspace.functions";
+import {
+	readLocalPreferences,
+	writeLocalPreferences,
+} from "../learning-preferences.local";
 import { BookmarkDialog, type BookmarkDialogValues } from "./bookmark-dialog";
 import { NotesEditor } from "./notes-editor";
 import {
 	PlayerFullscreenButton,
 	usePlayerFullscreen,
 } from "./player-fullscreen";
+import { PlayerPlaybackSpeedMenu } from "./player-playback-speed-menu";
+import { PlayerVolumeControl } from "./player-volume-control";
 import { YouTubePlayer, type YouTubePlayerHandle } from "./youtube-player";
 
 interface CoursePlayerScreenProps {
@@ -90,6 +100,7 @@ function CoursePlayerScreen({
 	const { registerNavigationFlush } = useWorkspaceNavigationFlush();
 	const getPlayerData = useServerFn(getCoursePlayerData);
 	const getPreferences = useServerFn(getLearningPreferences);
+	const updatePreferences = useServerFn(updateLearningPreferences);
 	const savePlaybackProgress = useServerFn(upsertPlaybackProgress);
 	const saveChapterProgress = useServerFn(upsertChapterProgress);
 	const createBookmarkFn = useServerFn(createBookmark);
@@ -144,7 +155,14 @@ function CoursePlayerScreen({
 	const [editingBookmark, setEditingBookmark] = useState<BookmarkDTO | null>(
 		null,
 	);
-	const [playerPlaying, setPlayerPlaying] = useState(false);
+	const [playerControls, setPlayerControls] = useState({
+		muted: false,
+		playing: false,
+		volume: 100,
+	});
+	const playerPlaying = playerControls.playing;
+	const playerVolume = playerControls.volume;
+	const playerMuted = playerControls.muted;
 	const latestProgressRef = useRef({
 		currentSeconds,
 		durationSeconds,
@@ -153,6 +171,7 @@ function CoursePlayerScreen({
 		completedByChapter,
 	});
 	const dirtyChapterIdsRef = useRef(new Set<string>());
+	const lastAudibleVolumeRef = useRef(100);
 	const youtubePlayerRef = useRef<YouTubePlayerHandle | null>(null);
 	const {
 		fullscreenError,
@@ -176,8 +195,13 @@ function CoursePlayerScreen({
 		initialData: startData,
 	});
 	const preferencesQuery = useQuery({
-		queryKey: ["learning-preferences"],
-		queryFn: () => getPreferences(),
+		queryKey: workspaceQueryKeys.learningPreferences,
+		queryFn: async () => {
+			const response = await getPreferences();
+			const localPreferences = readLocalPreferences();
+
+			return localPreferences ? { preferences: localPreferences } : response;
+		},
 	});
 	const fallbackLearningPreferences = useMemo(
 		() => getDefaultLearningPreferences(),
@@ -316,6 +340,47 @@ function CoursePlayerScreen({
 			setSaveError(null);
 		},
 		onError: () => setSaveError("Chapter progress could not be saved."),
+	});
+
+	const preferencesMutation = useMutation({
+		mutationFn: (preferences: LearningPreferencesDTO) =>
+			updatePreferences({ data: preferences }),
+		onMutate: async (preferences) => {
+			await queryClient.cancelQueries({
+				queryKey: workspaceQueryKeys.learningPreferences,
+			});
+			const previousPreferences =
+				queryClient.getQueryData<GetLearningPreferencesResponseV1>(
+					workspaceQueryKeys.learningPreferences,
+				);
+
+			queryClient.setQueryData<GetLearningPreferencesResponseV1>(
+				workspaceQueryKeys.learningPreferences,
+				{ preferences },
+			);
+
+			return { previousPreferences };
+		},
+		onSuccess: async (result) => {
+			writeLocalPreferences(result.preferences);
+			queryClient.setQueryData<GetLearningPreferencesResponseV1>(
+				workspaceQueryKeys.learningPreferences,
+				result,
+			);
+			await queryClient.invalidateQueries({
+				queryKey: workspaceQueryKeys.learningPreferences,
+			});
+			setSaveError(null);
+		},
+		onError: (_error, _preferences, context) => {
+			if (context?.previousPreferences) {
+				queryClient.setQueryData<GetLearningPreferencesResponseV1>(
+					workspaceQueryKeys.learningPreferences,
+					context.previousPreferences,
+				);
+			}
+			setSaveError("Playback speed could not be saved.");
+		},
 	});
 
 	const createBookmarkMutation = useMutation({
@@ -801,7 +866,7 @@ function CoursePlayerScreen({
 					youtubePlayerRef.current?.pause();
 					youtubePlayerRef.current?.seekTo(previousChapterEndSeconds);
 					setCurrentSeconds(previousChapterEndSeconds);
-					setPlayerPlaying(false);
+					setPlayerControls((current) => ({ ...current, playing: false }));
 					persistProgress({ refreshFromPlayer: false });
 					return;
 				}
@@ -831,13 +896,67 @@ function CoursePlayerScreen({
 	const togglePlayback = useCallback(() => {
 		if (playerPlaying) {
 			youtubePlayerRef.current?.pause();
-			setPlayerPlaying(false);
+			setPlayerControls((current) => ({ ...current, playing: false }));
 			return;
 		}
 
 		youtubePlayerRef.current?.play();
-		setPlayerPlaying(true);
+		setPlayerControls((current) => ({ ...current, playing: true }));
 	}, [playerPlaying]);
+
+	const changePlayerMuted = (muted: boolean) => {
+		const nextVolume =
+			!muted && playerVolume === 0
+				? lastAudibleVolumeRef.current
+				: playerVolume;
+
+		setPlayerControls((current) => ({
+			...current,
+			muted,
+			volume: nextVolume,
+		}));
+
+		if (!muted && playerVolume === 0) {
+			youtubePlayerRef.current?.setVolume(nextVolume);
+		}
+
+		if (muted) {
+			youtubePlayerRef.current?.mute();
+			return;
+		}
+
+		youtubePlayerRef.current?.unMute();
+	};
+
+	const changePlayerVolume = (volume: number) => {
+		const nextVolume = Math.max(0, Math.min(100, Math.round(volume)));
+		const muted = nextVolume === 0;
+
+		setPlayerControls((current) => ({
+			...current,
+			muted,
+			volume: nextVolume,
+		}));
+		youtubePlayerRef.current?.setVolume(nextVolume);
+		if (nextVolume > 0) {
+			lastAudibleVolumeRef.current = nextVolume;
+			youtubePlayerRef.current?.unMute();
+			return;
+		}
+
+		youtubePlayerRef.current?.mute();
+	};
+
+	const changePlaybackSpeed = (playbackSpeed: number) => {
+		if (playbackSpeed === learningPreferences.playbackSpeed) {
+			return;
+		}
+
+		preferencesMutation.mutate({
+			...learningPreferences,
+			playbackSpeed,
+		});
+	};
 
 	const previewSelectedChapterSeek = useCallback(
 		(values: number[]) => {
@@ -1060,15 +1179,19 @@ function CoursePlayerScreen({
 								ref={youtubePlayerRef}
 								providerVideoId={data.video.providerVideoId}
 								initialSeconds={currentSeconds}
+								muted={playerMuted}
 								playbackRate={learningPreferences.playbackSpeed}
 								seekToSeconds={seekToSeconds}
+								volume={playerVolume}
 								onReady={(duration) => {
 									if (duration > 0) {
 										setDurationSeconds(duration);
 									}
 								}}
 								onTimeUpdate={handleTimeUpdate}
-								onPlayingChange={setPlayerPlaying}
+								onPlayingChange={(playing) =>
+									setPlayerControls((current) => ({ ...current, playing }))
+								}
 								onPauseOrEnd={(time, duration) => {
 									handleTimeUpdate(time, duration);
 									persistProgress();
@@ -1092,12 +1215,23 @@ function CoursePlayerScreen({
 											{playerPlaying ? "Pause chapter" : "Play chapter"}
 										</span>
 									</Button>
+									<PlayerVolumeControl
+										muted={playerMuted}
+										volume={playerVolume}
+										onMutedChange={changePlayerMuted}
+										onVolumeChange={changePlayerVolume}
+									/>
 									<PlayerFullscreenButton
 										isFullscreen={isFullscreen}
 										isSupported={isFullscreenSupported}
 										onToggle={() => {
 											void toggleFullscreen();
 										}}
+									/>
+									<PlayerPlaybackSpeedMenu
+										pending={preferencesMutation.isPending}
+										playbackSpeed={learningPreferences.playbackSpeed}
+										onPlaybackSpeedChange={changePlaybackSpeed}
 									/>
 								</div>
 								<Slider
