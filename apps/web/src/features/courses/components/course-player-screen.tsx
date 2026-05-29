@@ -66,6 +66,10 @@ import {
 } from "../course-workspace.functions";
 import { BookmarkDialog, type BookmarkDialogValues } from "./bookmark-dialog";
 import { NotesEditor } from "./notes-editor";
+import {
+	PlayerFullscreenButton,
+	usePlayerFullscreen,
+} from "./player-fullscreen";
 import { YouTubePlayer, type YouTubePlayerHandle } from "./youtube-player";
 
 interface CoursePlayerScreenProps {
@@ -150,6 +154,13 @@ function CoursePlayerScreen({
 	});
 	const dirtyChapterIdsRef = useRef(new Set<string>());
 	const youtubePlayerRef = useRef<YouTubePlayerHandle | null>(null);
+	const {
+		fullscreenError,
+		isFullscreen,
+		isSupported: isFullscreenSupported,
+		playerSurfaceRef,
+		toggleFullscreen,
+	} = usePlayerFullscreen();
 	const pendingSeekRef = useRef<{
 		chapterId: string;
 		targetSeconds: number;
@@ -1039,7 +1050,11 @@ function CoursePlayerScreen({
 						</div>
 					</ContentPanel>
 
-					<div className="flex flex-col gap-3">
+					<div
+						ref={playerSurfaceRef}
+						className="flex flex-col gap-3"
+						data-course-player-surface
+					>
 						<PlayerVideoFrame className="lg:shadow-sm">
 							<YouTubePlayer
 								ref={youtubePlayerRef}
@@ -1060,22 +1075,31 @@ function CoursePlayerScreen({
 								}}
 							/>
 						</PlayerVideoFrame>
-						<ContentPanel className="p-3">
+						<ContentPanel className="p-3" data-player-controls>
 							<div className="grid gap-3 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center">
-								<Button
-									type="button"
-									size="icon-sm"
-									variant="outline"
-									onClick={togglePlayback}
-								>
-									<HugeIcon
-										name={playerPlaying ? "pause" : "play"}
-										className="size-4"
+								<div className="flex items-center gap-2">
+									<Button
+										type="button"
+										size="icon-sm"
+										variant="outline"
+										onClick={togglePlayback}
+									>
+										<HugeIcon
+											name={playerPlaying ? "pause" : "play"}
+											className="size-4"
+										/>
+										<span className="sr-only">
+											{playerPlaying ? "Pause chapter" : "Play chapter"}
+										</span>
+									</Button>
+									<PlayerFullscreenButton
+										isFullscreen={isFullscreen}
+										isSupported={isFullscreenSupported}
+										onToggle={() => {
+											void toggleFullscreen();
+										}}
 									/>
-									<span className="sr-only">
-										{playerPlaying ? "Pause chapter" : "Play chapter"}
-									</span>
-								</Button>
+								</div>
 								<Slider
 									aria-label="Chapter playback position"
 									className="h-6 cursor-pointer **:data-[slot=slider-thumb]:size-4 **:data-[slot=slider-track]:h-2"
@@ -1096,8 +1120,15 @@ function CoursePlayerScreen({
 											)} / ${formatTimestamp(selectedChapterEndSeconds)}`}
 								</span>
 							</div>
+							{fullscreenError ? (
+								<output className="mt-2 block text-muted-foreground text-xs">
+									{fullscreenError}
+								</output>
+							) : null}
 						</ContentPanel>
+					</div>
 
+					<div className="flex flex-col gap-3">
 						<PlayerTabletStack>
 							<ChapterPanel
 								chapters={data.chapters}

@@ -12,7 +12,7 @@ function AppHeader({
 	subtitle = "Local-first study from one video.",
 }: AppHeaderProps) {
 	return (
-		<header className="sticky top-0 z-20 border-border border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/85">
+		<header className="sticky top-0 z-20 border-border border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/85">
 			<div className="mx-auto flex h-14 w-full max-w-7xl items-center justify-between gap-3 px-3 sm:px-6">
 				<AppHeaderBrand subtitle={subtitle} />
 				{action ? <div className="shrink-0">{action}</div> : null}
