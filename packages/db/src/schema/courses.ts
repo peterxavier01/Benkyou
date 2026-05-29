@@ -47,6 +47,9 @@ export const courses = pgTable(
 		index("courses_active_owner_idx")
 			.on(table.ownerId)
 			.where(sql`${table.deletedAt} is null`),
+		index("courses_active_owner_updated_idx")
+			.on(table.ownerId, table.updatedAt)
+			.where(sql`${table.deletedAt} is null`),
 	],
 );
 
@@ -109,6 +112,10 @@ export const courseGenerationJobs = pgTable(
 	},
 	(table) => [
 		index("course_generation_jobs_course_idx").on(table.courseId),
+		index("course_generation_jobs_course_created_idx").on(
+			table.courseId,
+			table.createdAt,
+		),
 		index("course_generation_jobs_status_idx").on(table.status),
 	],
 );
@@ -217,6 +224,9 @@ export const bookmarks = pgTable(
 		index("bookmarks_user_idx").on(table.userId),
 		index("bookmarks_active_course_idx")
 			.on(table.courseId)
+			.where(sql`${table.deletedAt} is null`),
+		index("bookmarks_active_user_updated_idx")
+			.on(table.userId, table.updatedAt)
 			.where(sql`${table.deletedAt} is null`),
 	],
 );

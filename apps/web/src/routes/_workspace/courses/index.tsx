@@ -1,7 +1,6 @@
 import type { CourseLibraryFilterV1 } from "@benkyou/types";
 import { createFileRoute } from "@tanstack/react-router";
-import { CourseLibraryScreen } from "#/features/courses/components/course-library-screen";
-import { getCourseLibrary } from "#/features/courses/course-workspace.functions";
+import { courseLibraryQueryOptions } from "#/features/workspace/workspace.queries";
 
 const filters = new Set<CourseLibraryFilterV1>([
 	"all",
@@ -20,13 +19,6 @@ export const Route = createFileRoute("/_workspace/courses/")({
 				? (search.filter as CourseLibraryFilterV1)
 				: "all",
 	}),
-	loader: () => getCourseLibrary(),
-	component: CoursesRoute,
+	loader: ({ context: { queryClient } }) =>
+		queryClient.ensureQueryData(courseLibraryQueryOptions()),
 });
-
-function CoursesRoute() {
-	const initialData = Route.useLoaderData();
-	const search = Route.useSearch();
-
-	return <CourseLibraryScreen initialData={initialData} search={search} />;
-}

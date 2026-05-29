@@ -24,11 +24,9 @@ import {
 } from "@benkyou/ui/components/empty";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
-import { useMemo } from "react";
+import { bookmarksQueryOptions } from "#/features/workspace/workspace.queries";
 import { WorkspacePage } from "#components/workspace-layout";
 import BetterAuthHeader from "../../../integrations/better-auth/header-user";
-import { getBookmarks } from "../course-workspace.functions";
 
 interface BookmarksScreenProps {
 	initialData: GetBookmarksResponseV1;
@@ -40,20 +38,12 @@ interface BookmarksScreenProps {
 
 function BookmarksScreen({ initialData, search }: BookmarksScreenProps) {
 	const navigate = useNavigate();
-	const getBookmarkList = useServerFn(getBookmarks);
 	const bookmarksQuery = useQuery({
-		queryKey: ["bookmarks"],
-		queryFn: () => getBookmarkList(),
+		...bookmarksQueryOptions(),
 		initialData,
 	});
-	const courses = useMemo(
-		() => getCourseFilterOptions(bookmarksQuery.data.items),
-		[bookmarksQuery.data.items],
-	);
-	const filteredItems = useMemo(
-		() => filterBookmarks(bookmarksQuery.data.items, search),
-		[bookmarksQuery.data.items, search],
-	);
+	const courses = getCourseFilterOptions(bookmarksQuery.data.items);
+	const filteredItems = filterBookmarks(bookmarksQuery.data.items, search);
 
 	return (
 		<WorkspacePage

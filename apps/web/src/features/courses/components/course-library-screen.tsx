@@ -32,16 +32,19 @@ import {
 	EmptyTitle,
 } from "@benkyou/ui/components/empty";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate, useRouter } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useMemo } from "react";
+import {
+	courseLibraryQueryOptions,
+	workspaceQueryKeys,
+} from "#/features/workspace/workspace.queries";
 import { WorkspacePage } from "#components/workspace-layout";
 import BetterAuthHeader from "../../../integrations/better-auth/header-user";
 import {
 	openSampleCourse,
 	retryGenerationJob,
 } from "../../course-generation/course-generation.functions";
-import { deleteCourse, getCourseLibrary } from "../course-workspace.functions";
+import { deleteCourse } from "../course-workspace.functions";
 
 interface CourseLibraryScreenProps {
 	initialData: GetCourseLibraryResponseV1;
@@ -64,16 +67,13 @@ function CourseLibraryScreen({
 	search,
 }: CourseLibraryScreenProps) {
 	const navigate = useNavigate();
-	const router = useRouter();
 	const queryClient = useQueryClient();
-	const getLibrary = useServerFn(getCourseLibrary);
 	const retryJob = useServerFn(retryGenerationJob);
 	const deleteCourseFn = useServerFn(deleteCourse);
 	const openSample = useServerFn(openSampleCourse);
 
 	const libraryQuery = useQuery({
-		queryKey: ["course-library"],
-		queryFn: () => getLibrary(),
+		...courseLibraryQueryOptions(),
 		initialData,
 	});
 
@@ -81,6 +81,12 @@ function CourseLibraryScreen({
 		mutationFn: (generationJobId: string) =>
 			retryJob({ data: { generationJobId } }),
 		onSuccess: async (result) => {
+			queryClient.removeQueries({
+				queryKey: workspaceQueryKeys.coursePlayer(result.courseId),
+			});
+			await queryClient.invalidateQueries({
+				queryKey: workspaceQueryKeys.courseLibrary,
+			});
 			await navigate({ href: `/courses/new/${result.generationJobId}` });
 		},
 	});
@@ -88,21 +94,26 @@ function CourseLibraryScreen({
 	const deleteMutation = useMutation({
 		mutationFn: (courseId: string) => deleteCourseFn({ data: { courseId } }),
 		onSuccess: async () => {
-			await queryClient.invalidateQueries({ queryKey: ["course-library"] });
-			await router.invalidate();
+			await queryClient.invalidateQueries({
+				queryKey: workspaceQueryKeys.courseLibrary,
+			});
 		},
 	});
 
 	const sampleMutation = useMutation({
 		mutationFn: () => openSample(),
 		onSuccess: async (result) => {
+			await queryClient.invalidateQueries({
+				queryKey: workspaceQueryKeys.courseLibrary,
+			});
 			await navigate({ href: `/courses/${result.courseId}` });
 		},
 	});
 
-	const filteredItems = useMemo(
-		() => filterCourses(libraryQuery.data.items, search.filter, search.q),
-		[libraryQuery.data.items, search.filter, search.q],
+	const filteredItems = filterCourses(
+		libraryQuery.data.items,
+		search.filter,
+		search.q,
 	);
 
 	return (

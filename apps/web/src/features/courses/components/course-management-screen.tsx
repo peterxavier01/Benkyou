@@ -44,15 +44,18 @@ import {
 } from "@benkyou/ui/components/table";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate, useRouter } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
+import {
+	courseManagementQueryOptions,
+	workspaceQueryKeys,
+} from "#/features/workspace/workspace.queries";
 import { WorkspacePage } from "#components/workspace-layout";
 import BetterAuthHeader from "../../../integrations/better-auth/header-user";
 import {
 	deleteCourse,
 	exportCourseMarkdown,
-	getCourseManagementData,
 	regenerateChapters,
 	updateChapter,
 	updateCourseMetadata,
@@ -80,9 +83,7 @@ function CourseManagementScreen({
 	initialData,
 }: CourseManagementScreenProps) {
 	const navigate = useNavigate();
-	const router = useRouter();
 	const queryClient = useQueryClient();
-	const getManagementData = useServerFn(getCourseManagementData);
 	const updateMetadataFn = useServerFn(updateCourseMetadata);
 	const updateChapterFn = useServerFn(updateChapter);
 	const regenerateFn = useServerFn(regenerateChapters);
@@ -92,24 +93,14 @@ function CourseManagementScreen({
 		null,
 	);
 	const [formError, setFormError] = useState<string | null>(null);
+	const [exportPending, setExportPending] = useState(false);
+	const [exportError, setExportError] = useState<string | null>(null);
 
 	const managementQuery = useQuery({
-		queryKey: ["course-management", courseId],
-		queryFn: () => getManagementData({ data: { courseId } }),
+		...courseManagementQueryOptions(courseId),
 		initialData,
 	});
 	const data = managementQuery.data.data;
-
-	const invalidateCourse = async () => {
-		await Promise.all([
-			queryClient.invalidateQueries({
-				queryKey: ["course-management", courseId],
-			}),
-			queryClient.invalidateQueries({ queryKey: ["course-player", courseId] }),
-			queryClient.invalidateQueries({ queryKey: ["course-library"] }),
-			router.invalidate(),
-		]);
-	};
 
 	const metadataMutation = useMutation({
 		mutationFn: (values: MetadataValues) =>
@@ -120,7 +111,19 @@ function CourseManagementScreen({
 					description: values.description,
 				},
 			}),
-		onSuccess: invalidateCourse,
+		onSuccess: async () => {
+			await Promise.all([
+				queryClient.invalidateQueries({
+					queryKey: workspaceQueryKeys.courseManagement(courseId),
+				}),
+				queryClient.invalidateQueries({
+					queryKey: workspaceQueryKeys.coursePlayer(courseId),
+				}),
+				queryClient.invalidateQueries({
+					queryKey: workspaceQueryKeys.courseLibrary,
+				}),
+			]);
+		},
 	});
 
 	const chapterMutation = useMutation({
@@ -136,13 +139,34 @@ function CourseManagementScreen({
 			}),
 		onSuccess: async () => {
 			setEditingChapter(null);
-			await invalidateCourse();
+			await Promise.all([
+				queryClient.invalidateQueries({
+					queryKey: workspaceQueryKeys.courseManagement(courseId),
+				}),
+				queryClient.invalidateQueries({
+					queryKey: workspaceQueryKeys.coursePlayer(courseId),
+				}),
+				queryClient.invalidateQueries({
+					queryKey: workspaceQueryKeys.courseLibrary,
+				}),
+			]);
 		},
 	});
 
 	const regenerateMutation = useMutation({
 		mutationFn: () => regenerateFn({ data: { courseId } }),
 		onSuccess: async (result) => {
+			queryClient.removeQueries({
+				queryKey: workspaceQueryKeys.coursePlayer(courseId),
+			});
+			await Promise.all([
+				queryClient.invalidateQueries({
+					queryKey: workspaceQueryKeys.courseManagement(courseId),
+				}),
+				queryClient.invalidateQueries({
+					queryKey: workspaceQueryKeys.courseLibrary,
+				}),
+			]);
 			await navigate({ href: `/courses/new/${result.generationJobId}` });
 		},
 	});
@@ -150,14 +174,30 @@ function CourseManagementScreen({
 	const deleteMutation = useMutation({
 		mutationFn: () => deleteCourseFn({ data: { courseId } }),
 		onSuccess: async () => {
+			queryClient.removeQueries({
+				queryKey: workspaceQueryKeys.courseManagement(courseId),
+			});
+			queryClient.removeQueries({
+				queryKey: workspaceQueryKeys.coursePlayer(courseId),
+			});
+			await queryClient.invalidateQueries({
+				queryKey: workspaceQueryKeys.courseLibrary,
+			});
 			await navigate({ to: "/courses", search: { q: "", filter: "all" } });
 		},
 	});
 
-	const exportMutation = useMutation({
-		mutationFn: () => exportCourse({ data: { courseId } }),
-		onSuccess: (result) => downloadText(result.filename, result.markdown),
-	});
+	async function handleExportCourse() {
+		setExportError(null);
+		setExportPending(true);
+		try {
+			const result = await exportCourse({ data: { courseId } });
+			downloadText(result.filename, result.markdown);
+		} catch (error) {
+			setExportError(error instanceof Error ? error.message : "Export failed.");
+		}
+		setExportPending(false);
+	}
 
 	const metadataForm = useForm({
 		defaultValues: {
@@ -229,12 +269,12 @@ function CourseManagementScreen({
 							type="button"
 							variant="outline"
 							className="w-full"
-							disabled={exportMutation.isPending}
-							onClick={() => exportMutation.mutate()}
+							disabled={exportPending}
+							onClick={() => void handleExportCourse()}
 						>
 							<HugeIcon name="note" className="size-4" />
 							<span className="truncate">
-								{exportMutation.isPending ? "Exporting..." : "Export"}
+								{exportPending ? "Exporting..." : "Export"}
 							</span>
 						</Button>
 						<RegenerateDialog
@@ -248,6 +288,11 @@ function CourseManagementScreen({
 						/>
 					</div>
 				</div>
+				{exportError ? (
+					<p className="mt-3 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-destructive text-sm">
+						{exportError}
+					</p>
+				) : null}
 			</ContentPanel>
 
 			<div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">

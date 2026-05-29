@@ -81,17 +81,23 @@ const WorkspaceSettingsRoute = WorkspaceSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
   getParentRoute: () => WorkspaceRoute,
-} as any)
+} as any).lazy(() =>
+  import('./routes/_workspace/settings.lazy').then((d) => d.Route),
+)
 const WorkspaceBookmarksRoute = WorkspaceBookmarksRouteImport.update({
   id: '/bookmarks',
   path: '/bookmarks',
   getParentRoute: () => WorkspaceRoute,
-} as any)
+} as any).lazy(() =>
+  import('./routes/_workspace/bookmarks.lazy').then((d) => d.Route),
+)
 const WorkspaceCoursesIndexRoute = WorkspaceCoursesIndexRouteImport.update({
   id: '/courses/',
   path: '/courses/',
   getParentRoute: () => WorkspaceRoute,
-} as any)
+} as any).lazy(() =>
+  import('./routes/_workspace/courses/index.lazy').then((d) => d.Route),
+)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -102,7 +108,9 @@ const WorkspaceCoursesCourseIdRoute =
     id: '/courses/$courseId',
     path: '/courses/$courseId',
     getParentRoute: () => WorkspaceRoute,
-  } as any)
+  } as any).lazy(() =>
+    import('./routes/_workspace/courses/$courseId.lazy').then((d) => d.Route),
+  )
 const ApiV1ProgressPlaybackRoute = ApiV1ProgressPlaybackRouteImport.update({
   id: '/api/v1/progress/playback',
   path: '/api/v1/progress/playback',
@@ -113,13 +121,19 @@ const WorkspaceCoursesNewJobIdRoute =
     id: '/courses/new/$jobId',
     path: '/courses/new/$jobId',
     getParentRoute: () => WorkspaceRoute,
-  } as any)
+  } as any).lazy(() =>
+    import('./routes/_workspace/courses/new/$jobId.lazy').then((d) => d.Route),
+  )
 const WorkspaceCoursesCourseIdManageRoute =
   WorkspaceCoursesCourseIdManageRouteImport.update({
     id: '/courses/$courseId_/manage',
     path: '/courses/$courseId/manage',
     getParentRoute: () => WorkspaceRoute,
-  } as any)
+  } as any).lazy(() =>
+    import('./routes/_workspace/courses/$courseId_.manage.lazy').then(
+      (d) => d.Route,
+    ),
+  )
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
