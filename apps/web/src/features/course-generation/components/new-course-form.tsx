@@ -125,7 +125,7 @@ function NewCourseForm() {
 					type="button"
 					variant="outline"
 					size="sm"
-					className="justify-start sm:justify-center"
+					className="justify-start sm:justify-center w-max"
 					disabled={openingSample}
 					onClick={async () => {
 						setFormError(null);

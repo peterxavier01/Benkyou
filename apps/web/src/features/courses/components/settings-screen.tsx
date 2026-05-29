@@ -2,7 +2,6 @@ import {
 	DEFAULT_LEARNING_PREFERENCES,
 	LEARNING_PLAYBACK_SPEEDS,
 	LOCAL_STORAGE_KEYS,
-	LOCAL_STORAGE_PAYLOAD_VERSION,
 	learningPreferencesSchema,
 } from "@benkyou/core";
 import type {
@@ -38,15 +37,22 @@ import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
+import {
+	courseLibraryQueryOptions,
+	learningPreferencesQueryOptions,
+	workspaceQueryKeys,
+} from "#/features/workspace/workspace.queries";
 import { WorkspacePage } from "#components/workspace-layout";
 import type { getCurrentUser } from "../../auth/auth.functions";
 import {
 	exportCourseMarkdown,
-	getCourseLibrary,
-	getLearningPreferences,
 	updateLearningPreferences,
 } from "../course-workspace.functions";
+import {
+	readLocalPreferences,
+	writeLocalPreferences,
+} from "../learning-preferences.local";
 
 interface SettingsScreenProps {
 	currentUser: Awaited<ReturnType<typeof getCurrentUser>>;
@@ -60,44 +66,31 @@ function SettingsScreen({
 	initialPreferences,
 }: SettingsScreenProps) {
 	const queryClient = useQueryClient();
-	const getLibrary = useServerFn(getCourseLibrary);
-	const getPreferences = useServerFn(getLearningPreferences);
 	const updatePreferences = useServerFn(updateLearningPreferences);
 	const exportCourse = useServerFn(exportCourseMarkdown);
 	const [localPreferences, setLocalPreferences] =
-		useState<LearningPreferencesDTO | null>(null);
-	const [exportCourseId, setExportCourseId] = useState<string>("");
+		useState<LearningPreferencesDTO | null>(() => readLocalPreferences());
+	const [exportCourseId, setExportCourseId] = useState<string>(
+		() => initialLibrary.items[0]?.course.id ?? "",
+	);
 	const [resetDone, setResetDone] = useState(false);
+	const [exportPending, setExportPending] = useState(false);
+	const [exportError, setExportError] = useState<string | null>(null);
 
 	const libraryQuery = useQuery({
-		queryKey: ["course-library"],
-		queryFn: () => getLibrary(),
+		...courseLibraryQueryOptions(),
 		initialData: initialLibrary,
 	});
 	const preferencesQuery = useQuery({
-		queryKey: ["learning-preferences"],
-		queryFn: () => getPreferences(),
+		...learningPreferencesQueryOptions(),
 		initialData: initialPreferences,
 	});
 	const courses = libraryQuery.data.items;
 
-	useEffect(() => {
-		setLocalPreferences(readLocalPreferences());
-	}, []);
-
-	const effectivePreferences = useMemo(
-		() =>
-			localPreferences ??
-			preferencesQuery.data.preferences ??
-			DEFAULT_LEARNING_PREFERENCES,
-		[localPreferences, preferencesQuery.data.preferences],
-	);
-
-	useEffect(() => {
-		if (!exportCourseId && courses[0]) {
-			setExportCourseId(courses[0].course.id);
-		}
-	}, [courses, exportCourseId]);
+	const effectivePreferences =
+		localPreferences ??
+		preferencesQuery.data.preferences ??
+		DEFAULT_LEARNING_PREFERENCES;
 
 	const preferencesMutation = useMutation({
 		mutationFn: (preferences: LearningPreferencesDTO) =>
@@ -105,16 +98,28 @@ function SettingsScreen({
 		onSuccess: async (result) => {
 			writeLocalPreferences(result.preferences);
 			setLocalPreferences(result.preferences);
+			queryClient.setQueryData(workspaceQueryKeys.learningPreferences, result);
 			await queryClient.invalidateQueries({
-				queryKey: ["learning-preferences"],
+				queryKey: workspaceQueryKeys.learningPreferences,
 			});
 		},
 	});
 
-	const exportMutation = useMutation({
-		mutationFn: (courseId: string) => exportCourse({ data: { courseId } }),
-		onSuccess: (result) => downloadText(result.filename, result.markdown),
-	});
+	async function handleExportCourse(courseId: string) {
+		if (!courseId) {
+			return;
+		}
+
+		setExportError(null);
+		setExportPending(true);
+		try {
+			const result = await exportCourse({ data: { courseId } });
+			downloadText(result.filename, result.markdown);
+		} catch (error) {
+			setExportError(error instanceof Error ? error.message : "Export failed.");
+		}
+		setExportPending(false);
+	}
 
 	return (
 		<WorkspacePage
@@ -177,14 +182,19 @@ function SettingsScreen({
 						</Select>
 						<Button
 							type="button"
-							disabled={!exportCourseId || exportMutation.isPending}
-							onClick={() => exportMutation.mutate(exportCourseId)}
+							disabled={!exportCourseId || exportPending}
+							onClick={() => void handleExportCourse(exportCourseId)}
 						>
 							<HugeIcon name="note" className="size-4" />
-							{exportMutation.isPending ? "Exporting..." : "Export"}
+							{exportPending ? "Exporting..." : "Export"}
 						</Button>
 					</div>
 				</div>
+				{exportError ? (
+					<p className="mt-3 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-destructive text-sm">
+						{exportError}
+					</p>
+				) : null}
 				{courses.length === 0 ? (
 					<p className="mt-3 text-muted-foreground text-sm">
 						Create or open a sample course before exporting.
@@ -366,45 +376,6 @@ function PreferenceSwitch({
 			</div>
 			<Switch checked={checked} onCheckedChange={onCheckedChange} />
 		</div>
-	);
-}
-
-function readLocalPreferences() {
-	if (typeof window === "undefined") {
-		return null;
-	}
-
-	try {
-		const raw = window.localStorage.getItem(LOCAL_STORAGE_KEYS.preferences);
-		if (!raw) {
-			return null;
-		}
-		const parsed = JSON.parse(raw) as {
-			version?: number;
-			preferences?: unknown;
-		};
-		const result = learningPreferencesSchema.safeParse(parsed.preferences);
-
-		return parsed.version === LOCAL_STORAGE_PAYLOAD_VERSION && result.success
-			? result.data
-			: null;
-	} catch {
-		return null;
-	}
-}
-
-function writeLocalPreferences(preferences: LearningPreferencesDTO) {
-	if (typeof window === "undefined") {
-		return;
-	}
-
-	window.localStorage.setItem(
-		LOCAL_STORAGE_KEYS.preferences,
-		JSON.stringify({
-			version: LOCAL_STORAGE_PAYLOAD_VERSION,
-			preferences,
-			updatedAt: new Date().toISOString(),
-		}),
 	);
 }
 

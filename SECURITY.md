@@ -7,7 +7,7 @@ learners, self-hosters, and maintainers.
 
 Please do not report security vulnerabilities in public issues or discussions.
 
-Send reports privately to `security@benkyou.app`.
+Send reports privately to `security@benkyou.co`.
 
 Include as much detail as you can:
 

@@ -754,40 +754,69 @@ export async function getCourseLibrary(
 		.where(and(userMatches(courses.ownerId, userId), isNull(courses.deletedAt)))
 		.orderBy(desc(courses.updatedAt));
 
-	return Promise.all(
-		courseRows.map(async ({ course, video }) => {
-			const [chapterCountRow] = await db
-				.select({ value: count() })
-				.from(courseChapters)
-				.where(eq(courseChapters.courseId, course.id));
+	if (courseRows.length === 0) {
+		return [];
+	}
 
-			const [progressRow] = await db
+	const courseIds = courseRows.map(({ course }) => course.id);
+	const [chapterCountRows, progressRows, generationJobRows] = await Promise.all(
+		[
+			db
+				.select({
+					courseId: courseChapters.courseId,
+					value: count(),
+				})
+				.from(courseChapters)
+				.where(inArray(courseChapters.courseId, courseIds))
+				.groupBy(courseChapters.courseId),
+			db
 				.select()
 				.from(courseProgress)
 				.where(
 					and(
-						eq(courseProgress.courseId, course.id),
+						inArray(courseProgress.courseId, courseIds),
 						userMatches(courseProgress.userId, userId),
 					),
-				)
-				.limit(1);
-
-			const [jobRow] = await db
+				),
+			db
 				.select()
 				.from(courseGenerationJobs)
-				.where(eq(courseGenerationJobs.courseId, course.id))
-				.orderBy(desc(courseGenerationJobs.createdAt))
-				.limit(1);
-
-			return {
-				course: mapCourse(course),
-				video: mapVideo(video),
-				chapterCount: chapterCountRow?.value ?? 0,
-				progress: progressRow ? mapCourseProgress(progressRow) : null,
-				latestGenerationJob: jobRow ? mapGenerationJob(jobRow) : null,
-			};
-		}),
+				.where(inArray(courseGenerationJobs.courseId, courseIds))
+				.orderBy(
+					courseGenerationJobs.courseId,
+					desc(courseGenerationJobs.createdAt),
+				),
+		],
 	);
+	const chapterCounts = new Map(
+		chapterCountRows.map((row) => [row.courseId, row.value]),
+	);
+	const progressByCourseId = new Map(
+		progressRows.map((row) => [row.courseId, row]),
+	);
+	const latestJobByCourseId = new Map<
+		string,
+		(typeof generationJobRows)[number]
+	>();
+
+	for (const job of generationJobRows) {
+		if (!latestJobByCourseId.has(job.courseId)) {
+			latestJobByCourseId.set(job.courseId, job);
+		}
+	}
+
+	return courseRows.map(({ course, video }) => {
+		const progressRow = progressByCourseId.get(course.id);
+		const jobRow = latestJobByCourseId.get(course.id);
+
+		return {
+			course: mapCourse(course),
+			video: mapVideo(video),
+			chapterCount: chapterCounts.get(course.id) ?? 0,
+			progress: progressRow ? mapCourseProgress(progressRow) : null,
+			latestGenerationJob: jobRow ? mapGenerationJob(jobRow) : null,
+		};
+	});
 }
 
 export async function getBookmarks(

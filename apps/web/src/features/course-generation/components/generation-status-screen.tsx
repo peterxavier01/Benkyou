@@ -8,16 +8,23 @@ import {
 	AlertDescription,
 	AlertTitle,
 } from "@benkyou/ui/components/alert";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate, useRouter } from "@tanstack/react-router";
+import {
+	type QueryClient,
+	useMutation,
+	useQuery,
+	useQueryClient,
+} from "@tanstack/react-query";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useCallback, useEffect, useRef } from "react";
-
+import { useEffect, useRef } from "react";
+import {
+	generationJobQueryOptions,
+	workspaceQueryKeys,
+} from "#/features/workspace/workspace.queries";
 import { WorkspacePage } from "#components/workspace-layout";
 import BetterAuthHeader from "../../../integrations/better-auth/header-user";
 import {
 	cancelGenerationJob,
-	getGenerationJob,
 	processGenerationJob,
 	retryGenerationJob,
 } from "../course-generation.functions";
@@ -27,14 +34,21 @@ interface GenerationStatusScreenProps {
 	jobId: string;
 }
 
+async function refreshCourseCaches(queryClient: QueryClient, courseId: string) {
+	queryClient.removeQueries({
+		queryKey: workspaceQueryKeys.coursePlayer(courseId),
+	});
+	await queryClient.invalidateQueries({
+		queryKey: workspaceQueryKeys.courseLibrary,
+	});
+}
+
 function GenerationStatusScreen({
 	initialDetail,
 	jobId,
 }: GenerationStatusScreenProps) {
 	const navigate = useNavigate();
-	const router = useRouter();
 	const queryClient = useQueryClient();
-	const getJob = useServerFn(getGenerationJob);
 	const processJob = useServerFn(processGenerationJob);
 	const retryJob = useServerFn(retryGenerationJob);
 	const cancelJob = useServerFn(cancelGenerationJob);
@@ -42,8 +56,7 @@ function GenerationStatusScreen({
 	const refreshedJobIdRef = useRef<string | null>(null);
 
 	const jobQuery = useQuery({
-		queryKey: ["generation-job", jobId],
-		queryFn: () => getJob({ data: { generationJobId: jobId } }),
+		...generationJobQueryOptions(jobId),
 		initialData: initialDetail,
 		refetchInterval: (query) =>
 			isTerminalStatus(query.state.data?.job.status ?? initialDetail.job.status)
@@ -55,8 +68,11 @@ function GenerationStatusScreen({
 	const processMutation = useMutation({
 		mutationFn: () => processJob({ data: { generationJobId: jobId } }),
 		onSuccess: async (result) => {
-			queryClient.setQueryData(["generation-job", jobId], result.detail);
-			await refreshCourseCaches(result.detail.course.id);
+			queryClient.setQueryData(
+				workspaceQueryKeys.generationJob(jobId),
+				result.detail,
+			);
+			await refreshCourseCaches(queryClient, result.detail.course.id);
 		},
 	});
 
@@ -64,12 +80,11 @@ function GenerationStatusScreen({
 		mutationFn: () => retryJob({ data: { generationJobId: jobId } }),
 		onSuccess: async (result) => {
 			queryClient.removeQueries({
-				queryKey: ["course-player", result.courseId],
+				queryKey: workspaceQueryKeys.coursePlayer(result.courseId),
 			});
-			await Promise.all([
-				queryClient.invalidateQueries({ queryKey: ["course-library"] }),
-				router.invalidate(),
-			]);
+			await queryClient.invalidateQueries({
+				queryKey: workspaceQueryKeys.courseLibrary,
+			});
 			await navigate({ href: `/courses/new/${result.generationJobId}` });
 		},
 	});
@@ -77,21 +92,13 @@ function GenerationStatusScreen({
 	const cancelMutation = useMutation({
 		mutationFn: () => cancelJob({ data: { generationJobId: jobId } }),
 		onSuccess: async (result) => {
-			queryClient.setQueryData(["generation-job", jobId], result.detail);
-			await refreshCourseCaches(result.detail.course.id);
+			queryClient.setQueryData(
+				workspaceQueryKeys.generationJob(jobId),
+				result.detail,
+			);
+			await refreshCourseCaches(queryClient, result.detail.course.id);
 		},
 	});
-
-	const refreshCourseCaches = useCallback(
-		async (courseId: string) => {
-			queryClient.removeQueries({ queryKey: ["course-player", courseId] });
-			await Promise.all([
-				queryClient.invalidateQueries({ queryKey: ["course-library"] }),
-				router.invalidate(),
-			]);
-		},
-		[queryClient, router],
-	);
 
 	useEffect(() => {
 		if (!detail.canOpenCourse || refreshedJobIdRef.current === detail.job.id) {
@@ -99,13 +106,8 @@ function GenerationStatusScreen({
 		}
 
 		refreshedJobIdRef.current = detail.job.id;
-		void refreshCourseCaches(detail.course.id);
-	}, [
-		detail.canOpenCourse,
-		detail.course.id,
-		detail.job.id,
-		refreshCourseCaches,
-	]);
+		void refreshCourseCaches(queryClient, detail.course.id);
+	}, [detail.canOpenCourse, detail.course.id, detail.job.id, queryClient]);
 
 	useEffect(() => {
 		if (
