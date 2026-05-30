@@ -9,7 +9,7 @@ type AppHeaderProps = {
 
 function AppHeader({
 	action,
-	subtitle = "Local-first study from one video.",
+	subtitle = "Local-first video study workspace",
 }: AppHeaderProps) {
 	return (
 		<header className="sticky top-0 z-20 border-border border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/85">

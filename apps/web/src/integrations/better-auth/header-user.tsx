@@ -9,11 +9,14 @@ import {
 	DropdownMenuTrigger,
 	HugeIcon,
 } from "@benkyou/ui";
-import { Link, useRouter } from "@tanstack/react-router";
+import { Link, useRouter, useRouterState } from "@tanstack/react-router";
 
 export default function BetterAuthHeader() {
 	const { data: session, isPending } = authClient.useSession();
 	const router = useRouter();
+	const pathname = useRouterState({
+		select: (state) => state.location.pathname,
+	});
 
 	if (isPending) {
 		return <div className="size-8 animate-pulse rounded-md bg-muted" />;
@@ -89,10 +92,23 @@ export default function BetterAuthHeader() {
 	}
 
 	return (
-		<Button asChild variant="outline" size="sm">
-			<Link to="/sign-in" search={{ redirect: "/" }}>
-				Sign in
-			</Link>
-		</Button>
+		<div className="flex items-center gap-2">
+			{!isCoursesPath(pathname) ? (
+				<Button asChild variant="ghost" size="sm">
+					<Link to="/courses" search={{ q: "", filter: "all" }}>
+						Courses
+					</Link>
+				</Button>
+			) : null}
+			<Button asChild variant="outline" size="sm">
+				<Link to="/sign-in" search={{ redirect: "/" }}>
+					Sign in
+				</Link>
+			</Button>
+		</div>
 	);
+}
+
+function isCoursesPath(pathname: string) {
+	return pathname === "/courses" || pathname.startsWith("/courses/");
 }

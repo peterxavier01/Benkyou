@@ -22,11 +22,7 @@ function PlayerPrimary({
 	return (
 		<section
 			data-slot="player-primary"
-			className={cn(
-				"flex min-w-0 flex-col gap-3",
-				"lg:sticky lg:top-[4.25rem] lg:self-start",
-				className,
-			)}
+			className={cn("flex min-w-0 flex-col gap-3", className)}
 			{...props}
 		/>
 	);
@@ -53,7 +49,7 @@ function PlayerAside({ className, ...props }: React.ComponentProps<"aside">) {
 		<aside
 			data-slot="player-aside"
 			className={cn(
-				"hidden min-h-0 rounded-lg border border-border bg-card lg:flex lg:flex-col",
+				"hidden min-h-0 rounded-lg border border-border bg-card lg:sticky lg:top-[4.25rem] lg:flex lg:max-h-[calc(100dvh-4.25rem)] lg:flex-col lg:self-start",
 				className,
 			)}
 			{...props}
