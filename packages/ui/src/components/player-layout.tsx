@@ -49,7 +49,7 @@ function PlayerAside({ className, ...props }: React.ComponentProps<"aside">) {
 		<aside
 			data-slot="player-aside"
 			className={cn(
-				"hidden min-h-0 rounded-lg border border-border bg-card lg:sticky lg:top-[4.25rem] lg:flex lg:max-h-[calc(100dvh-4.25rem)] lg:flex-col lg:self-start",
+				"hidden min-h-0 rounded-lg border border-border bg-card lg:fixed lg:top-[4.25rem] lg:right-3 lg:z-10 lg:flex lg:max-h-[calc(100dvh-4.25rem)] lg:w-80 lg:flex-col xl:w-[360px]",
 				className,
 			)}
 			{...props}

@@ -30,7 +30,6 @@ import {
 	HugeIcon,
 	PlayerAside,
 	PlayerPrimary,
-	PlayerTabletStack,
 	PlayerVideoFrame,
 	PlayerWorkspace,
 	Progress,
@@ -1263,18 +1262,6 @@ function CoursePlayerScreen({
 					</div>
 
 					<div className="flex flex-col gap-3">
-						<PlayerTabletStack>
-							<ChapterPanel
-								chapters={data.chapters}
-								selectedChapterId={selectedChapter?.id ?? null}
-								watchedByChapter={watchedByChapter}
-								completedByChapter={completedByChapter}
-								durationSeconds={durationSeconds}
-								onSelect={selectChapter}
-								onToggleComplete={toggleChapterComplete}
-							/>
-						</PlayerTabletStack>
-
 						<LearningTabs
 							courseId={courseId}
 							chapter={selectedChapter}
@@ -1467,7 +1454,7 @@ function ChapterItem({
 
 function MobileChapterDrawer(props: Parameters<typeof ChapterPanel>[0]) {
 	return (
-		<div className="md:hidden">
+		<div className="lg:hidden">
 			<Drawer>
 				<DrawerTrigger asChild>
 					<Button type="button" variant="outline" size="sm">

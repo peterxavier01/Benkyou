@@ -167,14 +167,13 @@ function CourseLibraryScreen({
 					</div>
 				</div>
 
-				<div className="-mx-4 mt-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
+				<div className="mt-4 flex min-w-0 flex-wrap gap-2">
 					{Object.entries(filterLabels).map(([filter, label]) => (
 						<Button
 							key={filter}
 							type="button"
 							size="sm"
 							variant={search.filter === filter ? "default" : "outline"}
-							className="shrink-0"
 							onClick={() =>
 								void navigate({
 									to: "/courses",
