@@ -5,7 +5,7 @@ import {
 	signInInputSchema,
 	signUpInputSchema,
 } from "@benkyou/auth/schemas";
-import { Button, ContentPanel, Input, Label } from "@benkyou/ui";
+import { Button, ContentPanel, HugeIcon, Input, Label } from "@benkyou/ui";
 import {
 	Alert,
 	AlertDescription,
@@ -13,7 +13,7 @@ import {
 } from "@benkyou/ui/components/alert";
 import { useForm } from "@tanstack/react-form";
 import { useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import type { z } from "zod";
 
 type AuthMode = "sign-in" | "sign-up";
@@ -35,25 +35,22 @@ function AuthForm({ redirectTo }: AuthFormProps) {
 	const [mode, setMode] = useState<AuthMode>("sign-in");
 	const [authError, setAuthError] = useState<string | null>(null);
 
-	const copy = useMemo(
-		() =>
-			mode === "sign-in"
-				? {
-						title: "Sign in",
-						action: "Sign in",
-						description: "Resume your saved courses, notes, and bookmarks.",
-						switchAction: "Create account",
-						switchPrompt: "New to Benkyou?",
-					}
-				: {
-						title: "Create account",
-						action: "Create account",
-						description: "Save your learning workspace for later sessions.",
-						switchAction: "Sign in instead",
-						switchPrompt: "Already have an account?",
-					},
-		[mode],
-	);
+	const copy =
+		mode === "sign-in"
+			? {
+					title: "Sign in",
+					action: "Sign in",
+					description: "Resume your saved courses, notes, and bookmarks.",
+					switchAction: "Create account",
+					switchPrompt: "New to Benkyou?",
+				}
+			: {
+					title: "Create account",
+					action: "Create account",
+					description: "Save your learning workspace for later sessions.",
+					switchAction: "Sign in instead",
+					switchPrompt: "Already have an account?",
+				};
 
 	const form = useForm({
 		defaultValues,
@@ -215,19 +212,41 @@ function AuthTextField({
 	type?: "email" | "password" | "text";
 	value: string;
 }) {
+	const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+	const isPassword = type === "password";
+	const inputType = isPassword && isPasswordVisible ? "text" : type;
+
 	return (
 		<div className="space-y-2">
 			<Label htmlFor={fieldId}>{label}</Label>
-			<Input
-				id={fieldId}
-				name={name}
-				type={type}
-				autoComplete={autoComplete}
-				value={value}
-				aria-invalid={Boolean(error)}
-				onBlur={onBlur}
-				onChange={(event) => onChange(event.target.value)}
-			/>
+			<div className="relative">
+				<Input
+					id={fieldId}
+					name={name}
+					type={inputType}
+					autoComplete={autoComplete}
+					value={value}
+					aria-invalid={Boolean(error)}
+					className={isPassword ? "pr-10" : undefined}
+					onBlur={onBlur}
+					onChange={(event) => onChange(event.target.value)}
+				/>
+				{isPassword ? (
+					<button
+						type="button"
+						aria-label={isPasswordVisible ? "Hide password" : "Show password"}
+						aria-pressed={isPasswordVisible}
+						className="-translate-y-1/2 absolute top-1/2 right-2 flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35"
+						onMouseDown={(event) => event.preventDefault()}
+						onClick={() => setIsPasswordVisible((current) => !current)}
+					>
+						<HugeIcon
+							name={isPasswordVisible ? "viewOff" : "view"}
+							className="size-4"
+						/>
+					</button>
+				) : null}
+			</div>
 			{error ? <p className="text-destructive text-sm">{error}</p> : null}
 		</div>
 	);

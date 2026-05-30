@@ -23,7 +23,7 @@ const authBenefits = [
 
 function AuthIntroPanel() {
 	return (
-		<ContentPanel className="flex min-h-[420px] flex-col justify-between p-5 sm:p-7">
+		<ContentPanel className="flex flex-col justify-between p-5 sm:p-7 md:min-h-[420px]">
 			<div className="grid gap-5">
 				<BrandLogo subtitle="Hosted sync" />
 

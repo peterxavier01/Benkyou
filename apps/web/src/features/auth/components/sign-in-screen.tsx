@@ -27,9 +27,11 @@ function SignInScreen({ redirectTo }: SignInScreenProps) {
 			/>
 
 			<div className="mx-auto grid w-full max-w-6xl flex-1 items-start gap-4 px-4 py-6 md:grid-cols-[minmax(0,1fr)_420px] md:px-6 lg:py-10">
-				<AuthIntroPanel />
+				<section className="order-2 md:order-1">
+					<AuthIntroPanel />
+				</section>
 
-				<section className="flex items-center">
+				<section className="order-1 flex items-center md:order-2">
 					<AuthForm redirectTo={redirectTo} />
 				</section>
 			</div>

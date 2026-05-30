@@ -129,11 +129,11 @@ function HomeScreen() {
 								</p>
 							</div>
 						</div>
-						<ul className="grid grid-cols-4 gap-2 text-xs">
+						<ul className="flex flex-wrap gap-2 text-xs">
 							{["Chapters", "Notes", "Bookmarks", "Progress"].map((step) => (
 								<li
 									key={step}
-									className="rounded-md bg-accent px-2 py-1.5 text-center font-medium text-accent-foreground"
+									className="min-w-[6.5rem] flex-1 rounded-md bg-accent px-2 py-1.5 text-center font-medium text-accent-foreground"
 								>
 									{step}
 								</li>
