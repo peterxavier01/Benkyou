@@ -5,9 +5,9 @@ import {
 	Scripts,
 } from "@tanstack/react-router";
 import { lazy, Suspense } from "react";
+import { AnalyticsProvider } from "#/integrations/posthog/analytics-provider";
 import { AppRecoveryScreen } from "#components/app-recovery-screen";
 import { GlobalErrorScreen } from "#components/global-error-screen";
-import { AnalyticsProvider } from "#/integrations/posthog/analytics-provider";
 import { buildSeoHead } from "#lib/seo";
 import appCss from "../styles.css?url";
 
