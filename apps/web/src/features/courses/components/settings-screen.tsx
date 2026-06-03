@@ -43,6 +43,7 @@ import {
 	learningPreferencesQueryOptions,
 	workspaceQueryKeys,
 } from "#/features/workspace/workspace.queries";
+import { trackAnalyticsEvent } from "#/integrations/posthog/analytics";
 import { WorkspacePage } from "#components/workspace-layout";
 import type { getCurrentUser } from "../../auth/auth.functions";
 import {
@@ -96,6 +97,9 @@ function SettingsScreen({
 		mutationFn: (preferences: LearningPreferencesDTO) =>
 			updatePreferences({ data: preferences }),
 		onSuccess: async (result) => {
+			trackAnalyticsEvent("learning_preferences_updated", {
+				playback_speed: result.preferences.playbackSpeed,
+			});
 			writeLocalPreferences(result.preferences);
 			setLocalPreferences(result.preferences);
 			queryClient.setQueryData(workspaceQueryKeys.learningPreferences, result);
@@ -114,6 +118,9 @@ function SettingsScreen({
 		setExportPending(true);
 		try {
 			const result = await exportCourse({ data: { courseId } });
+			trackAnalyticsEvent("course_exported", {
+				source: "settings",
+			});
 			downloadText(result.filename, result.markdown);
 		} catch (error) {
 			setExportError(error instanceof Error ? error.message : "Export failed.");
@@ -234,6 +241,7 @@ function SettingsScreen({
 									variant="destructive"
 									onClick={() => {
 										resetLocalData();
+										trackAnalyticsEvent("local_data_reset");
 										setLocalPreferences(null);
 										setResetDone(true);
 									}}

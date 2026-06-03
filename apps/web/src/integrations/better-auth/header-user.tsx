@@ -10,6 +10,7 @@ import {
 	HugeIcon,
 } from "@benkyou/ui";
 import { Link, useRouter, useRouterState } from "@tanstack/react-router";
+import { trackAnalyticsEvent } from "#/integrations/posthog/analytics";
 
 export default function BetterAuthHeader() {
 	const { data: session, isPending } = authClient.useSession();
@@ -80,6 +81,7 @@ export default function BetterAuthHeader() {
 					<DropdownMenuItem
 						onSelect={() => {
 							void authClient.signOut().then(() => {
+								trackAnalyticsEvent("sign_out_succeeded");
 								void router.navigate({ to: "/" });
 							});
 						}}

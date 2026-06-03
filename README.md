@@ -43,6 +43,10 @@ Fill in the values in `apps/web/.env.local`. For the first local run, set:
 - `BETTER_AUTH_SECRET`: secret used by Better Auth.
 - `BETTER_AUTH_URL`: local app URL, usually `http://localhost:3000`.
 - `PUBLIC_SITE_URL`: public canonical URL for SEO metadata, robots, and sitemap.
+- `VITE_PUBLIC_POSTHOG_KEY`: optional PostHog project key; leave blank to
+  disable analytics for self-hosting.
+- `VITE_PUBLIC_POSTHOG_HOST`: optional PostHog host, default
+  `https://us.i.posthog.com`.
 - `GENERATION_RATE_LIMIT_MAX`: optional course generation quota, default `5`.
 - `GENERATION_RATE_LIMIT_WINDOW_HOURS`: optional quota window, default `24`.
 
@@ -89,7 +93,9 @@ workspace.
 
 Contributions should improve the self-hostable Benkyou learning workspace.
 Hosted-only business operations, billing, private infrastructure, internal
-analytics, and admin tooling are outside the scope of this repository.
+analytics, and admin tooling are outside the scope of this repository. The app
+may include optional, no-op-by-default analytics integrations for operators who
+configure them explicitly.
 
 ## Self-hosting
 

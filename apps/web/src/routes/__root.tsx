@@ -7,6 +7,7 @@ import {
 import { lazy, Suspense } from "react";
 import { AppRecoveryScreen } from "#components/app-recovery-screen";
 import { GlobalErrorScreen } from "#components/global-error-screen";
+import { AnalyticsProvider } from "#/integrations/posthog/analytics-provider";
 import { buildSeoHead } from "#lib/seo";
 import appCss from "../styles.css?url";
 
@@ -63,7 +64,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 				<HeadContent />
 			</head>
 			<body>
-				{children}
+				<AnalyticsProvider>{children}</AnalyticsProvider>
 				{AppDevtools ? (
 					<Suspense fallback={null}>
 						<AppDevtools />

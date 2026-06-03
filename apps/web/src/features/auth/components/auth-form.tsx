@@ -15,6 +15,7 @@ import { useForm } from "@tanstack/react-form";
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import type { z } from "zod";
+import { trackAnalyticsEvent } from "#/integrations/posthog/analytics";
 
 type AuthMode = "sign-in" | "sign-up";
 type AuthFormValues = SignUpInput;
@@ -75,6 +76,10 @@ function AuthForm({ redirectTo }: AuthFormProps) {
 					: await authClient.signUp.email(parsed.data as SignUpInput);
 
 			if (result.error) {
+				trackAnalyticsEvent(
+					mode === "sign-in" ? "sign_in_failed" : "sign_up_failed",
+					{ reason: result.error.message ? "provider_error" : "unknown" },
+				);
 				setAuthError(
 					result.error.message ||
 						"Authentication failed. Check your details and try again.",
@@ -82,6 +87,9 @@ function AuthForm({ redirectTo }: AuthFormProps) {
 				return;
 			}
 
+			trackAnalyticsEvent(
+				mode === "sign-in" ? "sign_in_succeeded" : "sign_up_succeeded",
+			);
 			await navigate({ href: redirectTo || "/" });
 		},
 	});
@@ -181,6 +189,9 @@ function AuthForm({ redirectTo }: AuthFormProps) {
 					onClick={() => {
 						setAuthError(null);
 						form.reset();
+						trackAnalyticsEvent("auth_mode_changed", {
+							mode: mode === "sign-in" ? "sign-up" : "sign-in",
+						});
 						setMode(mode === "sign-in" ? "sign-up" : "sign-in");
 					}}
 				>
@@ -227,7 +238,7 @@ function AuthTextField({
 					autoComplete={autoComplete}
 					value={value}
 					aria-invalid={Boolean(error)}
-					className={isPassword ? "pr-10" : undefined}
+					className={isPassword ? "ph-no-capture pr-10" : "ph-no-capture"}
 					onBlur={onBlur}
 					onChange={(event) => onChange(event.target.value)}
 				/>

@@ -32,6 +32,10 @@ Required values:
 - `YOUTUBE_TRANSCRIPT_PROVIDER`: optional transcript provider, default `auto`.
 - `TRANSCRIPTAPI_API_KEY`: optional TranscriptAPI key for reliable hosted
   YouTube transcript fetching.
+- `VITE_PUBLIC_POSTHOG_KEY`: optional PostHog project key; leave blank to
+  disable analytics for self-hosting.
+- `VITE_PUBLIC_POSTHOG_HOST`: optional PostHog host, default
+  `https://us.i.posthog.com`.
 - `GENERATION_RATE_LIMIT_MAX`: optional generation quota, default `5`.
 - `GENERATION_RATE_LIMIT_WINDOW_HOURS`: optional quota window, default `24`.
 
@@ -40,8 +44,8 @@ TranscriptAPI when `TRANSCRIPTAPI_API_KEY` is present, otherwise it falls back
 to the free local `youtube-transcript` package. For hosted production, set
 `YOUTUBE_TRANSCRIPT_PROVIDER=transcriptapi` and `TRANSCRIPTAPI_API_KEY` so the
 app does not silently return to the local scraper path. Use
-`YOUTUBE_TRANSCRIPT_PROVIDER=local` for development or self-hosted installs
-that prefer the free local package.
+`YOUTUBE_TRANSCRIPT_PROVIDER=local` for development or self-hosted installs that
+prefer the free local package.
 
 ## Deployment
 

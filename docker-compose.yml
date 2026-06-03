@@ -19,7 +19,11 @@ services:
       retries: 5
 
   web:
-    build: .
+    build:
+      context: .
+      args:
+        VITE_PUBLIC_POSTHOG_KEY: ${VITE_PUBLIC_POSTHOG_KEY:-}
+        VITE_PUBLIC_POSTHOG_HOST: ${VITE_PUBLIC_POSTHOG_HOST:-https://us.i.posthog.com}
     restart: unless-stopped
     depends_on:
       db:

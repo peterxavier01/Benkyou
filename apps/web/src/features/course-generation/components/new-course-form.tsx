@@ -9,6 +9,7 @@ import { useForm } from "@tanstack/react-form";
 import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
+import { trackAnalyticsEvent } from "#/integrations/posthog/analytics";
 
 import {
 	createCourseFromUrl,
@@ -37,16 +38,31 @@ function NewCourseForm() {
 		},
 		onSubmit: async ({ value }) => {
 			setFormError(null);
+			const parsedUrl = parseVideoUrl(value.url);
+
+			trackAnalyticsEvent("course_create_submitted", {
+				provider: parsedUrl.ok ? parsedUrl.value.provider : "unknown",
+			});
 
 			try {
 				const result = await createCourse({ data: { url: value.url } });
+				trackAnalyticsEvent("course_create_succeeded", {
+					has_generation_job: Boolean(result.generationJobId),
+					reused_existing_course: result.reusedExistingCourse,
+				});
 				if (result.reusedExistingCourse || result.generationJobId === null) {
 					await navigate({ href: `/courses/${result.courseId}` });
 					return;
 				}
 
+				trackAnalyticsEvent("generation_job_started", {
+					source: "course_create",
+				});
 				await navigate({ href: `/courses/new/${result.generationJobId}` });
 			} catch (error) {
+				trackAnalyticsEvent("course_create_failed", {
+					reason: error instanceof Error ? "server_error" : "unknown",
+				});
 				setFormError(toErrorMessage(error));
 			}
 		},
@@ -86,7 +102,7 @@ function NewCourseForm() {
 										name={field.name}
 										type="url"
 										placeholder="https://youtube.com/watch?v=..."
-										className="h-10 flex-1"
+										className="ph-no-capture h-10 flex-1"
 										value={field.state.value}
 										aria-invalid={Boolean(error)}
 										onBlur={field.handleBlur}
@@ -133,6 +149,7 @@ function NewCourseForm() {
 
 						try {
 							const result = await openSample();
+							trackAnalyticsEvent("sample_course_opened");
 							setOpeningSample(false);
 							await navigate({ href: `/courses/${result.courseId}` });
 						} catch (error) {

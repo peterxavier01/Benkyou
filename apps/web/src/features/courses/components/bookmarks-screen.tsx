@@ -25,6 +25,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { bookmarksQueryOptions } from "#/features/workspace/workspace.queries";
+import { trackAnalyticsEvent } from "#/integrations/posthog/analytics";
 import { WorkspacePage } from "#components/workspace-layout";
 import BetterAuthHeader from "../../../integrations/better-auth/header-user";
 
@@ -72,7 +73,7 @@ function BookmarksScreen({ initialData, search }: BookmarksScreenProps) {
 								id="bookmark-search"
 								value={search.q}
 								placeholder="Search bookmarks"
-								className="pl-9"
+								className="ph-no-capture pl-9"
 								onChange={(event) =>
 									void navigate({
 										to: "/bookmarks",
@@ -87,7 +88,11 @@ function BookmarksScreen({ initialData, search }: BookmarksScreenProps) {
 						</label>
 						<Select
 							value={search.course}
-							onValueChange={(course) =>
+							onValueChange={(course) => {
+								trackAnalyticsEvent("bookmark_filter_changed", {
+									course_filter: course === "all" ? "all" : "specific",
+									query_length: search.q.length,
+								});
 								void navigate({
 									to: "/bookmarks",
 									search: {
@@ -95,8 +100,8 @@ function BookmarksScreen({ initialData, search }: BookmarksScreenProps) {
 										course,
 									},
 									replace: true,
-								})
-							}
+								});
+							}}
 						>
 							<SelectTrigger className="w-full min-w-[0] **:data-[slot=select-value]:min-w-[0] **:data-[slot=select-value]:truncate">
 								<SelectValue placeholder="All courses" />
@@ -219,6 +224,13 @@ function BookmarkRow({ item }: { item: BookmarkListItemDTO }) {
 								chapter: item.bookmark.chapterId ?? undefined,
 								bookmark: item.bookmark.id,
 							}}
+							onClick={() =>
+								trackAnalyticsEvent("bookmark_jumped_to", {
+									source: "bookmarks",
+									has_chapter: Boolean(item.bookmark.chapterId),
+									has_note: Boolean(item.bookmark.note),
+								})
+							}
 						>
 							Open moment
 						</Link>

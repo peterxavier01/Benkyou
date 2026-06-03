@@ -101,6 +101,7 @@ function BookmarkDialog({
 										name={field.name}
 										value={field.state.value}
 										placeholder="Optional title"
+										className="ph-no-capture"
 										aria-invalid={Boolean(error)}
 										onBlur={field.handleBlur}
 										onChange={(event) => field.handleChange(event.target.value)}
@@ -125,7 +126,7 @@ function BookmarkDialog({
 										name={field.name}
 										value={field.state.value}
 										placeholder="Optional note"
-										className="min-h-24"
+										className="ph-no-capture min-h-24"
 										aria-invalid={Boolean(error)}
 										onBlur={field.handleBlur}
 										onChange={(event) => field.handleChange(event.target.value)}

@@ -16,6 +16,10 @@ COPY packages/ui/package.json packages/ui/package.json
 RUN pnpm install --frozen-lockfile
 
 FROM deps AS build
+ARG VITE_PUBLIC_POSTHOG_KEY=
+ARG VITE_PUBLIC_POSTHOG_HOST=https://us.i.posthog.com
+ENV VITE_PUBLIC_POSTHOG_KEY=$VITE_PUBLIC_POSTHOG_KEY
+ENV VITE_PUBLIC_POSTHOG_HOST=$VITE_PUBLIC_POSTHOG_HOST
 COPY . .
 RUN pnpm build
 

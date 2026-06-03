@@ -51,6 +51,7 @@ import { useServerFn } from "@tanstack/react-start";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { workspaceQueryKeys } from "#/features/workspace/workspace.queries";
+import { trackAnalyticsEvent } from "#/integrations/posthog/analytics";
 import {
 	useWorkspaceNavigationFlush,
 	WorkspacePage,
@@ -171,6 +172,9 @@ function CoursePlayerScreen({
 	});
 	const dirtyChapterIdsRef = useRef(new Set<string>());
 	const lastAudibleVolumeRef = useRef(100);
+	const openedCourseIdRef = useRef<string | null>(null);
+	const trackedMilestonesRef = useRef(new Set<number>());
+	const trackedPlayingStateRef = useRef(playerPlaying);
 	const youtubePlayerRef = useRef<YouTubePlayerHandle | null>(null);
 	const {
 		fullscreenError,
@@ -322,7 +326,10 @@ function CoursePlayerScreen({
 			watchedSeconds: number;
 			completed: boolean;
 		}) => saveChapterProgress({ data: input }),
-		onSuccess: (result) => {
+		onSuccess: (result, input) => {
+			trackAnalyticsEvent("chapter_completion_changed", {
+				completed: input.completed,
+			});
 			queryClient.setQueryData<CoursePlayerDataDTO>(
 				playerQueryKey,
 				(current) =>
@@ -361,6 +368,9 @@ function CoursePlayerScreen({
 			return { previousPreferences };
 		},
 		onSuccess: async (result) => {
+			trackAnalyticsEvent("playback_speed_changed", {
+				playback_speed: result.preferences.playbackSpeed,
+			});
 			writeLocalPreferences(result.preferences);
 			queryClient.setQueryData<GetLearningPreferencesResponseV1>(
 				workspaceQueryKeys.learningPreferences,
@@ -393,6 +403,10 @@ function CoursePlayerScreen({
 				},
 			}),
 		onSuccess: async (result) => {
+			trackAnalyticsEvent("bookmark_created", {
+				has_note: Boolean(result.bookmark.note),
+				has_title: Boolean(result.bookmark.title),
+			});
 			queryClient.setQueryData<CoursePlayerDataDTO>(
 				playerQueryKey,
 				(current) =>
@@ -421,6 +435,10 @@ function CoursePlayerScreen({
 				},
 			}),
 		onSuccess: async (result) => {
+			trackAnalyticsEvent("bookmark_updated", {
+				has_note: Boolean(result.bookmark.note),
+				has_title: Boolean(result.bookmark.title),
+			});
 			queryClient.setQueryData<CoursePlayerDataDTO>(
 				playerQueryKey,
 				(current) =>
@@ -448,6 +466,9 @@ function CoursePlayerScreen({
 				return;
 			}
 
+			trackAnalyticsEvent("bookmark_deleted", {
+				source: "course_player",
+			});
 			queryClient.setQueryData<CoursePlayerDataDTO>(
 				playerQueryKey,
 				(current) =>
@@ -470,6 +491,9 @@ function CoursePlayerScreen({
 		mutationFn: (generationJobId: string) =>
 			retryJob({ data: { generationJobId } }),
 		onSuccess: async (result) => {
+			trackAnalyticsEvent("generation_job_retry_requested", {
+				source: "course_player",
+			});
 			await queryClient.invalidateQueries({
 				queryKey: playerQueryKey,
 			});
@@ -702,6 +726,40 @@ function CoursePlayerScreen({
 	]);
 
 	useEffect(() => {
+		if (openedCourseIdRef.current === courseId) {
+			return;
+		}
+
+		openedCourseIdRef.current = courseId;
+		trackAnalyticsEvent("course_opened", {
+			chapter_count: data.chapters.length,
+			has_bookmarks: data.bookmarks.length > 0,
+			has_notes: data.notes.length > 0,
+			has_progress: Boolean(data.progress),
+		});
+	}, [
+		courseId,
+		data.bookmarks.length,
+		data.chapters.length,
+		data.notes.length,
+		data.progress,
+	]);
+
+	useEffect(() => {
+		for (const milestone of [25, 50, 75, 100]) {
+			if (
+				courseProgressPercent >= milestone &&
+				!trackedMilestonesRef.current.has(milestone)
+			) {
+				trackedMilestonesRef.current.add(milestone);
+				trackAnalyticsEvent("playback_milestone_reached", {
+					milestone,
+				});
+			}
+		}
+	}, [courseProgressPercent]);
+
+	useEffect(() => {
 		const intervalId = window.setInterval(
 			persistProgress,
 			DEFAULT_PROGRESS_SAVE_INTERVAL_MS,
@@ -754,6 +812,10 @@ function CoursePlayerScreen({
 				nextSeconds,
 			);
 			setSelectedChapterId(chapter.id);
+			trackAnalyticsEvent("chapter_selected", {
+				source: "outline",
+				seek_direction: seekDirection,
+			});
 			setCurrentSeconds(nextSeconds);
 			latestProgressRef.current = {
 				...latestProgressRef.current,
@@ -788,6 +850,11 @@ function CoursePlayerScreen({
 
 			if (chapter) {
 				setSelectedChapterId(chapter.id);
+				trackAnalyticsEvent("bookmark_jumped_to", {
+					source: "course_player",
+					has_chapter: Boolean(bookmark.chapterId),
+					has_note: Boolean(bookmark.note),
+				});
 				latestProgressRef.current = {
 					...latestProgressRef.current,
 					selectedChapterId: chapter.id,
@@ -892,16 +959,31 @@ function CoursePlayerScreen({
 		],
 	);
 
+	const trackPlaybackState = useCallback(
+		(playing: boolean, source: "player_button" | "player_state") => {
+			if (trackedPlayingStateRef.current === playing) {
+				return;
+			}
+			trackedPlayingStateRef.current = playing;
+			trackAnalyticsEvent(playing ? "playback_started" : "playback_paused", {
+				source,
+			});
+		},
+		[],
+	);
+
 	const togglePlayback = useCallback(() => {
 		if (playerPlaying) {
 			youtubePlayerRef.current?.pause();
+			trackPlaybackState(false, "player_button");
 			setPlayerControls((current) => ({ ...current, playing: false }));
 			return;
 		}
 
 		youtubePlayerRef.current?.play();
+		trackPlaybackState(true, "player_button");
 		setPlayerControls((current) => ({ ...current, playing: true }));
-	}, [playerPlaying]);
+	}, [playerPlaying, trackPlaybackState]);
 
 	const changePlayerMuted = (muted: boolean) => {
 		const nextVolume =
@@ -954,6 +1036,18 @@ function CoursePlayerScreen({
 		preferencesMutation.mutate({
 			...learningPreferences,
 			playbackSpeed,
+		});
+	};
+
+	const handlePlayingChange = (playing: boolean) => {
+		setPlayerControls((current) => {
+			if (current.playing === playing) {
+				return current;
+			}
+
+			trackPlaybackState(playing, "player_state");
+
+			return { ...current, playing };
 		});
 	};
 
@@ -1188,9 +1282,7 @@ function CoursePlayerScreen({
 									}
 								}}
 								onTimeUpdate={handleTimeUpdate}
-								onPlayingChange={(playing) =>
-									setPlayerControls((current) => ({ ...current, playing }))
-								}
+								onPlayingChange={handlePlayingChange}
 								onPauseOrEnd={(time, duration) => {
 									handleTimeUpdate(time, duration);
 									persistProgress();
@@ -1224,6 +1316,9 @@ function CoursePlayerScreen({
 										isFullscreen={isFullscreen}
 										isSupported={isFullscreenSupported}
 										onToggle={() => {
+											trackAnalyticsEvent("fullscreen_toggled", {
+												next_state: isFullscreen ? "exit" : "enter",
+											});
 											void toggleFullscreen();
 										}}
 									/>

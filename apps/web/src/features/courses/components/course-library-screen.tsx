@@ -38,6 +38,7 @@ import {
 	courseLibraryQueryOptions,
 	workspaceQueryKeys,
 } from "#/features/workspace/workspace.queries";
+import { trackAnalyticsEvent } from "#/integrations/posthog/analytics";
 import { WorkspacePage } from "#components/workspace-layout";
 import BetterAuthHeader from "../../../integrations/better-auth/header-user";
 import {
@@ -81,6 +82,9 @@ function CourseLibraryScreen({
 		mutationFn: (generationJobId: string) =>
 			retryJob({ data: { generationJobId } }),
 		onSuccess: async (result) => {
+			trackAnalyticsEvent("generation_job_retry_requested", {
+				source: "course_library",
+			});
 			queryClient.removeQueries({
 				queryKey: workspaceQueryKeys.coursePlayer(result.courseId),
 			});
@@ -94,6 +98,9 @@ function CourseLibraryScreen({
 	const deleteMutation = useMutation({
 		mutationFn: (courseId: string) => deleteCourseFn({ data: { courseId } }),
 		onSuccess: async () => {
+			trackAnalyticsEvent("course_deleted", {
+				source: "course_library",
+			});
 			await queryClient.invalidateQueries({
 				queryKey: workspaceQueryKeys.courseLibrary,
 			});
@@ -103,6 +110,9 @@ function CourseLibraryScreen({
 	const sampleMutation = useMutation({
 		mutationFn: () => openSample(),
 		onSuccess: async (result) => {
+			trackAnalyticsEvent("sample_course_opened", {
+				source: "course_library",
+			});
 			await queryClient.invalidateQueries({
 				queryKey: workspaceQueryKeys.courseLibrary,
 			});
@@ -151,7 +161,7 @@ function CourseLibraryScreen({
 								id="course-library-search"
 								value={search.q}
 								placeholder="Search title or channel"
-								className="pl-9"
+								className="ph-no-capture pl-9"
 								onChange={(event) =>
 									void navigate({
 										to: "/courses",
@@ -174,7 +184,11 @@ function CourseLibraryScreen({
 							type="button"
 							size="sm"
 							variant={search.filter === filter ? "default" : "outline"}
-							onClick={() =>
+							onClick={() => {
+								trackAnalyticsEvent("library_filter_changed", {
+									filter,
+									query_length: search.q.length,
+								});
 								void navigate({
 									to: "/courses",
 									search: {
@@ -182,8 +196,8 @@ function CourseLibraryScreen({
 										filter: filter as CourseLibraryFilterV1,
 									},
 									replace: true,
-								})
-							}
+								});
+							}}
 						>
 							{label}
 						</Button>

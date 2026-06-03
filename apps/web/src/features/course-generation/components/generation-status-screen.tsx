@@ -21,6 +21,7 @@ import {
 	generationJobQueryOptions,
 	workspaceQueryKeys,
 } from "#/features/workspace/workspace.queries";
+import { trackAnalyticsEvent } from "#/integrations/posthog/analytics";
 import { WorkspacePage } from "#components/workspace-layout";
 import BetterAuthHeader from "../../../integrations/better-auth/header-user";
 import {
@@ -54,6 +55,7 @@ function GenerationStatusScreen({
 	const cancelJob = useServerFn(cancelGenerationJob);
 	const triggeredProcessingJobIdRef = useRef<string | null>(null);
 	const refreshedJobIdRef = useRef<string | null>(null);
+	const trackedTerminalStatusRef = useRef<GenerationJobStatus | null>(null);
 
 	const jobQuery = useQuery({
 		...generationJobQueryOptions(jobId),
@@ -79,6 +81,9 @@ function GenerationStatusScreen({
 	const retryMutation = useMutation({
 		mutationFn: () => retryJob({ data: { generationJobId: jobId } }),
 		onSuccess: async (result) => {
+			trackAnalyticsEvent("generation_job_retry_requested", {
+				previous_status: detail.job.status,
+			});
 			queryClient.removeQueries({
 				queryKey: workspaceQueryKeys.coursePlayer(result.courseId),
 			});
@@ -92,6 +97,7 @@ function GenerationStatusScreen({
 	const cancelMutation = useMutation({
 		mutationFn: () => cancelJob({ data: { generationJobId: jobId } }),
 		onSuccess: async (result) => {
+			trackAnalyticsEvent("generation_job_cancelled");
 			queryClient.setQueryData(
 				workspaceQueryKeys.generationJob(jobId),
 				result.detail,
@@ -120,6 +126,30 @@ function GenerationStatusScreen({
 		triggeredProcessingJobIdRef.current = jobId;
 		processMutation.mutate();
 	}, [detail.job.status, jobId, processMutation]);
+
+	useEffect(() => {
+		if (
+			!isTerminalStatus(detail.job.status) ||
+			trackedTerminalStatusRef.current === detail.job.status
+		) {
+			return;
+		}
+
+		trackedTerminalStatusRef.current = detail.job.status;
+
+		if (detail.job.status === "completed") {
+			trackAnalyticsEvent("generation_job_completed", {
+				chapter_count: detail.chapterCount,
+			});
+			return;
+		}
+
+		if (detail.job.status === "failed") {
+			trackAnalyticsEvent("generation_job_failed", {
+				has_failure_reason: Boolean(detail.job.failureReason),
+			});
+		}
+	}, [detail.chapterCount, detail.job.failureReason, detail.job.status]);
 
 	const terminal = isTerminalStatus(detail.job.status);
 

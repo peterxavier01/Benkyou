@@ -51,6 +51,7 @@ import {
 	courseManagementQueryOptions,
 	workspaceQueryKeys,
 } from "#/features/workspace/workspace.queries";
+import { trackAnalyticsEvent } from "#/integrations/posthog/analytics";
 import { WorkspacePage } from "#components/workspace-layout";
 import BetterAuthHeader from "../../../integrations/better-auth/header-user";
 import {
@@ -112,6 +113,7 @@ function CourseManagementScreen({
 				},
 			}),
 		onSuccess: async () => {
+			trackAnalyticsEvent("course_metadata_updated");
 			await Promise.all([
 				queryClient.invalidateQueries({
 					queryKey: workspaceQueryKeys.courseManagement(courseId),
@@ -138,6 +140,7 @@ function CourseManagementScreen({
 				},
 			}),
 		onSuccess: async () => {
+			trackAnalyticsEvent("chapter_metadata_updated");
 			setEditingChapter(null);
 			await Promise.all([
 				queryClient.invalidateQueries({
@@ -156,6 +159,12 @@ function CourseManagementScreen({
 	const regenerateMutation = useMutation({
 		mutationFn: () => regenerateFn({ data: { courseId } }),
 		onSuccess: async (result) => {
+			trackAnalyticsEvent("course_regenerate_requested", {
+				chapter_count: data.chapters.length,
+			});
+			trackAnalyticsEvent("generation_job_started", {
+				source: "course_management",
+			});
 			queryClient.removeQueries({
 				queryKey: workspaceQueryKeys.coursePlayer(courseId),
 			});
@@ -174,6 +183,9 @@ function CourseManagementScreen({
 	const deleteMutation = useMutation({
 		mutationFn: () => deleteCourseFn({ data: { courseId } }),
 		onSuccess: async () => {
+			trackAnalyticsEvent("course_deleted", {
+				source: "course_management",
+			});
 			queryClient.removeQueries({
 				queryKey: workspaceQueryKeys.courseManagement(courseId),
 			});
@@ -192,6 +204,9 @@ function CourseManagementScreen({
 		setExportPending(true);
 		try {
 			const result = await exportCourse({ data: { courseId } });
+			trackAnalyticsEvent("course_exported", {
+				source: "course_management",
+			});
 			downloadText(result.filename, result.markdown);
 		} catch (error) {
 			setExportError(error instanceof Error ? error.message : "Export failed.");
@@ -317,7 +332,7 @@ function CourseManagementScreen({
 									<Label htmlFor="course-title">Title</Label>
 									<Input
 										id="course-title"
-										className="min-w-0"
+										className="ph-no-capture min-w-0"
 										value={field.state.value}
 										onBlur={field.handleBlur}
 										onChange={(event) => field.handleChange(event.target.value)}
@@ -332,7 +347,7 @@ function CourseManagementScreen({
 									<Label htmlFor="course-description">Description</Label>
 									<Textarea
 										id="course-description"
-										className="min-w-0 resize-y"
+										className="ph-no-capture min-w-0 resize-y"
 										value={field.state.value}
 										rows={5}
 										onBlur={field.handleBlur}
@@ -565,6 +580,7 @@ function ChapterEditDialog({
 								<Label htmlFor="chapter-title">Title</Label>
 								<Input
 									id="chapter-title"
+									className="ph-no-capture"
 									value={field.state.value}
 									onBlur={field.handleBlur}
 									onChange={(event) => field.handleChange(event.target.value)}
@@ -579,6 +595,7 @@ function ChapterEditDialog({
 								<Label htmlFor="chapter-summary">Summary</Label>
 								<Textarea
 									id="chapter-summary"
+									className="ph-no-capture"
 									value={field.state.value}
 									rows={4}
 									onBlur={field.handleBlur}
