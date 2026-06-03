@@ -12,6 +12,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { trackAnalyticsEvent } from "#/integrations/posthog/analytics";
 import { upsertChapterNote } from "../course-workspace.functions";
 
 type SaveState = "saved" | "saving" | "unsaved" | "failed" | "conflict";
@@ -75,6 +76,14 @@ function NotesEditor({ courseId, chapter, note }: NotesEditorProps) {
 		async (snapshot: SaveSnapshot) => {
 			if (inFlightRef.current) {
 				queuedSaveRef.current = snapshot;
+				writeDraft({
+					courseId,
+					chapterId: snapshot.chapterId,
+					markdown: snapshot.markdown,
+					serverUpdatedAt: snapshot.expectedUpdatedAt,
+					savedAt: new Date().toISOString(),
+				});
+				setSaveState("saving");
 				return;
 			}
 
@@ -87,9 +96,11 @@ function NotesEditor({ courseId, chapter, note }: NotesEditorProps) {
 				serverUpdatedAt: snapshot.expectedUpdatedAt,
 				savedAt: new Date().toISOString(),
 			});
+			let savedNote: ChapterNoteDTO | null = null;
 
 			try {
 				const result = await saveNoteMutation(snapshot);
+				savedNote = result.note;
 
 				queryClient.setQueryData<CoursePlayerDataDTO>(
 					["course-player", courseId],
@@ -101,13 +112,22 @@ function NotesEditor({ courseId, chapter, note }: NotesEditorProps) {
 								}
 							: current,
 				);
-				removeDraft(courseId, snapshot.chapterId);
+				trackAnalyticsEvent("note_saved", {
+					markdown_length: result.note.markdown.length,
+				});
 
 				if (latestRef.current.chapterId === snapshot.chapterId) {
+					const latestMarkdown = latestRef.current.markdown;
 					setLastSavedMarkdown(result.note.markdown);
 					setBaseUpdatedAt(result.note.updatedAt);
-					setSaveState("saved");
 					setAvailableDraft(null);
+
+					if (latestMarkdown === snapshot.markdown) {
+						removeDraft(courseId, snapshot.chapterId);
+						setSaveState("saved");
+					} else {
+						setSaveState(queuedSaveRef.current ? "saving" : "unsaved");
+					}
 				}
 			} catch (error) {
 				const message =
@@ -117,6 +137,11 @@ function NotesEditor({ courseId, chapter, note }: NotesEditorProps) {
 				} else {
 					setSaveState("failed");
 				}
+				trackAnalyticsEvent("note_save_failed", {
+					reason: message.includes("changed in another session")
+						? "conflict"
+						: "save_failed",
+				});
 			} finally {
 				inFlightRef.current = false;
 				const queued = queuedSaveRef.current;
@@ -127,7 +152,11 @@ function NotesEditor({ courseId, chapter, note }: NotesEditorProps) {
 					(queued.chapterId !== snapshot.chapterId ||
 						queued.markdown !== snapshot.markdown)
 				) {
-					void saveSnapshot(queued);
+					const nextQueued =
+						savedNote && queued.chapterId === savedNote.chapterId
+							? { ...queued, expectedUpdatedAt: savedNote.updatedAt }
+							: queued;
+					void saveSnapshot(nextQueued);
 				}
 			}
 		},
@@ -167,12 +196,21 @@ function NotesEditor({ courseId, chapter, note }: NotesEditorProps) {
 		const draft = nextChapterId
 			? getDraft(courseId, nextChapterId, serverUpdatedAt)
 			: null;
+		const chapterChanged = previousChapterId !== nextChapterId;
+		const hasLocalChanges = latest.markdown !== latest.lastSavedMarkdown;
 
-		setMarkdown(serverMarkdown);
-		setLastSavedMarkdown(serverMarkdown);
-		setBaseUpdatedAt(serverUpdatedAt);
-		setAvailableDraft(draft);
-		setSaveState(draft ? "failed" : "saved");
+		if (chapterChanged || !hasLocalChanges) {
+			setMarkdown(serverMarkdown);
+			setLastSavedMarkdown(serverMarkdown);
+			setBaseUpdatedAt(serverUpdatedAt);
+			setAvailableDraft(draft);
+			setSaveState(draft ? "failed" : "saved");
+			return;
+		}
+
+		if (serverMarkdown === latest.lastSavedMarkdown) {
+			setBaseUpdatedAt(serverUpdatedAt);
+		}
 	}, [chapter?.id, courseId, note?.markdown, note?.updatedAt, saveSnapshot]);
 
 	useEffect(() => {
@@ -248,8 +286,32 @@ function NotesEditor({ courseId, chapter, note }: NotesEditorProps) {
 
 	const copyMarkdown = async () => {
 		await copyText(markdown);
+		trackAnalyticsEvent("note_markdown_copied", {
+			markdown_length: markdown.length,
+		});
 		setCopied(true);
 		window.setTimeout(() => setCopied(false), 1200);
+	};
+
+	const updateMarkdown = (nextMarkdown: string) => {
+		setMarkdown(nextMarkdown);
+
+		if (!chapter?.id) {
+			return;
+		}
+
+		if (nextMarkdown === lastSavedMarkdown) {
+			removeDraft(courseId, chapter.id);
+			return;
+		}
+
+		writeDraft({
+			courseId,
+			chapterId: chapter.id,
+			markdown: nextMarkdown,
+			serverUpdatedAt: baseUpdatedAt,
+			savedAt: new Date().toISOString(),
+		});
 	};
 
 	return (
@@ -280,7 +342,12 @@ function NotesEditor({ courseId, chapter, note }: NotesEditorProps) {
 							type="button"
 							size="xs"
 							variant={mode === "preview" ? "secondary" : "ghost"}
-							onClick={() => setMode("preview")}
+							onClick={() => {
+								trackAnalyticsEvent("note_preview_opened", {
+									markdown_length: markdown.length,
+								});
+								setMode("preview");
+							}}
 						>
 							Preview
 						</Button>
@@ -329,8 +396,8 @@ function NotesEditor({ courseId, chapter, note }: NotesEditorProps) {
 					disabled={!chapter}
 					aria-label="Chapter notes"
 					placeholder="Write Markdown notes for this chapter."
-					className="min-h-48 resize-y leading-6 lg:min-h-64"
-					onChange={(event) => setMarkdown(event.target.value)}
+					className="ph-no-capture min-h-48 resize-y leading-6 lg:min-h-64"
+					onChange={(event) => updateMarkdown(event.target.value)}
 				/>
 			) : (
 				<MarkdownPreview markdown={markdown} />
