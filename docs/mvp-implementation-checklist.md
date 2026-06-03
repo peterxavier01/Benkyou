@@ -498,6 +498,7 @@ Goal: verify the MVP behaves like a serious learning tool before release.
 - [x] Validate AI chapter output before writing to the database.
 - [x] Add defensive handling for missing thumbnails, titles, transcripts, and
       durations.
+- [x] Apply Biome formatting and import cleanup after feature changes.
 
 ### Accessibility
 
@@ -506,16 +507,16 @@ Goal: verify the MVP behaves like a serious learning tool before release.
 - [x] Add visible focus states.
 - [x] Add accessible labels for icon buttons.
 - [x] Ensure dialogs trap focus and restore focus on close.
-- [ ] Confirm color contrast for text, badges, progress bars, and errors.
+- [x] Confirm color contrast for text, badges, progress bars, and errors.
 - [x] Respect reduced motion preferences.
 
 ### Responsive QA
 
-- [ ] Verify `/` at mobile, tablet, and desktop sizes.
-- [ ] Verify `/courses` at mobile, tablet, and desktop sizes.
-- [ ] Verify `/courses/:courseId` at mobile, tablet, and desktop sizes.
-- [ ] Verify notes and bookmark modals on small screens.
-- [ ] Confirm text never overlaps controls or overflows buttons.
+- [x] Verify `/` at mobile, tablet, and desktop sizes.
+- [x] Verify `/courses` at mobile, tablet, and desktop sizes.
+- [x] Verify `/courses/:courseId` at mobile, tablet, and desktop sizes.
+- [x] Verify notes and bookmark modals on small screens.
+- [x] Confirm text never overlaps controls or overflows buttons.
 
 ### Testing
 
@@ -524,7 +525,7 @@ Goal: verify the MVP behaves like a serious learning tool before release.
 - [x] Unit test progress percentage calculation.
 - [x] Unit test AI output validator.
 - [ ] Integration test course creation server function.
-- [ ] Integration test notes autosave.
+- [x] Integration test notes autosave.
 - [x] Integration test bookmark create/edit/delete.
 - [ ] Integration test route guards.
 - [x] Smoke test build with `pnpm build`.
@@ -533,10 +534,14 @@ Goal: verify the MVP behaves like a serious learning tool before release.
 
 ### Observability
 
-- [ ] Log generation job failures with job id and provider error category.
+- [x] Add optional PostHog analytics integration that is disabled when no public
+      project key is configured.
+- [x] Track core learner events for auth, course creation, generation, playback,
+      notes, bookmarks, course management, and settings.
+- [x] Log generation job failures with job id and provider error category.
 - [x] Add user-safe error messages.
 - [ ] Track generation duration and failure rate.
-- [ ] Track autosave failures.
+- [x] Track autosave failures.
 - [x] Add basic health check route if needed for deployment.
 
 ### Launch
@@ -551,9 +556,9 @@ Goal: verify the MVP behaves like a serious learning tool before release.
 
 ### Done When
 
-- [ ] The full happy path works from URL paste to generated course to resume.
-- [ ] The top failure paths are recoverable.
-- [ ] The app passes build, type check, lint/check, and responsive smoke tests.
+- [x] The full happy path works from URL paste to generated course to resume.
+- [x] The top failure paths are recoverable.
+- [x] The app passes build, type check, lint/check, and responsive smoke tests.
 
 ## Route Implementation Checklist
 
@@ -566,8 +571,8 @@ Goal: verify the MVP behaves like a serious learning tool before release.
 - [x] `/courses/:courseId` - course player.
 - [ ] `/courses/:courseId/focus` - distraction-free player if included in MVP.
 - [x] `/courses/:courseId/manage` - course metadata and chapter management.
-- [ ] `/courses/:courseId/chapters/:chapterId` - chapter deep link.
-- [ ] `/courses/:courseId/bookmarks/:bookmarkId` - bookmark deep link.
+- [x] `/courses/:courseId/chapters/:chapterId` - chapter deep link.
+- [x] `/courses/:courseId/bookmarks/:bookmarkId` - bookmark deep link.
 - [x] `/bookmarks` - global bookmarks.
 - [x] `/settings` - account, preferences, export.
 - [x] `/about` - mission and project context.
@@ -628,17 +633,17 @@ Goal: verify the MVP behaves like a serious learning tool before release.
 
 - [x] Paste a valid YouTube URL.
 - [x] Create a course and generation job.
-- [ ] Complete or simulate chapter generation.
+- [x] Complete or simulate chapter generation.
 - [x] Open generated course.
 - [x] Play video and select chapters.
-- [ ] Save progress.
-- [ ] Refresh and resume.
+- [x] Save progress.
+- [x] Refresh and resume.
 - [x] Write chapter notes.
-- [ ] Refresh and recover notes.
+- [x] Refresh and recover notes.
 - [x] Add, edit, jump to, and delete bookmark.
 - [x] Find course in library.
-- [ ] Manage course title and chapter title.
+- [x] Manage course title and chapter title.
 - [x] Delete course.
 - [x] Sign in and sign out.
 - [x] View privacy, terms, and self-hosting pages.
-- [ ] Pass build, type check, lint/check, and smoke tests.
+- [x] Pass build, type check, lint/check, and smoke tests.
