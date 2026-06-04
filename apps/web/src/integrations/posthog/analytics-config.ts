@@ -17,7 +17,7 @@ export interface AnalyticsConfig {
 }
 
 export function getAnalyticsConfig() {
-	return resolveAnalyticsConfig({
+	const config = resolveAnalyticsConfig({
 		DEV: import.meta.env.DEV,
 		MODE: import.meta.env.MODE,
 		VITE_PUBLIC_POSTHOG_DISABLED: import.meta.env.VITE_PUBLIC_POSTHOG_DISABLED,
@@ -26,6 +26,9 @@ export function getAnalyticsConfig() {
 		VITE_PUBLIC_POSTHOG_HOST: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
 		VITE_PUBLIC_POSTHOG_KEY: import.meta.env.VITE_PUBLIC_POSTHOG_KEY,
 	});
+
+	console.log("[Analytics Config]", config);
+	return config;
 }
 
 export function getServerAnalyticsConfig(
