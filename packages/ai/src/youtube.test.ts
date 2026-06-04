@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+	fetchYouTubeDataApiMetadataWithDiagnostics,
 	fetchYouTubeTranscript,
 	parseYouTubeDataApiVideoMetadata,
 	parseYouTubeDuration,
@@ -69,6 +70,66 @@ test("YouTube Data API metadata preserves category, tags, and topics", () => {
 			"https://en.wikipedia.org/wiki/Education",
 		],
 	});
+});
+
+test("YouTube Data API diagnostics report missing configuration", async () => {
+	const previousKey = process.env.YOUTUBE_API_KEY;
+	delete process.env.YOUTUBE_API_KEY;
+
+	try {
+		const result = await fetchYouTubeDataApiMetadataWithDiagnostics("video-1");
+
+		assert.equal(result.metadata, null);
+		assert.deepEqual(result.diagnostics, {
+			provider: "youtube_data_api",
+			result: "configuration_missing",
+			configured: false,
+			status: null,
+			statusText: null,
+			itemCount: null,
+			descriptionPresent: null,
+			durationPresent: null,
+			errorStatus: null,
+			errorReason: null,
+		});
+	} finally {
+		if (previousKey === undefined) {
+			delete process.env.YOUTUBE_API_KEY;
+		} else {
+			process.env.YOUTUBE_API_KEY = previousKey;
+		}
+	}
+});
+
+test("YouTube Data API diagnostics report non-OK response details", async () => {
+	const previousKey = process.env.YOUTUBE_API_KEY;
+	const previousFetch = globalThis.fetch;
+	process.env.YOUTUBE_API_KEY = "test-key";
+	globalThis.fetch = async () =>
+		jsonResponse(403, {
+			error: {
+				status: "PERMISSION_DENIED",
+				errors: [{ reason: "quotaExceeded" }],
+			},
+		});
+
+	try {
+		const result = await fetchYouTubeDataApiMetadataWithDiagnostics("video-1");
+
+		assert.equal(result.metadata, null);
+		assert.equal(result.diagnostics.result, "non_ok");
+		assert.equal(result.diagnostics.configured, true);
+		assert.equal(result.diagnostics.status, 403);
+		assert.equal(result.diagnostics.errorStatus, "PERMISSION_DENIED");
+		assert.equal(result.diagnostics.errorReason, "quotaExceeded");
+	} finally {
+		globalThis.fetch = previousFetch;
+		if (previousKey === undefined) {
+			delete process.env.YOUTUBE_API_KEY;
+		} else {
+			process.env.YOUTUBE_API_KEY = previousKey;
+		}
+	}
 });
 
 test("long transcript sampling includes beginning, middle, and end regions", () => {

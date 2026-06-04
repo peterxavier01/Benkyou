@@ -68,6 +68,31 @@ export interface YouTubeMetadata {
 	rawMetadata: Record<string, unknown>;
 }
 
+export type YouTubeDataApiMetadataResult =
+	| "success"
+	| "configuration_missing"
+	| "non_ok"
+	| "empty_items"
+	| "exception";
+
+export interface YouTubeDataApiMetadataDiagnostics {
+	provider: "youtube_data_api";
+	result: YouTubeDataApiMetadataResult;
+	configured: boolean;
+	status: number | null;
+	statusText: string | null;
+	itemCount: number | null;
+	descriptionPresent: boolean | null;
+	durationPresent: boolean | null;
+	errorStatus: string | null;
+	errorReason: string | null;
+}
+
+export interface YouTubeMetadataWithDiagnostics {
+	metadata: YouTubeMetadata | null;
+	diagnostics: YouTubeDataApiMetadataDiagnostics;
+}
+
 export async function fetchYouTubeTranscript(
 	providerVideoId: string,
 	options: FetchYouTubeTranscriptOptions = {},
@@ -260,46 +285,102 @@ async function parseTranscriptApiResponse(
 export async function fetchYouTubeDataApiMetadata(
 	providerVideoId: string,
 ): Promise<YouTubeMetadata | null> {
+	const result =
+		await fetchYouTubeDataApiMetadataWithDiagnostics(providerVideoId);
+
+	return result.metadata;
+}
+
+export async function fetchYouTubeDataApiMetadataWithDiagnostics(
+	providerVideoId: string,
+): Promise<YouTubeMetadataWithDiagnostics> {
 	const apiKey = process.env.YOUTUBE_API_KEY;
 
 	if (!apiKey) {
-		return null;
+		return {
+			metadata: null,
+			diagnostics: createYouTubeDataApiDiagnostics({
+				result: "configuration_missing",
+				configured: false,
+			}),
+		};
 	}
 
-	const response = await fetch(
-		`https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails,topicDetails&id=${encodeURIComponent(
-			providerVideoId,
-		)}&key=${encodeURIComponent(apiKey)}`,
-	);
+	let response: Response;
+
+	try {
+		response = await fetch(
+			`https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails,topicDetails&id=${encodeURIComponent(
+				providerVideoId,
+			)}&key=${encodeURIComponent(apiKey)}`,
+		);
+	} catch {
+		return {
+			metadata: null,
+			diagnostics: createYouTubeDataApiDiagnostics({
+				result: "exception",
+				configured: true,
+			}),
+		};
+	}
+
+	let data: YouTubeDataApiVideoListResponse | null = null;
+
+	try {
+		data = (await response.json()) as YouTubeDataApiVideoListResponse;
+	} catch {
+		data = null;
+	}
 
 	if (!response.ok) {
-		return null;
+		return {
+			metadata: null,
+			diagnostics: createYouTubeDataApiDiagnostics({
+				result: "non_ok",
+				configured: true,
+				status: response.status,
+				statusText: response.statusText,
+				error: data?.error,
+			}),
+		};
 	}
 
-	const data = (await response.json()) as {
-		items?: Array<{
-			snippet?: {
-				title?: unknown;
-				description?: unknown;
-				channelTitle?: unknown;
-				channelId?: unknown;
-				categoryId?: unknown;
-				tags?: unknown;
-				thumbnails?: Record<string, { url?: unknown } | undefined>;
-			};
-			contentDetails?: {
-				duration?: unknown;
-			};
-			topicDetails?: {
-				topicCategories?: unknown;
-			};
-		}>;
-	};
+	const itemCount = data?.items?.length ?? 0;
 
-	return parseYouTubeDataApiVideoMetadata(data);
+	if (itemCount === 0) {
+		return {
+			metadata: null,
+			diagnostics: createYouTubeDataApiDiagnostics({
+				result: "empty_items",
+				configured: true,
+				status: response.status,
+				statusText: response.statusText,
+				itemCount,
+			}),
+		};
+	}
+
+	const metadata = parseYouTubeDataApiVideoMetadata(data ?? {});
+	const item = data?.items?.[0];
+	const snippet = item?.snippet;
+
+	return {
+		metadata,
+		diagnostics: createYouTubeDataApiDiagnostics({
+			result: metadata ? "success" : "empty_items",
+			configured: true,
+			status: response.status,
+			statusText: response.statusText,
+			itemCount,
+			descriptionPresent:
+				typeof snippet?.description === "string" &&
+				snippet.description.trim().length > 0,
+			durationPresent: typeof item?.contentDetails?.duration === "string",
+		}),
+	};
 }
 
-export function parseYouTubeDataApiVideoMetadata(data: {
+type YouTubeDataApiVideoListResponse = {
 	items?: Array<{
 		snippet?: {
 			title?: unknown;
@@ -317,7 +398,15 @@ export function parseYouTubeDataApiVideoMetadata(data: {
 			topicCategories?: unknown;
 		};
 	}>;
-}): YouTubeMetadata | null {
+	error?: {
+		status?: unknown;
+		errors?: Array<{ reason?: unknown }>;
+	};
+};
+
+export function parseYouTubeDataApiVideoMetadata(
+	data: YouTubeDataApiVideoListResponse,
+): YouTubeMetadata | null {
 	const item = data.items?.[0];
 
 	if (!item) {
@@ -354,10 +443,51 @@ export function parseYouTubeDataApiVideoMetadata(data: {
 			: [],
 		rawMetadata: {
 			source: "youtube_data_api",
+			metadataAttempts: {
+				youtubeDataApi: createYouTubeDataApiDiagnostics({
+					result: "success",
+					configured: true,
+					itemCount: data.items?.length ?? null,
+					descriptionPresent:
+						typeof snippet?.description === "string" &&
+						snippet.description.trim().length > 0,
+					durationPresent: typeof item.contentDetails?.duration === "string",
+				}),
+			},
 			snippet: item.snippet ?? null,
 			contentDetails: item.contentDetails ?? null,
 			topicDetails: item.topicDetails ?? null,
 		},
+	};
+}
+
+function createYouTubeDataApiDiagnostics(input: {
+	result: YouTubeDataApiMetadataResult;
+	configured: boolean;
+	status?: number | null;
+	statusText?: string | null;
+	itemCount?: number | null;
+	descriptionPresent?: boolean | null;
+	durationPresent?: boolean | null;
+	error?: YouTubeDataApiVideoListResponse["error"] | null;
+}): YouTubeDataApiMetadataDiagnostics {
+	const error = input.error ?? null;
+	const firstError = error?.errors?.find(
+		(candidate) => typeof candidate?.reason === "string",
+	);
+
+	return {
+		provider: "youtube_data_api",
+		result: input.result,
+		configured: input.configured,
+		status: input.status ?? null,
+		statusText: input.statusText ?? null,
+		itemCount: input.itemCount ?? null,
+		descriptionPresent: input.descriptionPresent ?? null,
+		durationPresent: input.durationPresent ?? null,
+		errorStatus: typeof error?.status === "string" ? error.status : null,
+		errorReason:
+			typeof firstError?.reason === "string" ? firstError.reason : null,
 	};
 }
 

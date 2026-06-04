@@ -34,6 +34,11 @@ type CourseGenerationServer = typeof import("./course-generation.server");
 type YouTubeMetadata = Awaited<
 	ReturnType<CourseGenerationServer["fetchYouTubeDataApiMetadata"]>
 >;
+type YouTubeDataApiMetadataDiagnostics = Awaited<
+	ReturnType<
+		CourseGenerationServer["fetchYouTubeDataApiMetadataWithDiagnostics"]
+	>
+>["diagnostics"];
 type ClaimedGenerationJob = NonNullable<
 	Awaited<ReturnType<CourseGenerationServer["claimGenerationJob"]>>
 >;
@@ -610,25 +615,79 @@ async function safeFetchMetadata(
 	providerVideoId: string,
 	canonicalUrl: string,
 ) {
-	const { fetchYouTubeDataApiMetadata, fetchYouTubeOEmbedMetadata } =
-		await getCourseGenerationServer();
+	const {
+		fetchYouTubeDataApiMetadataWithDiagnostics,
+		fetchYouTubeOEmbedMetadata,
+	} = await getCourseGenerationServer();
 	let dataApiMetadata: YouTubeMetadata = null;
+	let dataApiDiagnostics: YouTubeDataApiMetadataDiagnostics | null = null;
 
 	try {
-		dataApiMetadata = await fetchYouTubeDataApiMetadata(providerVideoId);
+		const dataApiResult =
+			await fetchYouTubeDataApiMetadataWithDiagnostics(providerVideoId);
+		dataApiMetadata = dataApiResult.metadata;
+		dataApiDiagnostics = dataApiResult.diagnostics;
 	} catch {
 		dataApiMetadata = null;
+		dataApiDiagnostics = createDataApiExceptionDiagnostics();
 	}
 
 	if (dataApiMetadata) {
-		return dataApiMetadata;
+		return withMetadataAttempts(dataApiMetadata, {
+			youtubeDataApi: dataApiDiagnostics,
+			selected: "youtube_data_api",
+		});
 	}
 
 	try {
-		return await fetchYouTubeOEmbedMetadata(canonicalUrl);
+		const oembedMetadata = await fetchYouTubeOEmbedMetadata(canonicalUrl);
+
+		if (!oembedMetadata) {
+			return null;
+		}
+
+		return withMetadataAttempts(oembedMetadata, {
+			youtubeDataApi: dataApiDiagnostics,
+			youtubeOembed: {
+				provider: "youtube_oembed",
+				result: "success",
+			},
+			selected: "youtube_oembed",
+		});
 	} catch {
 		return null;
 	}
+}
+
+function withMetadataAttempts(
+	metadata: NonNullable<YouTubeMetadata>,
+	metadataAttempts: Record<string, unknown>,
+): NonNullable<YouTubeMetadata> {
+	return {
+		...metadata,
+		rawMetadata: {
+			...metadata.rawMetadata,
+			metadataAttempts: {
+				...getRecord(metadata.rawMetadata.metadataAttempts),
+				...metadataAttempts,
+			},
+		},
+	};
+}
+
+function createDataApiExceptionDiagnostics(): YouTubeDataApiMetadataDiagnostics {
+	return {
+		provider: "youtube_data_api",
+		result: "exception",
+		configured: Boolean(process.env.YOUTUBE_API_KEY),
+		status: null,
+		statusText: null,
+		itemCount: null,
+		descriptionPresent: null,
+		durationPresent: null,
+		errorStatus: null,
+		errorReason: null,
+	};
 }
 
 async function getOptionalUserId(headers = getHeaders()) {
@@ -779,6 +838,7 @@ function getGenerationDiagnostics(video: {
 	const rawMetadata = video.rawMetadata;
 	const snippet = getRecord(rawMetadata?.snippet);
 	const snippetDescription = snippet?.description;
+	const metadataAttempts = getRecord(rawMetadata?.metadataAttempts);
 
 	return {
 		metadata: {
@@ -786,6 +846,13 @@ function getGenerationDiagnostics(video: {
 				typeof rawMetadata?.source === "string"
 					? rawMetadata.source
 					: "unknown",
+			selectedSource:
+				typeof metadataAttempts?.selected === "string"
+					? metadataAttempts.selected
+					: typeof rawMetadata?.source === "string"
+						? rawMetadata.source
+						: "unknown",
+			attempts: metadataAttempts,
 			descriptionPresent: Boolean(video.description?.trim()),
 			descriptionLength: video.description?.length ?? 0,
 			durationSeconds: video.durationSeconds,

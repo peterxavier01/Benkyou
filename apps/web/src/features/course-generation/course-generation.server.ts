@@ -3,6 +3,7 @@ import "@tanstack/react-start/server-only";
 export {
 	classifyEducationalSuitability,
 	fetchYouTubeDataApiMetadata,
+	fetchYouTubeDataApiMetadataWithDiagnostics,
 	fetchYouTubeOEmbedMetadata,
 	fetchYouTubeTranscript,
 	generateCourseChapters,
