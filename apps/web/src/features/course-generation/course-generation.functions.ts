@@ -1,4 +1,5 @@
 import {
+	analyzeYouTubeDescriptionChapters,
 	cancelGenerationJobRequestV1Schema,
 	createCourseFromUrlRequestV1Schema,
 	EDUCATIONAL_SUITABILITY_REJECTION_MESSAGE,
@@ -8,7 +9,6 @@ import {
 	isEducationalSuitabilityAllowed,
 	isSampledTranscriptCacheIncomplete,
 	parseVideoUrl,
-	parseYouTubeDescriptionChapters,
 	processGenerationJobRequestV1Schema,
 	resolveTranscriptBackedDurationSeconds,
 	retryGenerationJobRequestV1Schema,
@@ -25,6 +25,10 @@ import type {
 } from "@benkyou/types";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
+import {
+	trackGenerationJobCompleted,
+	trackGenerationJobFailed,
+} from "#/integrations/posthog/analytics-server";
 
 type CourseGenerationServer = typeof import("./course-generation.server");
 type YouTubeMetadata = Awaited<
@@ -129,8 +133,11 @@ export const processGenerationJob = createServerFn({ method: "POST" })
 			return { detail: await getExistingDetail(data.generationJobId) };
 		}
 
+		let generationDiagnostics: Record<string, unknown> = {};
+
 		try {
 			const generationVideo = await getVideoInputForGeneration(claimed.video);
+			generationDiagnostics = getGenerationDiagnostics(generationVideo);
 			const educationalSuitability =
 				await classifyEducationalSuitabilityForVideo(generationVideo);
 
@@ -150,13 +157,26 @@ export const processGenerationJob = createServerFn({ method: "POST" })
 					);
 				}
 
+				await trackGenerationJobFailed({
+					...failed,
+					failureCategory: "educational_suitability",
+					retryable: false,
+				});
+
 				return { detail: toGenerationJobDetail(failed) };
 			}
 
-			const creatorChapters = parseYouTubeDescriptionChapters(
+			const creatorTimestampDiagnostics = analyzeYouTubeDescriptionChapters(
 				generationVideo.description,
 				generationVideo.durationSeconds,
 			);
+			const creatorChapters = creatorTimestampDiagnostics.chapters;
+			generationDiagnostics = {
+				...generationDiagnostics,
+				creatorTimestamps: summarizeCreatorTimestampDiagnostics(
+					creatorTimestampDiagnostics,
+				),
+			};
 
 			if (creatorChapters.length > 0) {
 				const completed = await completeGenerationJob({
@@ -168,6 +188,7 @@ export const processGenerationJob = createServerFn({ method: "POST" })
 					rawOutput: {
 						chapterSource: "creator_timestamps",
 						chapterCount: creatorChapters.length,
+						...generationDiagnostics,
 					},
 					chapters: creatorChapters.map((chapter, index) => ({
 						title: chapter.title,
@@ -181,6 +202,8 @@ export const processGenerationJob = createServerFn({ method: "POST" })
 				if (!completed) {
 					throw new Error("Generation job disappeared before completion.");
 				}
+
+				await trackGenerationJobCompleted(completed);
 
 				return { detail: toGenerationJobDetail(completed) };
 			}
@@ -216,6 +239,7 @@ export const processGenerationJob = createServerFn({ method: "POST" })
 						? "ai_coarse_fallback"
 						: "ai_generated",
 					transcriptCacheHit: transcriptInput.cacheHit,
+					...generationDiagnostics,
 					policy,
 					generated,
 				},
@@ -232,8 +256,11 @@ export const processGenerationJob = createServerFn({ method: "POST" })
 				throw new Error("Generation job disappeared before completion.");
 			}
 
+			await trackGenerationJobCompleted(completed);
+
 			return { detail: toGenerationJobDetail(completed) };
 		} catch (error) {
+			const serializedError = serializeGenerationError(error);
 			logGenerationFailure({
 				error,
 				jobId: claimed.job.id,
@@ -245,13 +272,20 @@ export const processGenerationJob = createServerFn({ method: "POST" })
 				failureReason: toUserSafeGenerationFailure(error),
 				retryable: true,
 				rawOutput: {
-					...serializeGenerationError(error),
+					...generationDiagnostics,
+					...serializedError,
 				},
 			});
 
 			if (!failed) {
 				throw error;
 			}
+
+			await trackGenerationJobFailed({
+				...failed,
+				failureCategory: getGenerationFailureCategory(serializedError),
+				retryable: true,
+			});
 
 			return { detail: toGenerationJobDetail(failed) };
 		}
@@ -723,6 +757,59 @@ function serializeGenerationError(error: unknown) {
 	return {
 		message: "Unknown generation error.",
 		name: "UnknownError",
+	};
+}
+
+function getGenerationFailureCategory(error: Record<string, unknown>) {
+	for (const key of ["transcriptFailureCode", "name", "causeName"]) {
+		const value = error[key];
+		if (typeof value === "string" && value.trim()) {
+			return value.trim();
+		}
+	}
+
+	return "unknown";
+}
+
+function getGenerationDiagnostics(video: {
+	description: string | null;
+	durationSeconds: number | null;
+	rawMetadata: Record<string, unknown> | null;
+}) {
+	const rawMetadata = video.rawMetadata;
+	const snippet = getRecord(rawMetadata?.snippet);
+	const snippetDescription = snippet?.description;
+
+	return {
+		metadata: {
+			source:
+				typeof rawMetadata?.source === "string"
+					? rawMetadata.source
+					: "unknown",
+			descriptionPresent: Boolean(video.description?.trim()),
+			descriptionLength: video.description?.length ?? 0,
+			durationSeconds: video.durationSeconds,
+			rawMetadataSnippetDescriptionPresent:
+				typeof snippetDescription === "string" &&
+				snippetDescription.trim().length > 0,
+			rawMetadataSnippetDescriptionLength:
+				typeof snippetDescription === "string" ? snippetDescription.length : 0,
+		},
+	};
+}
+
+function summarizeCreatorTimestampDiagnostics(
+	diagnostics: ReturnType<typeof analyzeYouTubeDescriptionChapters>,
+) {
+	return {
+		descriptionPresent: diagnostics.descriptionPresent,
+		descriptionLength: diagnostics.descriptionLength,
+		timestampCandidateCount: diagnostics.timestampCandidateCount,
+		parseableChapterCount: diagnostics.parseableChapterCount,
+		inDurationChapterCount: diagnostics.inDurationChapterCount,
+		orderedChapterCount: diagnostics.orderedChapterCount,
+		parsedChapterCount: diagnostics.parsedChapterCount,
+		skipReason: diagnostics.skipReason,
 	};
 }
 

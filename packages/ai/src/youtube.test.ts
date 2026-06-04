@@ -379,8 +379,7 @@ async function assertTranscriptApiFailure(input: {
 				sleep: input.sleep ?? noopSleep,
 			}),
 		(error: unknown) =>
-			error instanceof YouTubeTranscriptFetchError &&
-			error.code === input.code,
+			error instanceof YouTubeTranscriptFetchError && error.code === input.code,
 	);
 
 	assert.equal(responses.length, 0);

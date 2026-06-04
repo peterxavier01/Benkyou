@@ -97,6 +97,26 @@ export interface ParsedCreatorChapter {
 	endSeconds: number | null;
 }
 
+export type CreatorTimestampSkipReason =
+	| "description_missing"
+	| "no_timestamp_candidates"
+	| "no_parseable_chapters"
+	| "fewer_than_two_parseable_chapters"
+	| "all_parseable_chapters_outside_duration"
+	| "parseable_chapters_not_ordered";
+
+export interface CreatorTimestampDiagnostics {
+	descriptionPresent: boolean;
+	descriptionLength: number;
+	timestampCandidateCount: number;
+	parseableChapterCount: number;
+	inDurationChapterCount: number;
+	orderedChapterCount: number;
+	parsedChapterCount: number;
+	skipReason: CreatorTimestampSkipReason | null;
+	chapters: ParsedCreatorChapter[];
+}
+
 export interface ChapterGenerationPolicy {
 	minChapters: number;
 	maxChapters: number;
@@ -117,18 +137,45 @@ export function parseYouTubeDescriptionChapters(
 	description: string | null | undefined,
 	durationSeconds?: number | null,
 ): ParsedCreatorChapter[] {
+	return analyzeYouTubeDescriptionChapters(description, durationSeconds)
+		.chapters;
+}
+
+export function analyzeYouTubeDescriptionChapters(
+	description: string | null | undefined,
+	durationSeconds?: number | null,
+): CreatorTimestampDiagnostics {
 	if (!description) {
-		return [];
+		return {
+			descriptionPresent: false,
+			descriptionLength: 0,
+			timestampCandidateCount: 0,
+			parseableChapterCount: 0,
+			inDurationChapterCount: 0,
+			orderedChapterCount: 0,
+			parsedChapterCount: 0,
+			skipReason: "description_missing",
+			chapters: [],
+		};
 	}
 
 	const chapters: Array<Omit<ParsedCreatorChapter, "endSeconds">> = [];
+	let timestampCandidateCount = 0;
+	let parseableChapterCount = 0;
+	let inDurationChapterCount = 0;
 
 	for (const line of description.split(/\r?\n/)) {
+		if (hasTimestampCandidate(line)) {
+			timestampCandidateCount += 1;
+		}
+
 		const parsed = parseDescriptionChapterLine(line);
 
 		if (!parsed) {
 			continue;
 		}
+
+		parseableChapterCount += 1;
 
 		if (
 			durationSeconds !== null &&
@@ -137,6 +184,8 @@ export function parseYouTubeDescriptionChapters(
 		) {
 			continue;
 		}
+
+		inDurationChapterCount += 1;
 
 		const previous = chapters.at(-1);
 		if (previous && parsed.startSeconds <= previous.startSeconds) {
@@ -147,15 +196,42 @@ export function parseYouTubeDescriptionChapters(
 	}
 
 	if (chapters.length < 2) {
-		return [];
+		return {
+			descriptionPresent: true,
+			descriptionLength: description.length,
+			timestampCandidateCount,
+			parseableChapterCount,
+			inDurationChapterCount,
+			orderedChapterCount: chapters.length,
+			parsedChapterCount: 0,
+			skipReason: getCreatorTimestampSkipReason({
+				timestampCandidateCount,
+				parseableChapterCount,
+				inDurationChapterCount,
+				orderedChapterCount: chapters.length,
+			}),
+			chapters: [],
+		};
 	}
 
-	return chapters.map((chapter, index) => ({
+	const parsedChapters = chapters.map((chapter, index) => ({
 		...chapter,
 		endSeconds:
 			chapters[index + 1]?.startSeconds ??
 			(durationSeconds !== undefined ? durationSeconds : null),
 	}));
+
+	return {
+		descriptionPresent: true,
+		descriptionLength: description.length,
+		timestampCandidateCount,
+		parseableChapterCount,
+		inDurationChapterCount,
+		orderedChapterCount: chapters.length,
+		parsedChapterCount: parsedChapters.length,
+		skipReason: null,
+		chapters: parsedChapters,
+	};
 }
 
 export function getChapterGenerationPolicy(
@@ -407,6 +483,35 @@ function parseDescriptionChapterLine(
 	}
 
 	return { title, startSeconds };
+}
+
+function hasTimestampCandidate(line: string) {
+	return /\d{1,2}:\d{2}(?::\d{2})?/.test(line);
+}
+
+function getCreatorTimestampSkipReason(input: {
+	timestampCandidateCount: number;
+	parseableChapterCount: number;
+	inDurationChapterCount: number;
+	orderedChapterCount: number;
+}): CreatorTimestampSkipReason {
+	if (input.timestampCandidateCount === 0) {
+		return "no_timestamp_candidates";
+	}
+
+	if (input.parseableChapterCount === 0) {
+		return "no_parseable_chapters";
+	}
+
+	if (input.inDurationChapterCount === 0) {
+		return "all_parseable_chapters_outside_duration";
+	}
+
+	if (input.orderedChapterCount < input.inDurationChapterCount) {
+		return "parseable_chapters_not_ordered";
+	}
+
+	return "fewer_than_two_parseable_chapters";
 }
 
 function parseTimestamp(timestamp: string): number | null {

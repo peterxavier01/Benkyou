@@ -155,14 +155,11 @@ async function fetchTranscriptFromTranscriptApi(
 
 	for (let attempt = 0; attempt <= TRANSCRIPTAPI_MAX_RETRIES; attempt += 1) {
 		try {
-			response = await options.fetchImpl(
-				getTranscriptApiUrl(providerVideoId),
-				{
-					headers: {
-						Authorization: `Bearer ${options.apiKey}`,
-					},
+			response = await options.fetchImpl(getTranscriptApiUrl(providerVideoId), {
+				headers: {
+					Authorization: `Bearer ${options.apiKey}`,
 				},
-			);
+			});
 		} catch (error) {
 			if (attempt >= TRANSCRIPTAPI_MAX_RETRIES) {
 				throw new YouTubeTranscriptFetchError(

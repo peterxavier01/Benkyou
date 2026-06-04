@@ -138,14 +138,14 @@ function GenerationStatusScreen({
 		trackedTerminalStatusRef.current = detail.job.status;
 
 		if (detail.job.status === "completed") {
-			trackAnalyticsEvent("generation_job_completed", {
+			trackAnalyticsEvent("generation_status_completed_viewed", {
 				chapter_count: detail.chapterCount,
 			});
 			return;
 		}
 
 		if (detail.job.status === "failed") {
-			trackAnalyticsEvent("generation_job_failed", {
+			trackAnalyticsEvent("generation_status_failed_viewed", {
 				has_failure_reason: Boolean(detail.job.failureReason),
 			});
 		}

@@ -32,6 +32,8 @@ export type AnalyticsEventName =
 	| "generation_job_failed"
 	| "generation_job_retry_requested"
 	| "generation_job_started"
+	| "generation_status_completed_viewed"
+	| "generation_status_failed_viewed"
 	| "learning_preferences_updated"
 	| "library_filter_changed"
 	| "local_data_reset"

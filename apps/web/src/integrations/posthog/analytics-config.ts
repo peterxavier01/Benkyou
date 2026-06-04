@@ -18,6 +18,12 @@ export function getAnalyticsConfig() {
 	});
 }
 
+export function getServerAnalyticsConfig(
+	env: AnalyticsEnv = process.env,
+): AnalyticsConfig {
+	return resolveAnalyticsConfig(env);
+}
+
 export function resolveAnalyticsConfig(env: AnalyticsEnv): AnalyticsConfig {
 	const key = normalizeEnvValue(env.VITE_PUBLIC_POSTHOG_KEY);
 	const host =

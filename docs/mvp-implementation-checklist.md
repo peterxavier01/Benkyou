@@ -540,7 +540,7 @@ Goal: verify the MVP behaves like a serious learning tool before release.
       notes, bookmarks, course management, and settings.
 - [x] Log generation job failures with job id and provider error category.
 - [x] Add user-safe error messages.
-- [ ] Track generation duration and failure rate.
+- [x] Track generation duration and failure rate.
 - [x] Track autosave failures.
 - [x] Add basic health check route if needed for deployment.
 

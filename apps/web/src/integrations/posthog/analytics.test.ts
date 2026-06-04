@@ -1,6 +1,9 @@
 import { describe, expect, test } from "vitest";
 import { trackAnalyticsEvent } from "./analytics";
-import { resolveAnalyticsConfig } from "./analytics-config";
+import {
+	getServerAnalyticsConfig,
+	resolveAnalyticsConfig,
+} from "./analytics-config";
 
 describe("PostHog analytics config", () => {
 	test("is disabled when no public PostHog key is configured", () => {
@@ -26,5 +29,18 @@ describe("PostHog analytics config", () => {
 
 	test("tracking is a no-op when analytics is disabled", () => {
 		expect(() => trackAnalyticsEvent("course_opened")).not.toThrow();
+	});
+
+	test("server analytics config reads runtime environment values", () => {
+		expect(
+			getServerAnalyticsConfig({
+				VITE_PUBLIC_POSTHOG_HOST: " https://eu.i.posthog.com ",
+				VITE_PUBLIC_POSTHOG_KEY: " phc_runtime ",
+			}),
+		).toEqual({
+			enabled: true,
+			host: "https://eu.i.posthog.com",
+			key: "phc_runtime",
+		});
 	});
 });

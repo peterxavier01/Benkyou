@@ -9,6 +9,7 @@ import type {
 
 import {
 	aiGeneratedCourseV1Schema,
+	analyzeYouTubeDescriptionChapters,
 	cancelGenerationJobRequestV1Schema,
 	createCourseFromUrlRequestV1Schema,
 	educationalSuitabilityResultV1Schema,
@@ -232,6 +233,43 @@ test("description chapter parser rejects fewer than two valid chapters", () => {
 	assert.deepEqual(
 		parseYouTubeDescriptionChapters("00:00 Intro\n99:00 Too late", 60),
 		[],
+	);
+});
+
+test("description chapter diagnostics explain why creator timestamps are skipped", () => {
+	const timestampsNotAtLineStart = "Intro at 00:00\nMain at 01:00";
+
+	assert.deepEqual(analyzeYouTubeDescriptionChapters(null, 60), {
+		descriptionPresent: false,
+		descriptionLength: 0,
+		timestampCandidateCount: 0,
+		parseableChapterCount: 0,
+		inDurationChapterCount: 0,
+		orderedChapterCount: 0,
+		parsedChapterCount: 0,
+		skipReason: "description_missing",
+		chapters: [],
+	});
+
+	assert.deepEqual(
+		analyzeYouTubeDescriptionChapters(timestampsNotAtLineStart, 120),
+		{
+			descriptionPresent: true,
+			descriptionLength: timestampsNotAtLineStart.length,
+			timestampCandidateCount: 2,
+			parseableChapterCount: 0,
+			inDurationChapterCount: 0,
+			orderedChapterCount: 0,
+			parsedChapterCount: 0,
+			skipReason: "no_parseable_chapters",
+			chapters: [],
+		},
+	);
+
+	assert.equal(
+		analyzeYouTubeDescriptionChapters("00:00 Intro\n99:00 Too late", 60)
+			.skipReason,
+		"fewer_than_two_parseable_chapters",
 	);
 });
 
