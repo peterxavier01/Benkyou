@@ -29,17 +29,6 @@ const config = defineConfig(({ command }) => {
 			port: 3000,
 			allowedHosts: ["mantis-magical-swift.ngrok-free.app"],
 		},
-		define: {
-			"import.meta.env.VITE_PUBLIC_POSTHOG_KEY": JSON.stringify(
-				process.env.VITE_PUBLIC_POSTHOG_KEY,
-			),
-			"import.meta.env.VITE_PUBLIC_POSTHOG_HOST": JSON.stringify(
-				process.env.VITE_PUBLIC_POSTHOG_HOST,
-			),
-			"import.meta.env.VITE_PUBLIC_POSTHOG_DISABLED": JSON.stringify(
-				process.env.VITE_PUBLIC_POSTHOG_DISABLED,
-			),
-		},
 		resolve: {
 			...productionTslibFix?.resolve,
 			tsconfigPaths: true,
@@ -51,6 +40,12 @@ const config = defineConfig(({ command }) => {
 			nitro({
 				rollupConfig: { external: [/^@sentry\//] },
 				...productionTslibFix?.nitro,
+				runtimeConfig: {
+					public: {
+						posthogKey: process.env.VITE_PUBLIC_POSTHOG_KEY,
+						posthogHost: process.env.VITE_PUBLIC_POSTHOG_HOST,
+					},
+				},
 			}),
 			viteReact(),
 			babel({ presets: [reactCompilerPreset()] }),
