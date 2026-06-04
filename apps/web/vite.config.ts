@@ -40,12 +40,6 @@ const config = defineConfig(({ command }) => {
 			nitro({
 				rollupConfig: { external: [/^@sentry\//] },
 				...productionTslibFix?.nitro,
-				runtimeConfig: {
-					public: {
-						posthogKey: process.env.VITE_PUBLIC_POSTHOG_KEY,
-						posthogHost: process.env.VITE_PUBLIC_POSTHOG_HOST,
-					},
-				},
 			}),
 			viteReact(),
 			babel({ presets: [reactCompilerPreset()] }),

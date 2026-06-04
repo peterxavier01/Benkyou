@@ -1,27 +1,50 @@
 {
-  "$schema": "https://turborepo.dev/schema.json",
-  "ui": "tui",
-  "tasks": {
-    "build": {
-      "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": ["dist/**", ".output/**", "!.output/cache/**"]
-    },
-    "check": {
-      "dependsOn": ["^check"]
-    },
-    "format": {
-      "outputs": []
-    },
-    "lint": {
-      "dependsOn": ["^lint"]
-    },
-    "check-types": {
-      "dependsOn": ["^check-types"]
-    },
-    "dev": {
-      "cache": false,
-      "persistent": true
-    }
-  }
+	"$schema": "https://turborepo.dev/schema.json",
+	"ui": "tui",
+	"tasks": {
+		"build": {
+			"dependsOn": ["^build"],
+			"env": [
+				"AI_API_KEY",
+				"AI_PROVIDER",
+				"BETTER_AUTH_SECRET",
+				"BETTER_AUTH_URL",
+				"DATABASE_URL",
+				"GENERATION_RATE_LIMIT_MAX",
+				"GENERATION_RATE_LIMIT_WINDOW_HOURS",
+				"OPENAI_MODEL",
+				"PUBLIC_SITE_URL",
+				"TRANSCRIPTAPI_API_KEY",
+				"VITE_PUBLIC_POSTHOG_DISABLED",
+				"VITE_PUBLIC_POSTHOG_ENABLE_IN_DEVELOPMENT",
+				"VITE_PUBLIC_POSTHOG_HOST",
+				"VITE_PUBLIC_POSTHOG_KEY",
+				"YOUTUBE_API_KEY",
+				"YOUTUBE_TRANSCRIPT_PROVIDER"
+			],
+			"inputs": ["$TURBO_DEFAULT$", ".env*"],
+			"outputs": [
+				"dist/**",
+				".output/**",
+				"!.output/cache/**",
+				".vercel/output/**"
+			]
+		},
+		"check": {
+			"dependsOn": ["^check"]
+		},
+		"format": {
+			"outputs": []
+		},
+		"lint": {
+			"dependsOn": ["^lint"]
+		},
+		"check-types": {
+			"dependsOn": ["^check-types"]
+		},
+		"dev": {
+			"cache": false,
+			"persistent": true
+		}
+	}
 }
