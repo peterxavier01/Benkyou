@@ -8,12 +8,19 @@ const DEFAULT_IMAGE_PATH = "/social-card.png";
 const DEFAULT_THEME_COLOR = "#00694c";
 
 type SeoIndexing = "index" | "noindex";
+type JsonLdPrimitive = boolean | number | string | null;
+type JsonLdValue = JsonLdPrimitive | JsonLdObject | JsonLdValue[];
+
+export interface JsonLdObject {
+	[key: string]: JsonLdValue;
+}
 
 interface SeoOptions {
 	canonical?: boolean;
 	description?: string;
 	imagePath?: string;
 	indexing?: SeoIndexing;
+	jsonLd?: JsonLdObject[];
 	path?: string;
 	title?: string;
 	type?: "website" | "article";
@@ -80,6 +87,68 @@ export function buildSeoHead(options: SeoOptions = {}) {
 			{ rel: "icon", href: "/favicon.ico", sizes: "any" },
 			{ rel: "apple-touch-icon", href: "/logo192.png" },
 		],
+		scripts: (options.jsonLd ?? []).map((jsonLd) => ({
+			type: "application/ld+json",
+			children: stringifyJsonLd(jsonLd),
+		})),
+	};
+}
+
+export function buildWebsiteJsonLd(): JsonLdObject {
+	const siteUrl = getPublicSiteUrl();
+
+	return {
+		"@context": "https://schema.org",
+		"@type": "WebSite",
+		"@id": `${siteUrl}/#website`,
+		name: PRODUCT_NAME,
+		url: siteUrl,
+		description: DEFAULT_DESCRIPTION,
+		image: getCanonicalUrl(DEFAULT_IMAGE_PATH),
+	};
+}
+
+export function buildWebApplicationJsonLd(): JsonLdObject {
+	const siteUrl = getPublicSiteUrl();
+
+	return {
+		"@context": "https://schema.org",
+		"@type": "WebApplication",
+		"@id": `${siteUrl}/#webapplication`,
+		name: PRODUCT_NAME,
+		url: siteUrl,
+		description: DEFAULT_DESCRIPTION,
+		applicationCategory: "EducationalApplication",
+		operatingSystem: "Any",
+		image: getCanonicalUrl(DEFAULT_IMAGE_PATH),
+	};
+}
+
+export function buildWebPageJsonLd({
+	description,
+	path,
+	title,
+}: {
+	description: string;
+	path: string;
+	title: string;
+}): JsonLdObject {
+	const pageUrl = getCanonicalUrl(path);
+	const siteUrl = getPublicSiteUrl();
+
+	return {
+		"@context": "https://schema.org",
+		"@type": "WebPage",
+		"@id": `${pageUrl}#webpage`,
+		url: pageUrl,
+		name: title,
+		description,
+		isPartOf: {
+			"@id": `${siteUrl}/#website`,
+		},
+		about: {
+			"@id": `${siteUrl}/#webapplication`,
+		},
 	};
 }
 
@@ -116,4 +185,8 @@ function getRuntimeEnvValue(key: string) {
 	};
 
 	return globalWithProcess.process?.env?.[key] ?? import.meta.env[key];
+}
+
+function stringifyJsonLd(jsonLd: JsonLdObject) {
+	return JSON.stringify(jsonLd).replace(/</g, "\\u003c");
 }
