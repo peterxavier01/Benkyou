@@ -27,6 +27,44 @@ describe("PostHog analytics config", () => {
 		});
 	});
 
+	test("is disabled when analytics is explicitly disabled", () => {
+		expect(
+			resolveAnalyticsConfig({
+				VITE_PUBLIC_POSTHOG_DISABLED: "true",
+				VITE_PUBLIC_POSTHOG_KEY: "phc_test",
+			}),
+		).toEqual({
+			enabled: false,
+			host: "https://us.i.posthog.com",
+			key: "phc_test",
+		});
+	});
+
+	test("is disabled in development unless explicitly enabled", () => {
+		expect(
+			resolveAnalyticsConfig({
+				DEV: true,
+				VITE_PUBLIC_POSTHOG_KEY: "phc_test",
+			}),
+		).toEqual({
+			enabled: false,
+			host: "https://us.i.posthog.com",
+			key: "phc_test",
+		});
+
+		expect(
+			resolveAnalyticsConfig({
+				NODE_ENV: "development",
+				VITE_PUBLIC_POSTHOG_ENABLE_IN_DEVELOPMENT: "true",
+				VITE_PUBLIC_POSTHOG_KEY: "phc_test",
+			}),
+		).toEqual({
+			enabled: true,
+			host: "https://us.i.posthog.com",
+			key: "phc_test",
+		});
+	});
+
 	test("tracking is a no-op when analytics is disabled", () => {
 		expect(() => trackAnalyticsEvent("course_opened")).not.toThrow();
 	});

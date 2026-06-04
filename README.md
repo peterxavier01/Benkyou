@@ -47,6 +47,10 @@ Fill in the values in `apps/web/.env.local`. For the first local run, set:
   disable analytics for self-hosting.
 - `VITE_PUBLIC_POSTHOG_HOST`: optional PostHog host, default
   `https://us.i.posthog.com`.
+- `VITE_PUBLIC_POSTHOG_DISABLED`: set to `true` to disable analytics even when a
+  PostHog key is configured, default `false`.
+- `VITE_PUBLIC_POSTHOG_ENABLE_IN_DEVELOPMENT`: set to `true` only when you want
+  local development to send analytics events, default `false`.
 - `GENERATION_RATE_LIMIT_MAX`: optional course generation quota, default `5`.
 - `GENERATION_RATE_LIMIT_WINDOW_HOURS`: optional quota window, default `24`.
 
