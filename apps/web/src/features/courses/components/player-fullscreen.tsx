@@ -1,5 +1,9 @@
 import { Button, HugeIcon } from "@benkyou/ui";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+
+const FULLSCREEN_CONTROLS_HIDE_DELAY_MS = 3_000;
+
+type PlayerInteractionOverlayAction = "show_controls" | "toggle_playback";
 
 interface PlayerFullscreenButtonProps {
 	isFullscreen: boolean;
@@ -21,6 +25,14 @@ interface FullscreenDocument extends Document {
 
 interface LockableScreenOrientation extends ScreenOrientation {
 	lock?: (orientation: "landscape") => Promise<void>;
+}
+
+interface UseFullscreenControlVisibilityOptions {
+	controlsFocused?: boolean;
+	controlsInteracting?: boolean;
+	isFullscreen: boolean;
+	isPlaying: boolean;
+	hideDelayMs?: number;
 }
 
 function usePlayerFullscreen() {
@@ -101,6 +113,102 @@ function usePlayerFullscreen() {
 		playerSurfaceRef,
 		toggleFullscreen,
 	};
+}
+
+function useFullscreenControlVisibility({
+	controlsFocused = false,
+	controlsInteracting = false,
+	isFullscreen,
+	isPlaying,
+	hideDelayMs = FULLSCREEN_CONTROLS_HIDE_DELAY_MS,
+}: UseFullscreenControlVisibilityOptions) {
+	const [controlVisibility, setControlVisibility] = useState({
+		controlsHidden: false,
+		isFullscreen,
+		isPlaying,
+	});
+	const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const shouldAutoHide =
+		isFullscreen && isPlaying && !controlsFocused && !controlsInteracting;
+
+	if (
+		controlVisibility.isFullscreen !== isFullscreen ||
+		controlVisibility.isPlaying !== isPlaying
+	) {
+		setControlVisibility({
+			controlsHidden: false,
+			isFullscreen,
+			isPlaying,
+		});
+	}
+
+	const controlsHidden =
+		shouldAutoHide &&
+		controlVisibility.isFullscreen === isFullscreen &&
+		controlVisibility.isPlaying === isPlaying
+			? controlVisibility.controlsHidden
+			: false;
+	const controlsVisible = !controlsHidden;
+
+	const clearHideTimer = useCallback(() => {
+		if (!hideTimerRef.current) {
+			return;
+		}
+
+		clearTimeout(hideTimerRef.current);
+		hideTimerRef.current = null;
+	}, []);
+
+	const scheduleHideTimer = useCallback(() => {
+		clearHideTimer();
+
+		if (!shouldAutoHide) {
+			return;
+		}
+
+		hideTimerRef.current = setTimeout(() => {
+			if (shouldAutoHide) {
+				setControlVisibility((current) => ({
+					...current,
+					controlsHidden: true,
+				}));
+			}
+			hideTimerRef.current = null;
+		}, hideDelayMs);
+	}, [clearHideTimer, hideDelayMs, shouldAutoHide]);
+
+	const showControls = useCallback(() => {
+		setControlVisibility((current) => ({
+			...current,
+			controlsHidden: false,
+		}));
+		scheduleHideTimer();
+	}, [scheduleHideTimer]);
+
+	useEffect(() => {
+		if (!shouldAutoHide) {
+			clearHideTimer();
+			return;
+		}
+
+		scheduleHideTimer();
+
+		return clearHideTimer;
+	}, [clearHideTimer, scheduleHideTimer, shouldAutoHide]);
+
+	return {
+		controlsHidden: isFullscreen && controlsHidden,
+		controlsVisible,
+		showControls,
+	};
+}
+
+function getPlayerInteractionOverlayAction({
+	controlsHidden,
+}: {
+	controlsHidden: boolean;
+}): PlayerInteractionOverlayAction {
+	return controlsHidden ? "show_controls" : "toggle_playback";
 }
 
 function PlayerFullscreenButton({
@@ -213,4 +321,10 @@ function getScreenOrientation() {
 		| undefined;
 }
 
-export { PlayerFullscreenButton, usePlayerFullscreen };
+export {
+	FULLSCREEN_CONTROLS_HIDE_DELAY_MS,
+	getPlayerInteractionOverlayAction,
+	PlayerFullscreenButton,
+	useFullscreenControlVisibility,
+	usePlayerFullscreen,
+};
