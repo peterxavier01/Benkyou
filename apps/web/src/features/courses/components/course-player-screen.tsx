@@ -48,7 +48,10 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import type { PointerEvent as ReactPointerEvent } from "react";
+import type {
+	FocusEvent as ReactFocusEvent,
+	PointerEvent as ReactPointerEvent,
+} from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { workspaceQueryKeys } from "#/features/workspace/workspace.queries";
 import { trackAnalyticsEvent } from "#/integrations/posthog/analytics";
@@ -75,7 +78,9 @@ import {
 import { BookmarkDialog, type BookmarkDialogValues } from "./bookmark-dialog";
 import { NotesEditor } from "./notes-editor";
 import {
+	getPlayerInteractionOverlayAction,
 	PlayerFullscreenButton,
+	useFullscreenControlVisibility,
 	usePlayerFullscreen,
 } from "./player-fullscreen";
 import { PlayerPlaybackSpeedMenu } from "./player-playback-speed-menu";
@@ -160,6 +165,10 @@ function CoursePlayerScreen({
 		playing: false,
 		volume: 100,
 	});
+	const [fullscreenControlsFocused, setFullscreenControlsFocused] =
+		useState(false);
+	const [fullscreenControlsInteracting, setFullscreenControlsInteracting] =
+		useState(false);
 	const playerPlaying = playerControls.playing;
 	const playerVolume = playerControls.volume;
 	const playerMuted = playerControls.muted;
@@ -175,6 +184,7 @@ function CoursePlayerScreen({
 	const openedCourseIdRef = useRef<string | null>(null);
 	const trackedMilestonesRef = useRef(new Set<number>());
 	const trackedPlayingStateRef = useRef(playerPlaying);
+	const controlsFocusFromPointerRef = useRef(false);
 	const youtubePlayerRef = useRef<YouTubePlayerHandle | null>(null);
 	const {
 		fullscreenError,
@@ -183,6 +193,15 @@ function CoursePlayerScreen({
 		playerSurfaceRef,
 		toggleFullscreen,
 	} = usePlayerFullscreen();
+	const {
+		controlsHidden: fullscreenControlsHidden,
+		showControls: showFullscreenControls,
+	} = useFullscreenControlVisibility({
+		controlsFocused: fullscreenControlsFocused,
+		controlsInteracting: fullscreenControlsInteracting,
+		isFullscreen,
+		isPlaying: playerPlaying,
+	});
 	const pendingSeekRef = useRef<{
 		chapterId: string;
 		targetSeconds: number;
@@ -972,18 +991,50 @@ function CoursePlayerScreen({
 		[],
 	);
 
+	const setPlaybackPlaying = useCallback(
+		(playing: boolean, source: "player_button" | "player_state") => {
+			showFullscreenControls();
+
+			if (playing) {
+				youtubePlayerRef.current?.play();
+			} else {
+				youtubePlayerRef.current?.pause();
+			}
+
+			trackPlaybackState(playing, source);
+			setPlayerControls((current) => {
+				if (current.playing === playing) {
+					return current;
+				}
+
+				return { ...current, playing };
+			});
+		},
+		[showFullscreenControls, trackPlaybackState],
+	);
+
 	const togglePlayback = useCallback(() => {
-		if (playerPlaying) {
-			youtubePlayerRef.current?.pause();
-			trackPlaybackState(false, "player_button");
-			setPlayerControls((current) => ({ ...current, playing: false }));
+		setPlaybackPlaying(!playerPlaying, "player_button");
+	}, [playerPlaying, setPlaybackPlaying]);
+
+	const handlePlayerOverlayPointerDown = useCallback(() => {
+		showFullscreenControls();
+
+		if (
+			getPlayerInteractionOverlayAction({
+				controlsHidden: fullscreenControlsHidden,
+			}) === "show_controls"
+		) {
 			return;
 		}
 
-		youtubePlayerRef.current?.play();
-		trackPlaybackState(true, "player_button");
-		setPlayerControls((current) => ({ ...current, playing: true }));
-	}, [playerPlaying, trackPlaybackState]);
+		setPlaybackPlaying(!playerPlaying, "player_button");
+	}, [
+		fullscreenControlsHidden,
+		playerPlaying,
+		setPlaybackPlaying,
+		showFullscreenControls,
+	]);
 
 	const changePlayerMuted = (muted: boolean) => {
 		const nextVolume =
@@ -1040,6 +1091,7 @@ function CoursePlayerScreen({
 	};
 
 	const handlePlayingChange = (playing: boolean) => {
+		showFullscreenControls();
 		setPlayerControls((current) => {
 			if (current.playing === playing) {
 				return current;
@@ -1120,6 +1172,68 @@ function CoursePlayerScreen({
 			selectedChapterEndSeconds,
 		],
 	);
+
+	const handleFullscreenControlsBlur = useCallback(
+		(event: ReactFocusEvent<HTMLElement>) => {
+			const nextFocusedElement = event.relatedTarget;
+
+			if (
+				nextFocusedElement instanceof Node &&
+				event.currentTarget.contains(nextFocusedElement)
+			) {
+				return;
+			}
+
+			setFullscreenControlsFocused(false);
+			setFullscreenControlsInteracting(false);
+		},
+		[],
+	);
+
+	const handleFullscreenControlsFocus = useCallback(() => {
+		if (controlsFocusFromPointerRef.current) {
+			controlsFocusFromPointerRef.current = false;
+			setFullscreenControlsFocused(false);
+			showFullscreenControls();
+			return;
+		}
+
+		setFullscreenControlsFocused(true);
+	}, [showFullscreenControls]);
+
+	const trackPointerControlFocus = useCallback(() => {
+		controlsFocusFromPointerRef.current = true;
+		setFullscreenControlsInteracting(true);
+		showFullscreenControls();
+	}, [showFullscreenControls]);
+
+	const stopFullscreenControlInteraction = useCallback(() => {
+		setFullscreenControlsInteracting(false);
+	}, []);
+
+	useEffect(() => {
+		const playerSurface = playerSurfaceRef.current;
+
+		if (!playerSurface) {
+			return;
+		}
+
+		playerSurface.addEventListener("focusin", showFullscreenControls);
+		playerSurface.addEventListener("keydown", showFullscreenControls);
+		playerSurface.addEventListener("pointerdown", showFullscreenControls);
+		playerSurface.addEventListener("pointermove", showFullscreenControls);
+		playerSurface.addEventListener("touchstart", showFullscreenControls, {
+			passive: true,
+		});
+
+		return () => {
+			playerSurface.removeEventListener("focusin", showFullscreenControls);
+			playerSurface.removeEventListener("keydown", showFullscreenControls);
+			playerSurface.removeEventListener("pointerdown", showFullscreenControls);
+			playerSurface.removeEventListener("pointermove", showFullscreenControls);
+			playerSurface.removeEventListener("touchstart", showFullscreenControls);
+		};
+	}, [playerSurfaceRef, showFullscreenControls]);
 
 	const toggleChapterComplete = (chapter: CourseChapterDTO) => {
 		const nextCompleted = !completedByChapter[chapter.id];
@@ -1266,6 +1380,9 @@ function CoursePlayerScreen({
 						ref={playerSurfaceRef}
 						className="flex flex-col gap-3"
 						data-course-player-surface
+						data-player-controls-hidden={
+							fullscreenControlsHidden ? "" : undefined
+						}
 					>
 						<PlayerVideoFrame className="lg:shadow-sm">
 							<YouTubePlayer
@@ -1288,8 +1405,33 @@ function CoursePlayerScreen({
 									persistProgress();
 								}}
 							/>
+							<button
+								aria-label={
+									fullscreenControlsHidden
+										? "Show player controls"
+										: playerPlaying
+											? "Pause video"
+											: "Play video"
+								}
+								data-player-interaction-overlay
+								onPointerDown={handlePlayerOverlayPointerDown}
+								onPointerMove={showFullscreenControls}
+								tabIndex={-1}
+								type="button"
+							/>
 						</PlayerVideoFrame>
-						<ContentPanel className="p-3" data-player-controls>
+						<ContentPanel
+							className="p-3"
+							data-player-controls
+							onBlurCapture={handleFullscreenControlsBlur}
+							onFocusCapture={handleFullscreenControlsFocus}
+							onPointerCancelCapture={stopFullscreenControlInteraction}
+							onPointerDownCapture={trackPointerControlFocus}
+							onPointerUpCapture={stopFullscreenControlInteraction}
+							onTouchCancelCapture={stopFullscreenControlInteraction}
+							onTouchStartCapture={trackPointerControlFocus}
+							onTouchEndCapture={stopFullscreenControlInteraction}
+						>
 							<div className="grid gap-3 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center">
 								<div className="flex items-center gap-2">
 									<Button
