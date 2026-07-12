@@ -300,6 +300,12 @@ function CourseRow({
 }) {
 	const status = item.latestGenerationJob?.status ?? "completed";
 	const action = getCourseAction(item);
+	const progressPercent = Math.round(item.progress?.completionPercent ?? 0);
+	const progressSummary = formatProgressSummary(
+		progressPercent,
+		item.video.durationSeconds,
+	);
+	const durationLabel = formatCourseDuration(item.video.durationSeconds);
 
 	return (
 		<ContentPanel className="overflow-hidden p-0">
@@ -315,6 +321,11 @@ function CourseRow({
 								<span className="text-muted-foreground text-xs">
 									{item.chapterCount} chapters
 								</span>
+								{durationLabel ? (
+									<span className="text-muted-foreground text-xs">
+										{durationLabel} total
+									</span>
+								) : null}
 								{item.video.channelTitle ? (
 									<span className="text-muted-foreground text-xs">
 										{item.video.channelTitle}
@@ -379,9 +390,7 @@ function CourseRow({
 						<div>
 							<div className="mb-1 flex items-center justify-between text-xs">
 								<span className="text-muted-foreground">Progress</span>
-								<span className="font-medium">
-									{Math.round(item.progress?.completionPercent ?? 0)}%
-								</span>
+								<span className="font-medium">{progressSummary}</span>
 							</div>
 							<Progress value={item.progress?.completionPercent ?? 0} />
 						</div>
@@ -507,6 +516,10 @@ function getStatusTone(status: GenerationJobStatus) {
 }
 
 function formatStatus(status: GenerationJobStatus) {
+	if (status === "completed") {
+		return "Ready";
+	}
+
 	return status.charAt(0).toUpperCase() + status.slice(1);
 }
 
@@ -522,6 +535,46 @@ function formatDate(value: string) {
 		day: "numeric",
 		year: "numeric",
 	});
+}
+
+function formatProgressSummary(
+	percent: number,
+	durationSeconds: number | null,
+) {
+	const safePercent = Math.max(0, Math.min(100, percent));
+
+	if (!durationSeconds || durationSeconds <= 0) {
+		return `${safePercent}%`;
+	}
+
+	if (safePercent >= 100) {
+		return "100% - Complete";
+	}
+
+	const watchedSeconds = Math.round((durationSeconds * safePercent) / 100);
+	const remainingSeconds = Math.max(0, durationSeconds - watchedSeconds);
+
+	return `${safePercent}% - ${formatCourseDuration(remainingSeconds)} remaining`;
+}
+
+function formatCourseDuration(durationSeconds: number | null) {
+	if (!durationSeconds || durationSeconds <= 0) {
+		return null;
+	}
+
+	const totalMinutes = Math.max(1, Math.round(durationSeconds / 60));
+	const hours = Math.floor(totalMinutes / 60);
+	const minutes = totalMinutes % 60;
+
+	if (hours === 0) {
+		return `${minutes}m`;
+	}
+
+	if (minutes === 0) {
+		return `${hours}h`;
+	}
+
+	return `${hours}h ${minutes}m`;
 }
 
 export { CourseLibraryScreen };
