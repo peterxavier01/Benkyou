@@ -9,6 +9,7 @@ interface PlayerVolumeControlProps {
 	muted: boolean;
 	onMutedChange: (muted: boolean) => void;
 	onVolumeChange: (volume: number) => void;
+	portalContainer?: HTMLElement | null;
 	volume: number;
 }
 
@@ -16,6 +17,7 @@ function PlayerVolumeControl({
 	muted,
 	onMutedChange,
 	onVolumeChange,
+	portalContainer,
 	volume,
 }: PlayerVolumeControlProps) {
 	const effectiveMuted = muted || volume === 0;
@@ -38,7 +40,11 @@ function PlayerVolumeControl({
 					<HugeIcon name={iconName} className="size-4" />
 				</Button>
 			</PopoverTrigger>
-			<PopoverContent align="start" className="w-52 p-3">
+			<PopoverContent
+				align="start"
+				className="w-52 p-3"
+				portalContainer={portalContainer}
+			>
 				<div className="flex items-center justify-between gap-3">
 					<Button
 						aria-label={effectiveMuted ? "Unmute player" : "Mute player"}
