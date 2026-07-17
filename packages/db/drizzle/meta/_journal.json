@@ -1,48 +1,48 @@
 {
-  "version": "7",
-  "dialect": "postgresql",
-  "entries": [
-    {
-      "idx": 0,
-      "version": "7",
-      "when": 1778263648540,
-      "tag": "0000_white_carnage",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1778273668590,
-      "tag": "0001_skinny_nehzno",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1778755225262,
-      "tag": "0002_learning_preferences",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1778761970889,
-      "tag": "0003_sloppy_blink",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1778770000000,
-      "tag": "0004_generation_rate_limits",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1780060122435,
-      "tag": "0005_green_rafael_vega",
-      "breakpoints": true
-    }
-  ]
+	"version": "7",
+	"dialect": "postgresql",
+	"entries": [
+		{
+			"idx": 0,
+			"version": "7",
+			"when": 1778263648540,
+			"tag": "0000_white_carnage",
+			"breakpoints": true
+		},
+		{
+			"idx": 1,
+			"version": "7",
+			"when": 1778273668590,
+			"tag": "0001_skinny_nehzno",
+			"breakpoints": true
+		},
+		{
+			"idx": 2,
+			"version": "7",
+			"when": 1778755225262,
+			"tag": "0002_learning_preferences",
+			"breakpoints": true
+		},
+		{
+			"idx": 3,
+			"version": "7",
+			"when": 1778761970889,
+			"tag": "0003_sloppy_blink",
+			"breakpoints": true
+		},
+		{
+			"idx": 4,
+			"version": "7",
+			"when": 1778770000000,
+			"tag": "0004_generation_rate_limits",
+			"breakpoints": true
+		},
+		{
+			"idx": 5,
+			"version": "7",
+			"when": 1780060122435,
+			"tag": "0005_green_rafael_vega",
+			"breakpoints": true
+		}
+	]
 }

@@ -1,5 +1,5 @@
-import type { QueryClient } from "@tanstack/react-query";
 import { Toaster } from "@benkyou/ui";
+import type { QueryClient } from "@tanstack/react-query";
 import {
 	createRootRouteWithContext,
 	HeadContent,

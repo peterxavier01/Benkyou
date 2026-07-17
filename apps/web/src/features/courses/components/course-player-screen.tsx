@@ -89,8 +89,8 @@ import {
 	useFullscreenControlVisibility,
 	usePlayerFullscreen,
 } from "./player-fullscreen";
-import { PlayerGestureOverlay } from "./player-gesture-overlay";
 import { PlayerGestureHint } from "./player-gesture-hint";
+import { PlayerGestureOverlay } from "./player-gesture-overlay";
 import { PlayerMobileSettings } from "./player-mobile-settings";
 import { PlayerPlaybackSpeedMenu } from "./player-playback-speed-menu";
 import { PlayerVolumeControl } from "./player-volume-control";
