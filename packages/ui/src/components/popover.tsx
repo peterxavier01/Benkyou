@@ -18,11 +18,14 @@ function PopoverTrigger({
 function PopoverContent({
 	className,
 	align = "center",
+	portalContainer,
 	sideOffset = 4,
 	...props
-}: React.ComponentProps<typeof PopoverPrimitive.Content>) {
+}: React.ComponentProps<typeof PopoverPrimitive.Content> & {
+	portalContainer?: HTMLElement | null;
+}) {
 	return (
-		<PopoverPrimitive.Portal>
+		<PopoverPrimitive.Portal container={portalContainer}>
 			<PopoverPrimitive.Content
 				data-slot="popover-content"
 				align={align}

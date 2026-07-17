@@ -27,6 +27,12 @@ import {
 	DrawerHeader,
 	DrawerTitle,
 	DrawerTrigger,
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuLabel,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
 	HugeIcon,
 	PlayerAside,
 	PlayerPrimary,
@@ -39,6 +45,7 @@ import {
 	TabsContent,
 	TabsList,
 	TabsTrigger,
+	toast,
 } from "@benkyou/ui";
 import {
 	Alert,
@@ -78,11 +85,13 @@ import {
 import { BookmarkDialog, type BookmarkDialogValues } from "./bookmark-dialog";
 import { NotesEditor } from "./notes-editor";
 import {
-	getPlayerInteractionOverlayAction,
 	PlayerFullscreenButton,
 	useFullscreenControlVisibility,
 	usePlayerFullscreen,
 } from "./player-fullscreen";
+import { PlayerGestureHint } from "./player-gesture-hint";
+import { PlayerGestureOverlay } from "./player-gesture-overlay";
+import { PlayerMobileSettings } from "./player-mobile-settings";
 import { PlayerPlaybackSpeedMenu } from "./player-playback-speed-menu";
 import { PlayerVolumeControl } from "./player-volume-control";
 import { YouTubePlayer, type YouTubePlayerHandle } from "./youtube-player";
@@ -169,6 +178,9 @@ function CoursePlayerScreen({
 		useState(false);
 	const [fullscreenControlsInteracting, setFullscreenControlsInteracting] =
 		useState(false);
+	const [dismissedNextChapterId, setDismissedNextChapterId] = useState<
+		string | null
+	>(null);
 	const playerPlaying = playerControls.playing;
 	const playerVolume = playerControls.volume;
 	const playerMuted = playerControls.muted;
@@ -190,11 +202,13 @@ function CoursePlayerScreen({
 		fullscreenError,
 		isFullscreen,
 		isSupported: isFullscreenSupported,
+		playerSurfaceElement,
 		playerSurfaceRef,
 		toggleFullscreen,
 	} = usePlayerFullscreen();
 	const {
 		controlsHidden: fullscreenControlsHidden,
+		hideControls: hideFullscreenControls,
 		showControls: showFullscreenControls,
 	} = useFullscreenControlVisibility({
 		controlsFocused: fullscreenControlsFocused,
@@ -236,6 +250,15 @@ function CoursePlayerScreen({
 		data.chapters.find((chapter) => chapter.id === selectedChapterId) ??
 		data.chapters[0] ??
 		null;
+	const selectedChapterIndex = selectedChapter
+		? data.chapters.findIndex((chapter) => chapter.id === selectedChapter.id)
+		: -1;
+	const previousChapter =
+		selectedChapterIndex > 0 ? data.chapters[selectedChapterIndex - 1] : null;
+	const nextChapter =
+		selectedChapterIndex >= 0
+			? (data.chapters[selectedChapterIndex + 1] ?? null)
+			: null;
 	const selectedChapterEndSeconds = selectedChapter
 		? getChapterEndSeconds(
 				selectedChapter,
@@ -249,6 +272,12 @@ function CoursePlayerScreen({
 				Math.max(selectedChapter.startSeconds, currentSeconds),
 			)
 		: currentSeconds;
+	const showNextChapterPrompt = Boolean(
+		nextChapter &&
+			selectedChapterEndSeconds !== null &&
+			selectedChapterEndSeconds - currentSeconds <= 15 &&
+			dismissedNextChapterId !== nextChapter.id,
+	);
 	const courseProgressPercent = calculateProgressPercent(
 		currentSeconds,
 		durationSeconds || data.video.durationSeconds || 0,
@@ -477,10 +506,20 @@ function CoursePlayerScreen({
 	});
 
 	const deleteBookmarkMutation = useMutation({
-		mutationFn: (bookmarkId: string) =>
-			deleteBookmarkFn({ data: { bookmarkId } }),
-		onSuccess: async (result, bookmarkId) => {
+		mutationFn: (bookmark: BookmarkDTO) =>
+			deleteBookmarkFn({ data: { bookmarkId: bookmark.id } }),
+		onSuccess: async (result, bookmark) => {
 			if (!result.deleted) {
+				queryClient.setQueryData<CoursePlayerDataDTO>(
+					playerQueryKey,
+					(current) =>
+						current
+							? {
+									...current,
+									bookmarks: mergeBookmark(current.bookmarks, bookmark),
+								}
+							: current,
+				);
 				setSaveError("Bookmark could not be deleted.");
 				return;
 			}
@@ -495,7 +534,7 @@ function CoursePlayerScreen({
 						? {
 								...current,
 								bookmarks: current.bookmarks.filter(
-									(bookmark) => bookmark.id !== bookmarkId,
+									(candidate) => candidate.id !== bookmark.id,
 								),
 							}
 						: current,
@@ -503,8 +542,60 @@ function CoursePlayerScreen({
 			await queryClient.invalidateQueries({ queryKey: ["bookmarks"] });
 			setSaveError(null);
 		},
-		onError: () => setSaveError("Bookmark could not be deleted."),
+		onError: (_error, bookmark) => {
+			queryClient.setQueryData<CoursePlayerDataDTO>(
+				playerQueryKey,
+				(current) =>
+					current
+						? {
+								...current,
+								bookmarks: mergeBookmark(current.bookmarks, bookmark),
+							}
+						: current,
+			);
+			setSaveError(
+				"Bookmark could not be deleted. It has been restored. Try again.",
+			);
+		},
 	});
+
+	const requestBookmarkDelete = (bookmark: BookmarkDTO) => {
+		queryClient.setQueryData<CoursePlayerDataDTO>(playerQueryKey, (current) =>
+			current
+				? {
+						...current,
+						bookmarks: current.bookmarks.filter(
+							(candidate) => candidate.id !== bookmark.id,
+						),
+					}
+				: current,
+		);
+
+		const timeoutId = window.setTimeout(() => {
+			deleteBookmarkMutation.mutate(bookmark);
+		}, 5_000);
+
+		toast("Bookmark deleted", {
+			description: "You can restore it for the next 5 seconds.",
+			duration: 5_000,
+			action: {
+				label: "Undo",
+				onClick: () => {
+					window.clearTimeout(timeoutId);
+					queryClient.setQueryData<CoursePlayerDataDTO>(
+						playerQueryKey,
+						(current) =>
+							current
+								? {
+										...current,
+										bookmarks: mergeBookmark(current.bookmarks, bookmark),
+									}
+								: current,
+					);
+				},
+			},
+		});
+	};
 
 	const retryMutation = useMutation({
 		mutationFn: (generationJobId: string) =>
@@ -1017,24 +1108,52 @@ function CoursePlayerScreen({
 		setPlaybackPlaying(!playerPlaying, "player_button");
 	}, [playerPlaying, setPlaybackPlaying]);
 
-	const handlePlayerOverlayPointerDown = useCallback(() => {
-		showFullscreenControls();
+	const handleFullscreenToggle = () => {
+		trackAnalyticsEvent("fullscreen_toggled", {
+			next_state: isFullscreen ? "exit" : "enter",
+		});
+		void toggleFullscreen();
+	};
 
-		if (
-			getPlayerInteractionOverlayAction({
-				controlsHidden: fullscreenControlsHidden,
-			}) === "show_controls"
-		) {
-			return;
-		}
+	const seekBy = useCallback(
+		(deltaSeconds: number) => {
+			const latest = latestProgressRef.current;
+			const duration =
+				latest.durationSeconds || data.video.durationSeconds || 0;
+			const targetSeconds = Math.max(
+				0,
+				Math.min(
+					duration > 0 ? duration : Number.POSITIVE_INFINITY,
+					latest.currentSeconds + deltaSeconds,
+				),
+			);
+			const chapter = findChapterAtTime(data.chapters, targetSeconds);
+			const chapterId = chapter?.id ?? latest.selectedChapterId;
 
-		setPlaybackPlaying(!playerPlaying, "player_button");
-	}, [
-		fullscreenControlsHidden,
-		playerPlaying,
-		setPlaybackPlaying,
-		showFullscreenControls,
-	]);
+			pendingSeekRef.current = {
+				chapterId,
+				targetSeconds,
+				direction: deltaSeconds < 0 ? "backward" : "forward",
+			};
+			setCurrentSeconds(targetSeconds);
+			if (chapter) setSelectedChapterId(chapter.id);
+			latestProgressRef.current = {
+				...latest,
+				currentSeconds: targetSeconds,
+				selectedChapterId: chapterId,
+			};
+			setSeekToSeconds(targetSeconds);
+			youtubePlayerRef.current?.seekTo(targetSeconds);
+			showFullscreenControls();
+			persistProgress({ refreshFromPlayer: false });
+		},
+		[
+			data.chapters,
+			data.video.durationSeconds,
+			persistProgress,
+			showFullscreenControls,
+		],
+	);
 
 	const changePlayerMuted = (muted: boolean) => {
 		const nextVolume =
@@ -1212,7 +1331,7 @@ function CoursePlayerScreen({
 	}, []);
 
 	useEffect(() => {
-		const playerSurface = playerSurfaceRef.current;
+		const playerSurface = playerSurfaceElement;
 
 		if (!playerSurface) {
 			return;
@@ -1233,7 +1352,7 @@ function CoursePlayerScreen({
 			playerSurface.removeEventListener("pointermove", showFullscreenControls);
 			playerSurface.removeEventListener("touchstart", showFullscreenControls);
 		};
-	}, [playerSurfaceRef, showFullscreenControls]);
+	}, [playerSurfaceElement, showFullscreenControls]);
 
 	const toggleChapterComplete = (chapter: CourseChapterDTO) => {
 		const nextCompleted = !completedByChapter[chapter.id];
@@ -1290,40 +1409,21 @@ function CoursePlayerScreen({
 
 	return (
 		<WorkspacePage
-			title="Course player"
-			description={data.course.title}
+			title={data.course.title}
+			description={selectedChapter?.title ?? "Course player"}
 			maxWidth="full"
 			className="p-0 sm:p-0"
 			action={
-				<div className="flex items-center gap-2">
-					<Button asChild size="sm" variant="outline">
-						<Link
-							to="/courses/$courseId/manage"
-							params={{ courseId }}
-							onClick={persistProgressOnUnload}
-						>
-							<HugeIcon name="settings" className="size-4" />
-							Manage
-						</Link>
-					</Button>
-					<Button asChild size="sm" variant="outline">
-						<Link
-							to="/courses"
-							search={{ q: "", filter: "all" }}
-							onClick={persistProgressOnUnload}
-						>
-							<HugeIcon name="arrowLeft" className="size-4" />
-							Library
-						</Link>
-					</Button>
-					<BetterAuthHeader />
-				</div>
+				<CoursePlayerHeaderActions
+					courseId={courseId}
+					onNavigate={persistProgressOnUnload}
+				/>
 			}
 		>
-			<PlayerWorkspace>
+			<PlayerWorkspace className="p-0 lg:p-3">
 				<PlayerPrimary>
-					<ContentPanel className="p-4">
-						<div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+					<ContentPanel className="order-1 hidden p-4 lg:block">
+						<div className="flex items-start justify-between gap-3">
 							<div className="min-w-0">
 								<div className="flex flex-wrap items-center gap-2">
 									<StatusBadge tone="success">Ready</StatusBadge>
@@ -1338,24 +1438,15 @@ function CoursePlayerScreen({
 												)} / ${formatTimestamp(selectedChapterEndSeconds)}`}
 									</span>
 								</div>
-								<h1 className="mt-2 truncate font-semibold text-xl tracking-normal">
+								<h2 className="mt-2 truncate font-semibold text-xl tracking-normal">
 									{data.course.title}
-								</h1>
+								</h2>
 								<p className="mt-1 text-muted-foreground text-sm">
 									{data.video.channelTitle ?? "YouTube"} -{" "}
 									{formatTimestamp(currentSeconds)}
 									{selectedChapter ? ` in ${selectedChapter.title}` : ""}
 								</p>
 							</div>
-							<MobileChapterDrawer
-								chapters={data.chapters}
-								selectedChapterId={selectedChapter?.id ?? null}
-								watchedByChapter={watchedByChapter}
-								completedByChapter={completedByChapter}
-								durationSeconds={durationSeconds}
-								onSelect={selectChapter}
-								onToggleComplete={toggleChapterComplete}
-							/>
 						</div>
 						<div className="mt-3 flex flex-wrap items-center gap-2">
 							<Button
@@ -1378,13 +1469,13 @@ function CoursePlayerScreen({
 
 					<div
 						ref={playerSurfaceRef}
-						className="flex flex-col gap-3"
+						className="order-1 flex flex-col gap-3 lg:order-2"
 						data-course-player-surface
 						data-player-controls-hidden={
 							fullscreenControlsHidden ? "" : undefined
 						}
 					>
-						<PlayerVideoFrame className="lg:shadow-sm">
+						<PlayerVideoFrame className="rounded-none border-0 lg:rounded-lg lg:border lg:shadow-sm">
 							<YouTubePlayer
 								ref={youtubePlayerRef}
 								providerVideoId={data.video.providerVideoId}
@@ -1405,23 +1496,17 @@ function CoursePlayerScreen({
 									persistProgress();
 								}}
 							/>
-							<button
-								aria-label={
-									fullscreenControlsHidden
-										? "Show player controls"
-										: playerPlaying
-											? "Pause video"
-											: "Play video"
-								}
-								data-player-interaction-overlay
-								onPointerDown={handlePlayerOverlayPointerDown}
-								onPointerMove={showFullscreenControls}
-								tabIndex={-1}
-								type="button"
+							<PlayerGestureOverlay
+								controlsHidden={fullscreenControlsHidden}
+								onHideControls={hideFullscreenControls}
+								onSeek={seekBy}
+								onShowControls={showFullscreenControls}
+								onTogglePlayback={togglePlayback}
 							/>
+							<PlayerGestureHint isFullscreen={isFullscreen} />
 						</PlayerVideoFrame>
 						<ContentPanel
-							className="p-3"
+							className="mx-3 p-3 lg:mx-0"
 							data-player-controls
 							onBlurCapture={handleFullscreenControlsBlur}
 							onFocusCapture={handleFullscreenControlsFocus}
@@ -1432,8 +1517,103 @@ function CoursePlayerScreen({
 							onTouchStartCapture={trackPointerControlFocus}
 							onTouchEndCapture={stopFullscreenControlInteraction}
 						>
-							<div className="grid gap-3 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center">
+							<div className="grid gap-2 lg:hidden">
+								<Slider
+									aria-label="Chapter playback position"
+									className="h-11 cursor-pointer **:data-[slot=slider-thumb]:size-5 **:data-[slot=slider-track]:h-2"
+									disabled={selectedChapterEndSeconds === null}
+									max={selectedChapterEndSeconds ?? currentSeconds}
+									min={selectedChapter?.startSeconds ?? 0}
+									step={1}
+									value={[selectedChapterCurrentSeconds]}
+									onPointerDownCapture={seekSelectedChapterFromPointer}
+									onValueChange={previewSelectedChapterSeek}
+									onValueCommit={seekWithinSelectedChapter}
+								/>
+								<div className="flex items-center justify-between text-muted-foreground text-sm tabular-nums">
+									<span>{formatTimestamp(selectedChapterCurrentSeconds)}</span>
+									<span>
+										{selectedChapterEndSeconds === null
+											? "Duration unknown"
+											: formatTimestamp(selectedChapterEndSeconds)}
+									</span>
+								</div>
+								<div className="flex items-center justify-between gap-3">
+									<div className="flex items-center gap-2">
+										<Button
+											aria-label="Rewind 10 seconds"
+											className="size-11"
+											onClick={() => seekBy(-10)}
+											size="icon-lg"
+											title="Rewind 10 seconds"
+											type="button"
+											variant="outline"
+										>
+											<HugeIcon name="goBackward10Seconds" className="size-5" />
+										</Button>
+										<Button
+											aria-label={
+												playerPlaying ? "Pause chapter" : "Play chapter"
+											}
+											className="size-11"
+											onClick={togglePlayback}
+											size="icon-lg"
+											type="button"
+										>
+											<HugeIcon
+												name={playerPlaying ? "pause" : "play"}
+												className="size-5"
+											/>
+										</Button>
+										<Button
+											aria-label="Forward 10 seconds"
+											className="size-11"
+											onClick={() => seekBy(10)}
+											size="icon-lg"
+											title="Forward 10 seconds"
+											type="button"
+											variant="outline"
+										>
+											<HugeIcon name="goForward10Seconds" className="size-5" />
+										</Button>
+									</div>
+									<div className="flex items-center gap-2">
+										<PlayerFullscreenButton
+											className="size-11"
+											isFullscreen={isFullscreen}
+											isSupported={isFullscreenSupported}
+											onToggle={handleFullscreenToggle}
+										/>
+										<PlayerMobileSettings
+											muted={playerMuted}
+											pending={preferencesMutation.isPending}
+											playbackSpeed={learningPreferences.playbackSpeed}
+											portalContainer={
+												isFullscreen ? playerSurfaceElement : undefined
+											}
+											volume={playerVolume}
+											onMutedChange={changePlayerMuted}
+											onPlaybackSpeedChange={changePlaybackSpeed}
+											onVolumeChange={changePlayerVolume}
+										/>
+									</div>
+								</div>
+							</div>
+
+							<div className="hidden gap-3 lg:grid lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:items-center">
 								<div className="flex items-center gap-2">
+									<Button
+										aria-label="Rewind 10 seconds"
+										className="size-8"
+										onClick={() => seekBy(-10)}
+										size="icon-sm"
+										title="Rewind 10 seconds"
+										type="button"
+										variant="outline"
+									>
+										<HugeIcon name="goBackward10Seconds" className="size-4" />
+										<span className="sr-only">Rewind 10 seconds</span>
+									</Button>
 									<Button
 										type="button"
 										size="icon-sm"
@@ -1448,8 +1628,23 @@ function CoursePlayerScreen({
 											{playerPlaying ? "Pause chapter" : "Play chapter"}
 										</span>
 									</Button>
+									<Button
+										aria-label="Forward 10 seconds"
+										className="relative size-8 after:absolute after:-inset-1.5 after:content-['']"
+										onClick={() => seekBy(10)}
+										size="icon-sm"
+										title="Forward 10 seconds"
+										type="button"
+										variant="outline"
+									>
+										<HugeIcon name="goForward10Seconds" className="size-4" />
+										<span className="sr-only">Forward 10 seconds</span>
+									</Button>
 									<PlayerVolumeControl
 										muted={playerMuted}
+										portalContainer={
+											isFullscreen ? playerSurfaceElement : undefined
+										}
 										volume={playerVolume}
 										onMutedChange={changePlayerMuted}
 										onVolumeChange={changePlayerVolume}
@@ -1457,16 +1652,14 @@ function CoursePlayerScreen({
 									<PlayerFullscreenButton
 										isFullscreen={isFullscreen}
 										isSupported={isFullscreenSupported}
-										onToggle={() => {
-											trackAnalyticsEvent("fullscreen_toggled", {
-												next_state: isFullscreen ? "exit" : "enter",
-											});
-											void toggleFullscreen();
-										}}
+										onToggle={handleFullscreenToggle}
 									/>
 									<PlayerPlaybackSpeedMenu
 										pending={preferencesMutation.isPending}
 										playbackSpeed={learningPreferences.playbackSpeed}
+										portalContainer={
+											isFullscreen ? playerSurfaceElement : undefined
+										}
 										onPlaybackSpeedChange={changePlaybackSpeed}
 									/>
 								</div>
@@ -1491,23 +1684,41 @@ function CoursePlayerScreen({
 								</span>
 							</div>
 							{fullscreenError ? (
-								<output className="mt-2 block text-muted-foreground text-xs">
+								<output className="mt-2 block text-muted-foreground text-sm lg:text-xs">
 									{fullscreenError}
 								</output>
 							) : null}
 						</ContentPanel>
 					</div>
 
-					<div className="flex flex-col gap-3">
+					<MobileLessonContext
+						chapter={selectedChapter}
+						chapters={data.chapters}
+						completedByChapter={completedByChapter}
+						courseProgressPercent={courseProgressPercent}
+						currentSeconds={currentSeconds}
+						durationSeconds={durationSeconds}
+						nextChapter={nextChapter}
+						previousChapter={previousChapter}
+						showNextChapterPrompt={showNextChapterPrompt}
+						videoChannelTitle={data.video.channelTitle}
+						watchedByChapter={watchedByChapter}
+						onAddBookmark={openCreateBookmarkDialog}
+						onDismissNextChapter={() =>
+							setDismissedNextChapterId(nextChapter?.id ?? null)
+						}
+						onSelectChapter={selectChapter}
+						onToggleComplete={toggleChapterComplete}
+					/>
+
+					<div className="order-3 mx-3 flex flex-col gap-3 lg:mx-0">
 						<LearningTabs
 							courseId={courseId}
 							chapter={selectedChapter}
 							note={selectedNote}
 							bookmarks={selectedBookmarks}
 							deletingBookmark={deleteBookmarkMutation.isPending}
-							onDeleteBookmark={(bookmark) =>
-								deleteBookmarkMutation.mutate(bookmark.id)
-							}
+							onDeleteBookmark={requestBookmarkDelete}
 							onEditBookmark={openEditBookmarkDialog}
 							onJumpToBookmark={jumpToBookmark}
 						/>
@@ -1561,6 +1772,215 @@ function CoursePlayerScreen({
 	);
 }
 
+function CoursePlayerHeaderActions({
+	courseId,
+	onNavigate,
+}: {
+	courseId: string;
+	onNavigate: () => void;
+}) {
+	return (
+		<div className="flex items-center gap-1.5 lg:gap-2">
+			<div className="lg:hidden">
+				<DropdownMenu>
+					<DropdownMenuTrigger asChild>
+						<Button
+							aria-label="Course actions"
+							className="size-11"
+							size="icon-lg"
+							type="button"
+							variant="ghost"
+						>
+							<HugeIcon name="settings" className="size-4" />
+						</Button>
+					</DropdownMenuTrigger>
+					<DropdownMenuContent align="end" className="w-48">
+						<DropdownMenuLabel>Course actions</DropdownMenuLabel>
+						<DropdownMenuSeparator />
+						<DropdownMenuItem asChild>
+							<Link
+								params={{ courseId }}
+								to="/courses/$courseId/manage"
+								onClick={onNavigate}
+							>
+								<HugeIcon name="settings" className="size-4" />
+								Manage course
+							</Link>
+						</DropdownMenuItem>
+						<DropdownMenuItem asChild>
+							<Link
+								search={{ q: "", filter: "all" }}
+								to="/courses"
+								onClick={onNavigate}
+							>
+								<HugeIcon name="library" className="size-4" />
+								Back to library
+							</Link>
+						</DropdownMenuItem>
+					</DropdownMenuContent>
+				</DropdownMenu>
+			</div>
+
+			<div className="hidden items-center gap-2 lg:flex">
+				<Button asChild size="sm" variant="outline">
+					<Link
+						params={{ courseId }}
+						to="/courses/$courseId/manage"
+						onClick={onNavigate}
+					>
+						<HugeIcon name="settings" className="size-4" />
+						Manage
+					</Link>
+				</Button>
+				<Button asChild size="sm" variant="outline">
+					<Link
+						search={{ q: "", filter: "all" }}
+						to="/courses"
+						onClick={onNavigate}
+					>
+						<HugeIcon name="arrowLeft" className="size-4" />
+						Library
+					</Link>
+				</Button>
+			</div>
+			<BetterAuthHeader />
+		</div>
+	);
+}
+
+function MobileLessonContext({
+	chapter,
+	chapters,
+	completedByChapter,
+	courseProgressPercent,
+	currentSeconds,
+	durationSeconds,
+	nextChapter,
+	previousChapter,
+	showNextChapterPrompt,
+	videoChannelTitle,
+	watchedByChapter,
+	onAddBookmark,
+	onDismissNextChapter,
+	onSelectChapter,
+	onToggleComplete,
+}: {
+	chapter: CourseChapterDTO | null;
+	chapters: CourseChapterDTO[];
+	completedByChapter: Record<string, boolean>;
+	courseProgressPercent: number;
+	currentSeconds: number;
+	durationSeconds: number;
+	nextChapter: CourseChapterDTO | null;
+	previousChapter: CourseChapterDTO | null;
+	showNextChapterPrompt: boolean;
+	videoChannelTitle: string | null | undefined;
+	watchedByChapter: Record<string, number>;
+	onAddBookmark: () => void;
+	onDismissNextChapter: () => void;
+	onSelectChapter: (chapter: CourseChapterDTO) => void;
+	onToggleComplete: (chapter: CourseChapterDTO) => void;
+}) {
+	return (
+		<section
+			className="order-2 mx-3 grid gap-3 lg:hidden"
+			aria-labelledby="lesson-heading"
+		>
+			<div className="grid gap-3 px-1">
+				<div className="flex items-start justify-between gap-3">
+					<div className="min-w-0">
+						<p className="text-muted-foreground text-sm">Current chapter</p>
+						<h2
+							id="lesson-heading"
+							className="mt-1 line-clamp-2 font-semibold text-lg leading-6"
+						>
+							{chapter?.title ?? "Choose a chapter"}
+						</h2>
+					</div>
+					<MobileChapterDrawer
+						chapters={chapters}
+						selectedChapterId={chapter?.id ?? null}
+						watchedByChapter={watchedByChapter}
+						completedByChapter={completedByChapter}
+						durationSeconds={durationSeconds}
+						onSelect={onSelectChapter}
+						onToggleComplete={onToggleComplete}
+					/>
+				</div>
+
+				<div className="flex items-center gap-2">
+					<Button
+						className="min-h-11 flex-1"
+						disabled={!previousChapter}
+						onClick={() => previousChapter && onSelectChapter(previousChapter)}
+						type="button"
+						variant="outline"
+					>
+						<HugeIcon name="arrowLeft" className="size-4" />
+						Previous
+					</Button>
+					<Button
+						className="min-h-11 flex-1"
+						disabled={!nextChapter}
+						onClick={() => nextChapter && onSelectChapter(nextChapter)}
+						type="button"
+						variant="outline"
+					>
+						Next
+						<HugeIcon name="arrowRight" className="size-4" />
+					</Button>
+					<Button
+						aria-label={`Add bookmark at ${formatTimestamp(currentSeconds)}`}
+						className="size-11"
+						onClick={onAddBookmark}
+						size="icon-lg"
+						type="button"
+					>
+						<HugeIcon name="bookmark" className="size-4" />
+					</Button>
+				</div>
+
+				<details className="group border-border border-y">
+					<summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 text-sm [&::-webkit-details-marker]:hidden">
+						<span className="font-medium">Course details</span>
+						<span className="text-muted-foreground">
+							{chapters.length} chapters · {Math.round(courseProgressPercent)}%
+						</span>
+					</summary>
+					<div className="grid gap-2 pb-3 text-muted-foreground text-sm">
+						<p>{videoChannelTitle ?? "YouTube"}</p>
+						<Progress value={courseProgressPercent} />
+					</div>
+				</details>
+			</div>
+
+			{showNextChapterPrompt && nextChapter ? (
+				<div className="rounded-lg border border-primary/25 bg-accent p-3 text-accent-foreground">
+					<p className="font-medium text-sm">Continue with the next chapter</p>
+					<p className="mt-1 line-clamp-2 text-sm">{nextChapter.title}</p>
+					<div className="mt-3 flex gap-2">
+						<Button
+							className="min-h-11 flex-1"
+							onClick={() => onSelectChapter(nextChapter)}
+							type="button"
+						>
+							Play next chapter
+						</Button>
+						<Button
+							className="min-h-11"
+							onClick={onDismissNextChapter}
+							type="button"
+							variant="ghost"
+						>
+							Not now
+						</Button>
+					</div>
+				</div>
+			) : null}
+		</section>
+	);
+}
+
 function ChapterPanel({
 	chapters,
 	selectedChapterId,
@@ -1569,6 +1989,7 @@ function ChapterPanel({
 	durationSeconds,
 	onSelect,
 	onToggleComplete,
+	hideHeader = false,
 }: {
 	chapters: CourseChapterDTO[];
 	selectedChapterId: string | null;
@@ -1577,16 +1998,19 @@ function ChapterPanel({
 	durationSeconds: number;
 	onSelect: (chapter: CourseChapterDTO) => void;
 	onToggleComplete: (chapter: CourseChapterDTO) => void;
+	hideHeader?: boolean;
 }) {
 	return (
 		<div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-			<div className="border-b border-border p-3">
-				<h2 className="font-semibold text-sm">Chapters</h2>
-				<p className="text-muted-foreground text-xs">
-					Jump through the generated outline.
-				</p>
-			</div>
-			<div className="min-h-0 flex-1 overflow-auto p-2 md:max-h-[420px] lg:max-h-none">
+			{hideHeader ? null : (
+				<div className="border-b border-border p-3">
+					<h2 className="font-semibold text-sm">Chapters</h2>
+					<p className="text-muted-foreground text-xs">
+						Jump through the generated outline.
+					</p>
+				</div>
+			)}
+			<div className="min-h-0 flex-1 divide-y divide-border overflow-auto p-2 md:max-h-[420px] lg:max-h-none">
 				{chapters.map((chapter) => (
 					<ChapterItem
 						key={chapter.id}
@@ -1637,52 +2061,50 @@ function ChapterItem({
 	return (
 		<div
 			aria-current={active ? "true" : undefined}
-			className={`mb-1.5 rounded-md border px-2 py-1.5 transition-colors ${
+			className={`grid grid-cols-[minmax(0,1fr)_auto] items-start gap-1 rounded-md p-1 transition-colors ${
 				active
-					? "border-primary/40 bg-accent text-accent-foreground"
-					: "border-border bg-background hover:bg-muted/45"
+					? "bg-accent text-accent-foreground ring-1 ring-primary/30"
+					: "hover:bg-muted/45"
 			}`}
 		>
-			<div className="flex items-start justify-between gap-2">
-				<div className="min-w-0">
-					<button
-						type="button"
-						className="line-clamp-2 cursor-pointer text-left font-medium text-sm leading-5 transition-colors hover:text-primary focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35"
-						onClick={() => onSelect(chapter)}
-					>
-						{chapter.title}
-					</button>
-					<div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-muted-foreground text-xs">
-						<span>
-							{formatTimestamp(chapter.startSeconds)}
-							{chapter.endSeconds
-								? ` - ${formatTimestamp(chapter.endSeconds)}`
-								: ""}
-						</span>
-						{durationLabel ? <span>{durationLabel}</span> : null}
-						{active ? (
-							<span className="font-medium text-primary">Now playing</span>
-						) : null}
-					</div>
-				</div>
-				<Button
-					type="button"
-					size="icon-xs"
-					variant={completed ? "secondary" : "ghost"}
-					className="mt-0.5"
-					aria-pressed={completed}
-					onClick={() => onToggleComplete(chapter)}
-				>
-					<HugeIcon
-						name={completed ? "checkmarkCircle" : "circle"}
-						className={completed ? "size-4 text-primary" : "size-4"}
-					/>
-					<span className="sr-only">
-						{completed ? "Mark chapter incomplete" : "Mark chapter complete"}
+			<button
+				type="button"
+				className="min-h-11 min-w-0 cursor-pointer rounded-sm p-1.5 text-left transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35"
+				onClick={() => onSelect(chapter)}
+			>
+				<span className="line-clamp-2 font-medium text-sm leading-5">
+					{chapter.title}
+				</span>
+				<span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-muted-foreground text-sm lg:text-xs">
+					<span>
+						{formatTimestamp(chapter.startSeconds)}
+						{chapter.endSeconds
+							? ` - ${formatTimestamp(chapter.endSeconds)}`
+							: ""}
 					</span>
-				</Button>
-			</div>
-			<div className="mt-1.5">
+					{durationLabel ? <span>{durationLabel}</span> : null}
+					{active ? (
+						<span className="font-medium text-primary">Now playing</span>
+					) : null}
+				</span>
+			</button>
+			<Button
+				type="button"
+				size="icon-lg"
+				variant={completed ? "secondary" : "ghost"}
+				className="size-11 lg:size-7"
+				aria-pressed={completed}
+				onClick={() => onToggleComplete(chapter)}
+			>
+				<HugeIcon
+					name={completed ? "checkmarkCircle" : "circle"}
+					className={completed ? "size-4 text-primary" : "size-4"}
+				/>
+				<span className="sr-only">
+					{completed ? "Mark chapter incomplete" : "Mark chapter complete"}
+				</span>
+			</Button>
+			<div className="col-span-2 px-1.5 pb-1.5">
 				<Progress value={completed ? 100 : percent} />
 			</div>
 		</div>
@@ -1690,11 +2112,13 @@ function ChapterItem({
 }
 
 function MobileChapterDrawer(props: Parameters<typeof ChapterPanel>[0]) {
+	const [open, setOpen] = useState(false);
+
 	return (
 		<div className="lg:hidden">
-			<Drawer>
+			<Drawer open={open} onOpenChange={setOpen}>
 				<DrawerTrigger asChild>
-					<Button type="button" variant="outline" size="sm">
+					<Button type="button" variant="outline" className="min-h-11">
 						<HugeIcon name="menu" className="size-4" />
 						Chapters
 					</Button>
@@ -1704,7 +2128,14 @@ function MobileChapterDrawer(props: Parameters<typeof ChapterPanel>[0]) {
 						<DrawerTitle>Chapters</DrawerTitle>
 						<DrawerDescription>Select a chapter to jump.</DrawerDescription>
 					</DrawerHeader>
-					<ChapterPanel {...props} />
+					<ChapterPanel
+						{...props}
+						hideHeader
+						onSelect={(chapter) => {
+							props.onSelect(chapter);
+							setOpen(false);
+						}}
+					/>
 				</DrawerContent>
 			</Drawer>
 		</div>
@@ -1732,24 +2163,29 @@ function LearningTabs({
 }) {
 	return (
 		<ContentPanel className="min-w-0 overflow-hidden p-0">
-			<Tabs defaultValue="summary" className="flex-col gap-0">
+			<Tabs
+				key={chapter?.id ?? "no-chapter"}
+				defaultValue={chapter?.summary ? "summary" : "notes"}
+				className="flex-col gap-0"
+			>
 				<TabsList
 					variant="line"
-					className="h-10 w-full justify-start rounded-none border-border border-b px-3"
+					className="h-11 w-full justify-start rounded-none border-border border-b lg:h-10"
 				>
-					<TabsTrigger value="summary" className="h-9 px-2.5">
+					<TabsTrigger value="summary" className="h-11 px-3 text-sm lg:h-10">
 						Summary
 					</TabsTrigger>
-					<TabsTrigger value="notes" className="h-9 px-2.5">
+					<TabsTrigger value="notes" className="h-11 px-3 text-sm lg:h-10">
 						Notes
 					</TabsTrigger>
-					<TabsTrigger value="bookmarks" className="h-9 px-2.5">
+					<TabsTrigger value="bookmarks" className="h-11 px-3 text-sm lg:h-10">
 						Bookmarks
 					</TabsTrigger>
 				</TabsList>
 				<TabsContent value="summary" className="p-4">
 					<p className="max-w-3xl text-muted-foreground text-sm leading-6">
-						{chapter?.summary ?? "No summary is available for this chapter."}
+						{chapter?.summary ??
+							"No summary is available. Use Notes to capture the important points."}
 					</p>
 				</TabsContent>
 				<TabsContent value="notes" className="p-4">
@@ -1775,7 +2211,7 @@ function LearningTabs({
 														bookmark.timestampSeconds,
 													)}`}
 											</p>
-											<p className="text-muted-foreground text-xs">
+											<p className="text-muted-foreground text-sm lg:text-xs">
 												{formatTimestamp(bookmark.timestampSeconds)}
 											</p>
 											{bookmark.note ? (
@@ -1787,6 +2223,7 @@ function LearningTabs({
 										<div className="flex shrink-0 flex-wrap gap-1">
 											<Button
 												type="button"
+												className="min-h-11 lg:min-h-6"
 												size="xs"
 												variant="outline"
 												onClick={() => onJumpToBookmark(bookmark)}
@@ -1795,6 +2232,7 @@ function LearningTabs({
 											</Button>
 											<Button
 												type="button"
+												className="size-11 lg:size-6"
 												size="icon-xs"
 												variant="ghost"
 												onClick={() => onEditBookmark(bookmark)}
@@ -1804,6 +2242,7 @@ function LearningTabs({
 											</Button>
 											<Button
 												type="button"
+												className="size-11 lg:size-6"
 												size="icon-xs"
 												variant="ghost"
 												disabled={deletingBookmark}

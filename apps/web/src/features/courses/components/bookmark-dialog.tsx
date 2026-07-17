@@ -101,13 +101,13 @@ function BookmarkDialog({
 										name={field.name}
 										value={field.state.value}
 										placeholder="Optional title"
-										className="ph-no-capture"
+										className="ph-no-capture min-h-11 sm:min-h-8"
 										aria-invalid={Boolean(error)}
 										onBlur={field.handleBlur}
 										onChange={(event) => field.handleChange(event.target.value)}
 									/>
 									{error ? (
-										<p className="text-destructive text-xs">{error}</p>
+										<p className="text-destructive text-sm">{error}</p>
 									) : null}
 								</div>
 							);
@@ -132,7 +132,7 @@ function BookmarkDialog({
 										onChange={(event) => field.handleChange(event.target.value)}
 									/>
 									{error ? (
-										<p className="text-destructive text-xs">{error}</p>
+										<p className="text-destructive text-sm">{error}</p>
 									) : null}
 								</div>
 							);
@@ -141,6 +141,7 @@ function BookmarkDialog({
 
 					<DialogFooter className="mt-0">
 						<Button
+							className="min-h-11 sm:min-h-8"
 							type="button"
 							variant="outline"
 							onClick={() => onOpenChange(false)}
@@ -150,6 +151,7 @@ function BookmarkDialog({
 						<form.Subscribe>
 							{(state) => (
 								<Button
+									className="min-h-11 sm:min-h-8"
 									type="submit"
 									disabled={state.isSubmitting || submitting}
 								>

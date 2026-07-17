@@ -8,7 +8,6 @@ import {
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import {
 	FULLSCREEN_CONTROLS_HIDE_DELAY_MS,
-	getPlayerInteractionOverlayAction,
 	useFullscreenControlVisibility,
 } from "./player-fullscreen";
 
@@ -190,19 +189,5 @@ describe("useFullscreenControlVisibility", () => {
 			vi.advanceTimersByTime(FULLSCREEN_CONTROLS_HIDE_DELAY_MS);
 		});
 		expect(screen.getByTestId("state").textContent).toBe("hidden");
-	});
-});
-
-describe("getPlayerInteractionOverlayAction", () => {
-	test("reveals controls without toggling playback when controls are hidden", () => {
-		expect(getPlayerInteractionOverlayAction({ controlsHidden: true })).toBe(
-			"show_controls",
-		);
-	});
-
-	test("toggles playback when controls are already visible", () => {
-		expect(getPlayerInteractionOverlayAction({ controlsHidden: false })).toBe(
-			"toggle_playback",
-		);
 	});
 });

@@ -1,3 +1,4 @@
+import { Toaster } from "@benkyou/ui";
 import type { QueryClient } from "@tanstack/react-query";
 import {
 	createRootRouteWithContext,
@@ -30,7 +31,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 				},
 				{
 					name: "viewport",
-					content: "width=device-width, initial-scale=1",
+					content: "width=device-width, initial-scale=1, viewport-fit=cover",
 				},
 				...seo.meta,
 			],
@@ -65,6 +66,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 			</head>
 			<body>
 				<AnalyticsProvider>{children}</AnalyticsProvider>
+				<Toaster position="bottom-center" />
 				{AppDevtools ? (
 					<Suspense fallback={null}>
 						<AppDevtools />

@@ -3,9 +3,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 const FULLSCREEN_CONTROLS_HIDE_DELAY_MS = 3_000;
 
-type PlayerInteractionOverlayAction = "show_controls" | "toggle_playback";
-
 interface PlayerFullscreenButtonProps {
+	className?: string;
 	isFullscreen: boolean;
 	isSupported: boolean;
 	onToggle: () => void;
@@ -36,19 +35,21 @@ interface UseFullscreenControlVisibilityOptions {
 }
 
 function usePlayerFullscreen() {
-	const playerSurfaceRef = useRef<HTMLDivElement | null>(null);
+	const playerSurfaceNodeRef = useRef<HTMLDivElement | null>(null);
+	const [playerSurfaceElement, setPlayerSurfaceElement] =
+		useState<HTMLDivElement | null>(null);
 	const [isFullscreen, setIsFullscreen] = useState(false);
 	const [isSupported, setIsSupported] = useState(true);
 	const [fullscreenError, setFullscreenError] = useState<string | null>(null);
 
 	useEffect(() => {
-		const surface = playerSurfaceRef.current;
+		const surface = playerSurfaceNodeRef.current;
 		if (surface) {
 			setIsSupported(canUseFullscreen(surface));
 		}
 
 		const handleFullscreenChange = () => {
-			const active = getFullscreenElement() === playerSurfaceRef.current;
+			const active = getFullscreenElement() === playerSurfaceNodeRef.current;
 			setIsFullscreen(active);
 
 			if (active) {
@@ -72,8 +73,13 @@ function usePlayerFullscreen() {
 		};
 	}, []);
 
+	const playerSurfaceRef = useCallback((node: HTMLDivElement | null) => {
+		playerSurfaceNodeRef.current = node;
+		setPlayerSurfaceElement(node);
+	}, []);
+
 	const toggleFullscreen = async () => {
-		const surface = playerSurfaceRef.current;
+		const surface = playerSurfaceNodeRef.current;
 
 		if (!surface) {
 			return;
@@ -98,7 +104,6 @@ function usePlayerFullscreen() {
 
 			await requestFullscreen(surface);
 			setIsFullscreen(true);
-			void lockLandscapeOrientation();
 		} catch {
 			setFullscreenError(
 				"Fullscreen could not start here. Rotate your device manually.",
@@ -110,6 +115,7 @@ function usePlayerFullscreen() {
 		fullscreenError,
 		isFullscreen,
 		isSupported,
+		playerSurfaceElement,
 		playerSurfaceRef,
 		toggleFullscreen,
 	};
@@ -185,6 +191,15 @@ function useFullscreenControlVisibility({
 		scheduleHideTimer();
 	}, [scheduleHideTimer]);
 
+	const hideControls = useCallback(() => {
+		if (!shouldAutoHide) return;
+		clearHideTimer();
+		setControlVisibility((current) => ({
+			...current,
+			controlsHidden: true,
+		}));
+	}, [clearHideTimer, shouldAutoHide]);
+
 	useEffect(() => {
 		if (!shouldAutoHide) {
 			clearHideTimer();
@@ -199,19 +214,13 @@ function useFullscreenControlVisibility({
 	return {
 		controlsHidden: isFullscreen && controlsHidden,
 		controlsVisible,
+		hideControls,
 		showControls,
 	};
 }
 
-function getPlayerInteractionOverlayAction({
-	controlsHidden,
-}: {
-	controlsHidden: boolean;
-}): PlayerInteractionOverlayAction {
-	return controlsHidden ? "show_controls" : "toggle_playback";
-}
-
 function PlayerFullscreenButton({
+	className,
 	isFullscreen,
 	isSupported,
 	onToggle,
@@ -221,6 +230,7 @@ function PlayerFullscreenButton({
 	return (
 		<Button
 			aria-label={label}
+			className={className}
 			disabled={!isSupported}
 			onClick={onToggle}
 			size="icon-sm"
@@ -323,7 +333,6 @@ function getScreenOrientation() {
 
 export {
 	FULLSCREEN_CONTROLS_HIDE_DELAY_MS,
-	getPlayerInteractionOverlayAction,
 	PlayerFullscreenButton,
 	useFullscreenControlVisibility,
 	usePlayerFullscreen,

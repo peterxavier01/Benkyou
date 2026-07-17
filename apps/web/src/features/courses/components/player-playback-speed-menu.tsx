@@ -15,6 +15,7 @@ interface PlayerPlaybackSpeedMenuProps {
 	onPlaybackSpeedChange: (speed: number) => void;
 	pending?: boolean;
 	playbackSpeed: number;
+	portalContainer?: HTMLElement | null;
 }
 
 function PlayerPlaybackSpeedMenu({
@@ -22,11 +23,12 @@ function PlayerPlaybackSpeedMenu({
 	onPlaybackSpeedChange,
 	pending,
 	playbackSpeed,
+	portalContainer,
 }: PlayerPlaybackSpeedMenuProps) {
 	const formattedSpeed = formatPlaybackSpeed(playbackSpeed);
 
 	return (
-		<DropdownMenu>
+		<DropdownMenu modal={false}>
 			<DropdownMenuTrigger asChild>
 				<Button
 					aria-busy={pending || undefined}
@@ -40,7 +42,11 @@ function PlayerPlaybackSpeedMenu({
 					{formattedSpeed}
 				</Button>
 			</DropdownMenuTrigger>
-			<DropdownMenuContent align="start" className="w-32">
+			<DropdownMenuContent
+				align="start"
+				className="w-32"
+				portalContainer={portalContainer}
+			>
 				<DropdownMenuLabel>Speed</DropdownMenuLabel>
 				<DropdownMenuSeparator />
 				<DropdownMenuRadioGroup

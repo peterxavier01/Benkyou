@@ -321,7 +321,7 @@ function NotesEditor({ courseId, chapter, note }: NotesEditorProps) {
 					<p className="truncate font-medium text-sm">
 						{chapter?.title ?? "No chapter selected"}
 					</p>
-					<p className="text-muted-foreground text-xs">
+					<p className="text-muted-foreground text-sm lg:text-xs">
 						Notes are saved to the selected chapter.
 					</p>
 				</div>
@@ -331,6 +331,7 @@ function NotesEditor({ courseId, chapter, note }: NotesEditorProps) {
 					</StatusBadge>
 					<div className="flex rounded-md border border-border bg-background p-0.5">
 						<Button
+							className="min-h-11 lg:min-h-6"
 							type="button"
 							size="xs"
 							variant={mode === "write" ? "secondary" : "ghost"}
@@ -339,6 +340,7 @@ function NotesEditor({ courseId, chapter, note }: NotesEditorProps) {
 							Write
 						</Button>
 						<Button
+							className="min-h-11 lg:min-h-6"
 							type="button"
 							size="xs"
 							variant={mode === "preview" ? "secondary" : "ghost"}
@@ -353,6 +355,7 @@ function NotesEditor({ courseId, chapter, note }: NotesEditorProps) {
 						</Button>
 					</div>
 					<Button
+						className="min-h-11 lg:min-h-6"
 						type="button"
 						size="xs"
 						variant="outline"
@@ -368,16 +371,22 @@ function NotesEditor({ courseId, chapter, note }: NotesEditorProps) {
 					<div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
 						<div className="min-w-0">
 							<p className="font-medium text-sm">Local draft available</p>
-							<p className="mt-1 text-muted-foreground text-xs">
+							<p className="mt-1 text-muted-foreground text-sm lg:text-xs">
 								A previous save did not finish. Restore it or keep the saved
 								server note.
 							</p>
 						</div>
 						<div className="flex shrink-0 flex-wrap gap-2">
-							<Button type="button" size="xs" onClick={restoreDraft}>
+							<Button
+								className="min-h-11 lg:min-h-6"
+								type="button"
+								size="xs"
+								onClick={restoreDraft}
+							>
 								Restore draft
 							</Button>
 							<Button
+								className="min-h-11 lg:min-h-6"
 								type="button"
 								size="xs"
 								variant="outline"
