@@ -51,4 +51,5 @@ export const LOCAL_STORAGE_KEYS = {
 	notes: "benkyou:notes:v1",
 	bookmarks: "benkyou:bookmarks:v1",
 	preferences: "benkyou:preferences:v1",
+	playerGestureHint: "benkyou:player-gesture-hint:v1",
 } as const;

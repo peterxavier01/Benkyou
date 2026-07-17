@@ -172,7 +172,7 @@ function WorkspacePage({
 		<>
 			<header className="sticky top-0 z-20 border-border border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/85">
 				<div className="flex h-14 items-center gap-3 px-3 sm:px-6">
-					<SidebarTrigger className="md:hidden" />
+					<SidebarTrigger className="size-11 md:hidden" />
 					<Separator orientation="vertical" className="hidden h-5 md:block" />
 					<div className="min-w-0 flex-1">
 						<h1 className="truncate font-semibold text-sm leading-5 text-foreground">

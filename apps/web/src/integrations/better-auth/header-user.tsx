@@ -32,7 +32,7 @@ export default function BetterAuthHeader() {
 					<Button
 						type="button"
 						variant="ghost"
-						className="h-10 max-w-[240px] justify-start gap-2 px-2 text-left sm:max-w-[280px]"
+						className="h-11 max-w-[240px] justify-start gap-2 px-2 text-left sm:h-10 sm:max-w-[280px]"
 					>
 						{session.user.image ? (
 							<img
@@ -102,7 +102,12 @@ export default function BetterAuthHeader() {
 					</Link>
 				</Button>
 			) : null}
-			<Button asChild variant="outline" size="sm">
+			<Button
+				asChild
+				variant="outline"
+				size="sm"
+				className="min-h-11 sm:min-h-7"
+			>
 				<Link to="/sign-in" search={{ redirect: "/" }}>
 					Sign in
 				</Link>

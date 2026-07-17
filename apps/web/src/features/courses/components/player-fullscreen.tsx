@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 const FULLSCREEN_CONTROLS_HIDE_DELAY_MS = 3_000;
 
 interface PlayerFullscreenButtonProps {
+	className?: string;
 	isFullscreen: boolean;
 	isSupported: boolean;
 	onToggle: () => void;
@@ -219,6 +220,7 @@ function useFullscreenControlVisibility({
 }
 
 function PlayerFullscreenButton({
+	className,
 	isFullscreen,
 	isSupported,
 	onToggle,
@@ -228,6 +230,7 @@ function PlayerFullscreenButton({
 	return (
 		<Button
 			aria-label={label}
+			className={className}
 			disabled={!isSupported}
 			onClick={onToggle}
 			size="icon-sm"
