@@ -78,11 +78,11 @@ import {
 import { BookmarkDialog, type BookmarkDialogValues } from "./bookmark-dialog";
 import { NotesEditor } from "./notes-editor";
 import {
-	getPlayerInteractionOverlayAction,
 	PlayerFullscreenButton,
 	useFullscreenControlVisibility,
 	usePlayerFullscreen,
 } from "./player-fullscreen";
+import { PlayerGestureOverlay } from "./player-gesture-overlay";
 import { PlayerPlaybackSpeedMenu } from "./player-playback-speed-menu";
 import { PlayerVolumeControl } from "./player-volume-control";
 import { YouTubePlayer, type YouTubePlayerHandle } from "./youtube-player";
@@ -195,6 +195,7 @@ function CoursePlayerScreen({
 	} = usePlayerFullscreen();
 	const {
 		controlsHidden: fullscreenControlsHidden,
+		hideControls: hideFullscreenControls,
 		showControls: showFullscreenControls,
 	} = useFullscreenControlVisibility({
 		controlsFocused: fullscreenControlsFocused,
@@ -1017,24 +1018,45 @@ function CoursePlayerScreen({
 		setPlaybackPlaying(!playerPlaying, "player_button");
 	}, [playerPlaying, setPlaybackPlaying]);
 
-	const handlePlayerOverlayPointerDown = useCallback(() => {
-		showFullscreenControls();
+	const seekBy = useCallback(
+		(deltaSeconds: number) => {
+			const latest = latestProgressRef.current;
+			const duration =
+				latest.durationSeconds || data.video.durationSeconds || 0;
+			const targetSeconds = Math.max(
+				0,
+				Math.min(
+					duration > 0 ? duration : Number.POSITIVE_INFINITY,
+					latest.currentSeconds + deltaSeconds,
+				),
+			);
+			const chapter = findChapterAtTime(data.chapters, targetSeconds);
+			const chapterId = chapter?.id ?? latest.selectedChapterId;
 
-		if (
-			getPlayerInteractionOverlayAction({
-				controlsHidden: fullscreenControlsHidden,
-			}) === "show_controls"
-		) {
-			return;
-		}
-
-		setPlaybackPlaying(!playerPlaying, "player_button");
-	}, [
-		fullscreenControlsHidden,
-		playerPlaying,
-		setPlaybackPlaying,
-		showFullscreenControls,
-	]);
+			pendingSeekRef.current = {
+				chapterId,
+				targetSeconds,
+				direction: deltaSeconds < 0 ? "backward" : "forward",
+			};
+			setCurrentSeconds(targetSeconds);
+			if (chapter) setSelectedChapterId(chapter.id);
+			latestProgressRef.current = {
+				...latest,
+				currentSeconds: targetSeconds,
+				selectedChapterId: chapterId,
+			};
+			setSeekToSeconds(targetSeconds);
+			youtubePlayerRef.current?.seekTo(targetSeconds);
+			showFullscreenControls();
+			persistProgress({ refreshFromPlayer: false });
+		},
+		[
+			data.chapters,
+			data.video.durationSeconds,
+			persistProgress,
+			showFullscreenControls,
+		],
+	);
 
 	const changePlayerMuted = (muted: boolean) => {
 		const nextVolume =
@@ -1405,19 +1427,11 @@ function CoursePlayerScreen({
 									persistProgress();
 								}}
 							/>
-							<button
-								aria-label={
-									fullscreenControlsHidden
-										? "Show player controls"
-										: playerPlaying
-											? "Pause video"
-											: "Play video"
-								}
-								data-player-interaction-overlay
-								onPointerDown={handlePlayerOverlayPointerDown}
-								onPointerMove={showFullscreenControls}
-								tabIndex={-1}
-								type="button"
+							<PlayerGestureOverlay
+								controlsHidden={fullscreenControlsHidden}
+								onHideControls={hideFullscreenControls}
+								onSeek={seekBy}
+								onShowControls={showFullscreenControls}
 							/>
 						</PlayerVideoFrame>
 						<ContentPanel
@@ -1433,7 +1447,19 @@ function CoursePlayerScreen({
 							onTouchEndCapture={stopFullscreenControlInteraction}
 						>
 							<div className="grid gap-3 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center">
-								<div className="flex items-center gap-2">
+								<div className="flex items-center gap-3 sm:gap-2">
+									<Button
+										aria-label="Rewind 10 seconds"
+										className="relative size-8 after:absolute after:-inset-1.5 after:content-['']"
+										onClick={() => seekBy(-10)}
+										size="icon-sm"
+										title="Rewind 10 seconds"
+										type="button"
+										variant="outline"
+									>
+										<HugeIcon name="goBackward10Seconds" className="size-4" />
+										<span className="sr-only">Rewind 10 seconds</span>
+									</Button>
 									<Button
 										type="button"
 										size="icon-sm"
@@ -1448,8 +1474,23 @@ function CoursePlayerScreen({
 											{playerPlaying ? "Pause chapter" : "Play chapter"}
 										</span>
 									</Button>
+									<Button
+										aria-label="Forward 10 seconds"
+										className="relative size-8 after:absolute after:-inset-1.5 after:content-['']"
+										onClick={() => seekBy(10)}
+										size="icon-sm"
+										title="Forward 10 seconds"
+										type="button"
+										variant="outline"
+									>
+										<HugeIcon name="goForward10Seconds" className="size-4" />
+										<span className="sr-only">Forward 10 seconds</span>
+									</Button>
 									<PlayerVolumeControl
 										muted={playerMuted}
+										portalContainer={
+											isFullscreen ? playerSurfaceRef.current : undefined
+										}
 										volume={playerVolume}
 										onMutedChange={changePlayerMuted}
 										onVolumeChange={changePlayerVolume}
@@ -1467,6 +1508,9 @@ function CoursePlayerScreen({
 									<PlayerPlaybackSpeedMenu
 										pending={preferencesMutation.isPending}
 										playbackSpeed={learningPreferences.playbackSpeed}
+										portalContainer={
+											isFullscreen ? playerSurfaceRef.current : undefined
+										}
 										onPlaybackSpeedChange={changePlaybackSpeed}
 									/>
 								</div>
@@ -1735,15 +1779,15 @@ function LearningTabs({
 			<Tabs defaultValue="summary" className="flex-col gap-0">
 				<TabsList
 					variant="line"
-					className="h-10 w-full justify-start rounded-none border-border border-b px-3"
+					className="h-10 w-full justify-start rounded-none border-border border-b"
 				>
-					<TabsTrigger value="summary" className="h-9 px-2.5">
+					<TabsTrigger value="summary" className="h-10 px-2.5">
 						Summary
 					</TabsTrigger>
-					<TabsTrigger value="notes" className="h-9 px-2.5">
+					<TabsTrigger value="notes" className="h-10 px-2.5">
 						Notes
 					</TabsTrigger>
-					<TabsTrigger value="bookmarks" className="h-9 px-2.5">
+					<TabsTrigger value="bookmarks" className="h-10 px-2.5">
 						Bookmarks
 					</TabsTrigger>
 				</TabsList>

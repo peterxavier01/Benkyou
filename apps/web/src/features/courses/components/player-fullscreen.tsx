@@ -3,8 +3,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 const FULLSCREEN_CONTROLS_HIDE_DELAY_MS = 3_000;
 
-type PlayerInteractionOverlayAction = "show_controls" | "toggle_playback";
-
 interface PlayerFullscreenButtonProps {
 	isFullscreen: boolean;
 	isSupported: boolean;
@@ -98,7 +96,6 @@ function usePlayerFullscreen() {
 
 			await requestFullscreen(surface);
 			setIsFullscreen(true);
-			void lockLandscapeOrientation();
 		} catch {
 			setFullscreenError(
 				"Fullscreen could not start here. Rotate your device manually.",
@@ -185,6 +182,15 @@ function useFullscreenControlVisibility({
 		scheduleHideTimer();
 	}, [scheduleHideTimer]);
 
+	const hideControls = useCallback(() => {
+		if (!shouldAutoHide) return;
+		clearHideTimer();
+		setControlVisibility((current) => ({
+			...current,
+			controlsHidden: true,
+		}));
+	}, [clearHideTimer, shouldAutoHide]);
+
 	useEffect(() => {
 		if (!shouldAutoHide) {
 			clearHideTimer();
@@ -199,16 +205,9 @@ function useFullscreenControlVisibility({
 	return {
 		controlsHidden: isFullscreen && controlsHidden,
 		controlsVisible,
+		hideControls,
 		showControls,
 	};
-}
-
-function getPlayerInteractionOverlayAction({
-	controlsHidden,
-}: {
-	controlsHidden: boolean;
-}): PlayerInteractionOverlayAction {
-	return controlsHidden ? "show_controls" : "toggle_playback";
 }
 
 function PlayerFullscreenButton({
@@ -323,7 +322,6 @@ function getScreenOrientation() {
 
 export {
 	FULLSCREEN_CONTROLS_HIDE_DELAY_MS,
-	getPlayerInteractionOverlayAction,
 	PlayerFullscreenButton,
 	useFullscreenControlVisibility,
 	usePlayerFullscreen,
