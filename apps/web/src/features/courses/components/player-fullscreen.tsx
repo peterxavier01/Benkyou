@@ -34,19 +34,21 @@ interface UseFullscreenControlVisibilityOptions {
 }
 
 function usePlayerFullscreen() {
-	const playerSurfaceRef = useRef<HTMLDivElement | null>(null);
+	const playerSurfaceNodeRef = useRef<HTMLDivElement | null>(null);
+	const [playerSurfaceElement, setPlayerSurfaceElement] =
+		useState<HTMLDivElement | null>(null);
 	const [isFullscreen, setIsFullscreen] = useState(false);
 	const [isSupported, setIsSupported] = useState(true);
 	const [fullscreenError, setFullscreenError] = useState<string | null>(null);
 
 	useEffect(() => {
-		const surface = playerSurfaceRef.current;
+		const surface = playerSurfaceNodeRef.current;
 		if (surface) {
 			setIsSupported(canUseFullscreen(surface));
 		}
 
 		const handleFullscreenChange = () => {
-			const active = getFullscreenElement() === playerSurfaceRef.current;
+			const active = getFullscreenElement() === playerSurfaceNodeRef.current;
 			setIsFullscreen(active);
 
 			if (active) {
@@ -70,8 +72,13 @@ function usePlayerFullscreen() {
 		};
 	}, []);
 
+	const playerSurfaceRef = useCallback((node: HTMLDivElement | null) => {
+		playerSurfaceNodeRef.current = node;
+		setPlayerSurfaceElement(node);
+	}, []);
+
 	const toggleFullscreen = async () => {
-		const surface = playerSurfaceRef.current;
+		const surface = playerSurfaceNodeRef.current;
 
 		if (!surface) {
 			return;
@@ -107,6 +114,7 @@ function usePlayerFullscreen() {
 		fullscreenError,
 		isFullscreen,
 		isSupported,
+		playerSurfaceElement,
 		playerSurfaceRef,
 		toggleFullscreen,
 	};

@@ -28,6 +28,7 @@ interface PlayerGestureOverlayProps {
 	onHideControls: () => void;
 	onSeek: (deltaSeconds: number) => void;
 	onShowControls: () => void;
+	onTogglePlayback: () => void;
 }
 
 function classifyPlayerGesture(input: TapInput): PlayerGestureAction {
@@ -51,6 +52,7 @@ function PlayerGestureOverlay({
 	onHideControls,
 	onSeek,
 	onShowControls,
+	onTogglePlayback,
 }: PlayerGestureOverlayProps) {
 	const pointerStartRef = useRef<{
 		id: number;
@@ -103,6 +105,11 @@ function PlayerGestureOverlay({
 	};
 
 	const handlePointerEnd = (event: ReactPointerEvent<HTMLDivElement>) => {
+		if (event.pointerType === "mouse") {
+			if (event.isPrimary && event.button === 0) onTogglePlayback();
+			return;
+		}
+
 		const start = pointerStartRef.current;
 		pointerStartRef.current = null;
 		if (!start || start.id !== event.pointerId) return;

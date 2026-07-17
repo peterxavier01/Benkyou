@@ -29,6 +29,8 @@ body {
   --foreground: oklch(0.94 0.006 220);
   --card: oklch(0.22 0.014 220);
   --card-foreground: oklch(0.94 0.006 220);
+  --popover: oklch(0.22 0.014 220);
+  --popover-foreground: oklch(0.94 0.006 220);
   --muted: oklch(0.28 0.012 220);
   --muted-foreground: oklch(0.73 0.01 220);
   --border: oklch(0.36 0.014 220);

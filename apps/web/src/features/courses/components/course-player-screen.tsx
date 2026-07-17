@@ -190,6 +190,7 @@ function CoursePlayerScreen({
 		fullscreenError,
 		isFullscreen,
 		isSupported: isFullscreenSupported,
+		playerSurfaceElement,
 		playerSurfaceRef,
 		toggleFullscreen,
 	} = usePlayerFullscreen();
@@ -1234,7 +1235,7 @@ function CoursePlayerScreen({
 	}, []);
 
 	useEffect(() => {
-		const playerSurface = playerSurfaceRef.current;
+		const playerSurface = playerSurfaceElement;
 
 		if (!playerSurface) {
 			return;
@@ -1255,7 +1256,7 @@ function CoursePlayerScreen({
 			playerSurface.removeEventListener("pointermove", showFullscreenControls);
 			playerSurface.removeEventListener("touchstart", showFullscreenControls);
 		};
-	}, [playerSurfaceRef, showFullscreenControls]);
+	}, [playerSurfaceElement, showFullscreenControls]);
 
 	const toggleChapterComplete = (chapter: CourseChapterDTO) => {
 		const nextCompleted = !completedByChapter[chapter.id];
@@ -1432,6 +1433,7 @@ function CoursePlayerScreen({
 								onHideControls={hideFullscreenControls}
 								onSeek={seekBy}
 								onShowControls={showFullscreenControls}
+								onTogglePlayback={togglePlayback}
 							/>
 						</PlayerVideoFrame>
 						<ContentPanel
@@ -1489,7 +1491,7 @@ function CoursePlayerScreen({
 									<PlayerVolumeControl
 										muted={playerMuted}
 										portalContainer={
-											isFullscreen ? playerSurfaceRef.current : undefined
+											isFullscreen ? playerSurfaceElement : undefined
 										}
 										volume={playerVolume}
 										onMutedChange={changePlayerMuted}
@@ -1509,7 +1511,7 @@ function CoursePlayerScreen({
 										pending={preferencesMutation.isPending}
 										playbackSpeed={learningPreferences.playbackSpeed}
 										portalContainer={
-											isFullscreen ? playerSurfaceRef.current : undefined
+											isFullscreen ? playerSurfaceElement : undefined
 										}
 										onPlaybackSpeedChange={changePlaybackSpeed}
 									/>
