@@ -85,6 +85,7 @@ import {
 import { BookmarkDialog, type BookmarkDialogValues } from "./bookmark-dialog";
 import { NotesEditor } from "./notes-editor";
 import {
+	isPlaybackStateTransition,
 	PlayerFullscreenButton,
 	shouldShowFullscreenControlsForPointerMovement,
 	useFullscreenControlVisibility,
@@ -1072,13 +1073,14 @@ function CoursePlayerScreen({
 
 	const trackPlaybackState = useCallback(
 		(playing: boolean, source: "player_button" | "player_state") => {
-			if (trackedPlayingStateRef.current === playing) {
-				return;
+			if (!isPlaybackStateTransition(trackedPlayingStateRef.current, playing)) {
+				return false;
 			}
 			trackedPlayingStateRef.current = playing;
 			trackAnalyticsEvent(playing ? "playback_started" : "playback_paused", {
 				source,
 			});
+			return true;
 		},
 		[],
 	);
@@ -1214,13 +1216,13 @@ function CoursePlayerScreen({
 	};
 
 	const handlePlayingChange = (playing: boolean) => {
+		if (!trackPlaybackState(playing, "player_state")) return;
+
 		showFullscreenControls();
 		setPlayerControls((current) => {
 			if (current.playing === playing) {
 				return current;
 			}
-
-			trackPlaybackState(playing, "player_state");
 
 			return { ...current, playing };
 		});

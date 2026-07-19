@@ -8,6 +8,7 @@ import {
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import {
 	FULLSCREEN_CONTROLS_HIDE_DELAY_MS,
+	isPlaybackStateTransition,
 	shouldShowFullscreenControlsForPointerMovement,
 	useFullscreenControlVisibility,
 } from "./player-fullscreen";
@@ -219,5 +220,14 @@ describe("fullscreen pointer activity", () => {
 		expect(shouldShowFullscreenControlsForPointerMovement("mouse")).toBe(true);
 		expect(shouldShowFullscreenControlsForPointerMovement("touch")).toBe(false);
 		expect(shouldShowFullscreenControlsForPointerMovement("pen")).toBe(false);
+	});
+});
+
+describe("playback state activity", () => {
+	test("only actual playback transitions count as activity", () => {
+		expect(isPlaybackStateTransition(false, true)).toBe(true);
+		expect(isPlaybackStateTransition(true, false)).toBe(true);
+		expect(isPlaybackStateTransition(true, true)).toBe(false);
+		expect(isPlaybackStateTransition(false, false)).toBe(false);
 	});
 });

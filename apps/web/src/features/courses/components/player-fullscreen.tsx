@@ -228,6 +228,10 @@ function shouldShowFullscreenControlsForPointerMovement(pointerType: string) {
 	return pointerType === "mouse";
 }
 
+function isPlaybackStateTransition(current: boolean, next: boolean) {
+	return current !== next;
+}
+
 function PlayerFullscreenButton({
 	className,
 	isFullscreen,
@@ -342,6 +346,7 @@ function getScreenOrientation() {
 
 export {
 	FULLSCREEN_CONTROLS_HIDE_DELAY_MS,
+	isPlaybackStateTransition,
 	PlayerFullscreenButton,
 	shouldShowFullscreenControlsForPointerMovement,
 	useFullscreenControlVisibility,
