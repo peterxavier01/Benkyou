@@ -16,6 +16,7 @@ import { trackAnalyticsEvent } from "#/integrations/posthog/analytics";
 import { upsertChapterNote } from "../course-workspace.functions";
 
 type SaveState = "saved" | "saving" | "unsaved" | "failed" | "conflict";
+type CopyState = "idle" | "copied" | "failed";
 
 interface NotesEditorProps {
 	courseId: string;
@@ -50,7 +51,7 @@ function NotesEditor({ courseId, chapter, note }: NotesEditorProps) {
 	const [baseUpdatedAt, setBaseUpdatedAt] = useState(note?.updatedAt ?? null);
 	const [saveState, setSaveState] = useState<SaveState>("saved");
 	const [availableDraft, setAvailableDraft] = useState<NoteDraft | null>(null);
-	const [copied, setCopied] = useState(false);
+	const [copyState, setCopyState] = useState<CopyState>("idle");
 	const latestRef = useRef({
 		chapterId: chapter?.id ?? null,
 		markdown,
@@ -60,6 +61,17 @@ function NotesEditor({ courseId, chapter, note }: NotesEditorProps) {
 	const previousChapterIdRef = useRef(chapter?.id ?? null);
 	const inFlightRef = useRef(false);
 	const queuedSaveRef = useRef<SaveSnapshot | null>(null);
+	const copyResetTimeoutRef = useRef<number | null>(null);
+	const copyDisabled = markdown.trim().length === 0;
+
+	useEffect(
+		() => () => {
+			if (copyResetTimeoutRef.current !== null) {
+				window.clearTimeout(copyResetTimeoutRef.current);
+			}
+		},
+		[],
+	);
 
 	const { mutateAsync: saveNoteMutation } = useMutation({
 		mutationFn: (input: SaveSnapshot) =>
@@ -285,12 +297,28 @@ function NotesEditor({ courseId, chapter, note }: NotesEditorProps) {
 	};
 
 	const copyMarkdown = async () => {
-		await copyText(markdown);
-		trackAnalyticsEvent("note_markdown_copied", {
-			markdown_length: markdown.length,
-		});
-		setCopied(true);
-		window.setTimeout(() => setCopied(false), 1200);
+		if (copyDisabled) {
+			return;
+		}
+
+		if (copyResetTimeoutRef.current !== null) {
+			window.clearTimeout(copyResetTimeoutRef.current);
+		}
+
+		try {
+			await copyText(markdown);
+			trackAnalyticsEvent("note_markdown_copied", {
+				markdown_length: markdown.length,
+			});
+			setCopyState("copied");
+		} catch {
+			setCopyState("failed");
+		}
+
+		copyResetTimeoutRef.current = window.setTimeout(() => {
+			setCopyState("idle");
+			copyResetTimeoutRef.current = null;
+		}, 2500);
 	};
 
 	const updateMarkdown = (nextMarkdown: string) => {
@@ -318,19 +346,23 @@ function NotesEditor({ courseId, chapter, note }: NotesEditorProps) {
 		<div className="space-y-3">
 			<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 				<div className="min-w-0">
-					<p className="truncate font-medium text-sm">
-						{chapter?.title ?? "No chapter selected"}
-					</p>
+					<div className="flex min-w-0 items-center gap-2">
+						<p className="truncate font-medium text-sm">
+							{chapter?.title ?? "No chapter selected"}
+						</p>
+						<StatusBadge tone={statusTone(saveState)}>
+							{statusLabel(saveState)}
+						</StatusBadge>
+					</div>
 					<p className="text-muted-foreground text-sm lg:text-xs">
 						Notes are saved to the selected chapter.
 					</p>
 				</div>
-				<div className="flex flex-wrap items-center gap-2">
-					<StatusBadge tone={statusTone(saveState)}>
-						{statusLabel(saveState)}
-					</StatusBadge>
-					<div className="flex rounded-md border border-border bg-background p-0.5">
+				<div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:gap-3">
+					<fieldset className="flex rounded-md border border-border bg-background p-0.5">
+						<legend className="sr-only">Note editor mode</legend>
 						<Button
+							aria-pressed={mode === "write"}
 							className="min-h-11 lg:min-h-6"
 							type="button"
 							size="xs"
@@ -340,6 +372,7 @@ function NotesEditor({ courseId, chapter, note }: NotesEditorProps) {
 							Write
 						</Button>
 						<Button
+							aria-pressed={mode === "preview"}
 							className="min-h-11 lg:min-h-6"
 							type="button"
 							size="xs"
@@ -353,16 +386,31 @@ function NotesEditor({ courseId, chapter, note }: NotesEditorProps) {
 						>
 							Preview
 						</Button>
-					</div>
+					</fieldset>
 					<Button
-						className="min-h-11 lg:min-h-6"
+						aria-describedby="copy-note-status"
+						className="min-h-11 sm:w-32 lg:min-h-6"
+						disabled={copyDisabled}
 						type="button"
 						size="xs"
 						variant="outline"
 						onClick={copyMarkdown}
 					>
-						{copied ? "Copied" : "Copy Markdown"}
+						{copyState === "copied"
+							? "Copied"
+							: copyState === "failed"
+								? "Copy failed"
+								: "Copy as Markdown"}
 					</Button>
+					<output aria-live="polite" className="sr-only" id="copy-note-status">
+						{copyDisabled
+							? "Write a note before copying."
+							: copyState === "copied"
+								? "Note copied as Markdown."
+								: copyState === "failed"
+									? "Could not copy the note. Try again."
+									: ""}
+					</output>
 				</div>
 			</div>
 
@@ -717,9 +765,15 @@ async function copyText(text: string) {
 	textarea.style.position = "fixed";
 	textarea.style.opacity = "0";
 	document.body.appendChild(textarea);
-	textarea.select();
-	document.execCommand("copy");
-	document.body.removeChild(textarea);
+
+	try {
+		textarea.select();
+		if (!document.execCommand("copy")) {
+			throw new Error("Copy command was rejected.");
+		}
+	} finally {
+		document.body.removeChild(textarea);
+	}
 }
 
 export { NotesEditor };
