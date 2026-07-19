@@ -129,19 +129,22 @@ function useFullscreenControlVisibility({
 	hideDelayMs = FULLSCREEN_CONTROLS_HIDE_DELAY_MS,
 }: UseFullscreenControlVisibilityOptions) {
 	const [controlVisibility, setControlVisibility] = useState({
+		controlsBlocked: controlsFocused || controlsInteracting,
 		controlsHidden: false,
 		isFullscreen,
 		isPlaying,
 	});
 	const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-	const shouldAutoHide =
-		isFullscreen && isPlaying && !controlsFocused && !controlsInteracting;
+	const controlsBlocked = controlsFocused || controlsInteracting;
+	const shouldAutoHide = isFullscreen && !controlsBlocked;
 
 	if (
+		controlVisibility.controlsBlocked !== controlsBlocked ||
 		controlVisibility.isFullscreen !== isFullscreen ||
 		controlVisibility.isPlaying !== isPlaying
 	) {
 		setControlVisibility({
+			controlsBlocked,
 			controlsHidden: false,
 			isFullscreen,
 			isPlaying,
@@ -150,6 +153,7 @@ function useFullscreenControlVisibility({
 
 	const controlsHidden =
 		shouldAutoHide &&
+		controlVisibility.controlsBlocked === controlsBlocked &&
 		controlVisibility.isFullscreen === isFullscreen &&
 		controlVisibility.isPlaying === isPlaying
 			? controlVisibility.controlsHidden
@@ -174,14 +178,15 @@ function useFullscreenControlVisibility({
 
 		hideTimerRef.current = setTimeout(() => {
 			if (shouldAutoHide) {
-				setControlVisibility((current) => ({
-					...current,
-					controlsHidden: true,
-				}));
+				setControlVisibility((current) =>
+					current.isPlaying === isPlaying
+						? { ...current, controlsHidden: true }
+						: current,
+				);
 			}
 			hideTimerRef.current = null;
 		}, hideDelayMs);
-	}, [clearHideTimer, hideDelayMs, shouldAutoHide]);
+	}, [clearHideTimer, hideDelayMs, isPlaying, shouldAutoHide]);
 
 	const showControls = useCallback(() => {
 		setControlVisibility((current) => ({
@@ -192,13 +197,13 @@ function useFullscreenControlVisibility({
 	}, [scheduleHideTimer]);
 
 	const hideControls = useCallback(() => {
-		if (!shouldAutoHide) return;
+		if (!isFullscreen) return;
 		clearHideTimer();
 		setControlVisibility((current) => ({
 			...current,
 			controlsHidden: true,
 		}));
-	}, [clearHideTimer, shouldAutoHide]);
+	}, [clearHideTimer, isFullscreen]);
 
 	useEffect(() => {
 		if (!shouldAutoHide) {
@@ -217,6 +222,14 @@ function useFullscreenControlVisibility({
 		hideControls,
 		showControls,
 	};
+}
+
+function shouldShowFullscreenControlsForPointerMovement(pointerType: string) {
+	return pointerType === "mouse";
+}
+
+function isPlaybackStateTransition(current: boolean, next: boolean) {
+	return current !== next;
 }
 
 function PlayerFullscreenButton({
@@ -333,7 +346,9 @@ function getScreenOrientation() {
 
 export {
 	FULLSCREEN_CONTROLS_HIDE_DELAY_MS,
+	isPlaybackStateTransition,
 	PlayerFullscreenButton,
+	shouldShowFullscreenControlsForPointerMovement,
 	useFullscreenControlVisibility,
 	usePlayerFullscreen,
 };

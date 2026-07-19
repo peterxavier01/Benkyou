@@ -50,15 +50,22 @@ function PlayerMobileSettings({
 					<HugeIcon name="settings" className="size-5" />
 				</Button>
 			</DrawerTrigger>
-			<DrawerContent portalContainer={portalContainer}>
-				<DrawerHeader className="text-left">
+			<DrawerContent
+				className="overflow-hidden"
+				portalContainer={portalContainer}
+			>
+				<DrawerHeader className="shrink-0 text-left">
 					<DrawerTitle>Playback settings</DrawerTitle>
 					<DrawerDescription>
 						Adjust audio and playback speed.
 					</DrawerDescription>
 				</DrawerHeader>
 
-				<div className="grid gap-6 px-4 pb-2">
+				<div
+					data-vaul-no-drag
+					className="grid min-h-0 flex-1 gap-6 overflow-y-auto overscroll-contain px-4 pb-2"
+					style={{ touchAction: "pan-y" }}
+				>
 					<section className="grid gap-3" aria-labelledby="volume-heading">
 						<div className="flex items-center justify-between gap-3">
 							<h3 id="volume-heading" className="font-medium text-sm">
@@ -88,6 +95,7 @@ function PlayerMobileSettings({
 								max={100}
 								min={0}
 								step={1}
+								style={{ touchAction: "pan-y" }}
 								value={[volume]}
 								onValueChange={(values) => onVolumeChange(values[0] ?? volume)}
 							/>
@@ -121,7 +129,7 @@ function PlayerMobileSettings({
 					</section>
 				</div>
 
-				<DrawerFooter>
+				<DrawerFooter className="shrink-0">
 					<DrawerClose asChild>
 						<Button className="min-h-11" type="button">
 							Done

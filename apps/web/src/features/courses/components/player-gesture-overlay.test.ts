@@ -1,14 +1,16 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import {
 	classifyPlayerGesture,
 	MAX_TAP_DURATION_MS,
 	MAX_TAP_MOVEMENT_PX,
+	performSingleTapAction,
 } from "./player-gesture-overlay";
 
 const tap = {
-	controlsHidden: false,
+	controlsHiddenAtStart: false,
 	durationMs: 100,
 	isDoubleTap: false,
+	isPlaybackControlHit: false,
 	isPrimary: true,
 	movementPx: 0,
 	pointerType: "touch",
@@ -18,9 +20,48 @@ const tap = {
 describe("classifyPlayerGesture", () => {
 	test("single taps only change control visibility", () => {
 		expect(classifyPlayerGesture(tap)).toBe("hide_controls");
-		expect(classifyPlayerGesture({ ...tap, controlsHidden: true })).toBe(
+		expect(classifyPlayerGesture({ ...tap, controlsHiddenAtStart: true })).toBe(
 			"show_controls",
 		);
+	});
+
+	test("single taps on the centered playback control toggle playback", () => {
+		expect(classifyPlayerGesture({ ...tap, isPlaybackControlHit: true })).toBe(
+			"toggle_playback",
+		);
+		expect(
+			classifyPlayerGesture({
+				...tap,
+				controlsHiddenAtStart: true,
+				isPlaybackControlHit: true,
+			}),
+		).toBe("toggle_playback");
+	});
+
+	test("single taps keep the visibility meaning captured at pointer start", () => {
+		const hiddenAtPointerStart = {
+			...tap,
+			controlsHiddenAtStart: true,
+		};
+
+		expect(classifyPlayerGesture(hiddenAtPointerStart)).toBe("show_controls");
+	});
+
+	test("center playback taps reveal hidden controls and toggle playback", () => {
+		const onHideControls = vi.fn();
+		const onShowControls = vi.fn();
+		const onTogglePlayback = vi.fn();
+
+		performSingleTapAction("toggle_playback", {
+			controlsHidden: true,
+			onHideControls,
+			onShowControls,
+			onTogglePlayback,
+		});
+
+		expect(onShowControls).toHaveBeenCalledOnce();
+		expect(onTogglePlayback).toHaveBeenCalledOnce();
+		expect(onHideControls).not.toHaveBeenCalled();
 	});
 
 	test("double taps seek only in the left and right thirds", () => {

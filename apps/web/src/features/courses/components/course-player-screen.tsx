@@ -85,7 +85,9 @@ import {
 import { BookmarkDialog, type BookmarkDialogValues } from "./bookmark-dialog";
 import { NotesEditor } from "./notes-editor";
 import {
+	isPlaybackStateTransition,
 	PlayerFullscreenButton,
+	shouldShowFullscreenControlsForPointerMovement,
 	useFullscreenControlVisibility,
 	usePlayerFullscreen,
 } from "./player-fullscreen";
@@ -1071,13 +1073,14 @@ function CoursePlayerScreen({
 
 	const trackPlaybackState = useCallback(
 		(playing: boolean, source: "player_button" | "player_state") => {
-			if (trackedPlayingStateRef.current === playing) {
-				return;
+			if (!isPlaybackStateTransition(trackedPlayingStateRef.current, playing)) {
+				return false;
 			}
 			trackedPlayingStateRef.current = playing;
 			trackAnalyticsEvent(playing ? "playback_started" : "playback_paused", {
 				source,
 			});
+			return true;
 		},
 		[],
 	);
@@ -1116,7 +1119,10 @@ function CoursePlayerScreen({
 	};
 
 	const seekBy = useCallback(
-		(deltaSeconds: number) => {
+		(
+			deltaSeconds: number,
+			{ showControls = true }: { showControls?: boolean } = {},
+		) => {
 			const latest = latestProgressRef.current;
 			const duration =
 				latest.durationSeconds || data.video.durationSeconds || 0;
@@ -1144,7 +1150,7 @@ function CoursePlayerScreen({
 			};
 			setSeekToSeconds(targetSeconds);
 			youtubePlayerRef.current?.seekTo(targetSeconds);
-			showFullscreenControls();
+			if (showControls) showFullscreenControls();
 			persistProgress({ refreshFromPlayer: false });
 		},
 		[
@@ -1210,13 +1216,13 @@ function CoursePlayerScreen({
 	};
 
 	const handlePlayingChange = (playing: boolean) => {
+		if (!trackPlaybackState(playing, "player_state")) return;
+
 		showFullscreenControls();
 		setPlayerControls((current) => {
 			if (current.playing === playing) {
 				return current;
 			}
-
-			trackPlaybackState(playing, "player_state");
 
 			return { ...current, playing };
 		});
@@ -1337,20 +1343,20 @@ function CoursePlayerScreen({
 			return;
 		}
 
+		const handlePointerMove = (event: PointerEvent) => {
+			if (shouldShowFullscreenControlsForPointerMovement(event.pointerType)) {
+				showFullscreenControls();
+			}
+		};
+
 		playerSurface.addEventListener("focusin", showFullscreenControls);
 		playerSurface.addEventListener("keydown", showFullscreenControls);
-		playerSurface.addEventListener("pointerdown", showFullscreenControls);
-		playerSurface.addEventListener("pointermove", showFullscreenControls);
-		playerSurface.addEventListener("touchstart", showFullscreenControls, {
-			passive: true,
-		});
+		playerSurface.addEventListener("pointermove", handlePointerMove);
 
 		return () => {
 			playerSurface.removeEventListener("focusin", showFullscreenControls);
 			playerSurface.removeEventListener("keydown", showFullscreenControls);
-			playerSurface.removeEventListener("pointerdown", showFullscreenControls);
-			playerSurface.removeEventListener("pointermove", showFullscreenControls);
-			playerSurface.removeEventListener("touchstart", showFullscreenControls);
+			playerSurface.removeEventListener("pointermove", handlePointerMove);
 		};
 	}, [playerSurfaceElement, showFullscreenControls]);
 
@@ -1499,7 +1505,9 @@ function CoursePlayerScreen({
 							<PlayerGestureOverlay
 								controlsHidden={fullscreenControlsHidden}
 								onHideControls={hideFullscreenControls}
-								onSeek={seekBy}
+								onSeek={(deltaSeconds) =>
+									seekBy(deltaSeconds, { showControls: false })
+								}
 								onShowControls={showFullscreenControls}
 								onTogglePlayback={togglePlayback}
 							/>
