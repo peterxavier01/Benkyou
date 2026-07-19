@@ -86,6 +86,7 @@ import { BookmarkDialog, type BookmarkDialogValues } from "./bookmark-dialog";
 import { NotesEditor } from "./notes-editor";
 import {
 	PlayerFullscreenButton,
+	shouldShowFullscreenControlsForPointerMovement,
 	useFullscreenControlVisibility,
 	usePlayerFullscreen,
 } from "./player-fullscreen";
@@ -1337,20 +1338,20 @@ function CoursePlayerScreen({
 			return;
 		}
 
+		const handlePointerMove = (event: PointerEvent) => {
+			if (shouldShowFullscreenControlsForPointerMovement(event.pointerType)) {
+				showFullscreenControls();
+			}
+		};
+
 		playerSurface.addEventListener("focusin", showFullscreenControls);
 		playerSurface.addEventListener("keydown", showFullscreenControls);
-		playerSurface.addEventListener("pointerdown", showFullscreenControls);
-		playerSurface.addEventListener("pointermove", showFullscreenControls);
-		playerSurface.addEventListener("touchstart", showFullscreenControls, {
-			passive: true,
-		});
+		playerSurface.addEventListener("pointermove", handlePointerMove);
 
 		return () => {
 			playerSurface.removeEventListener("focusin", showFullscreenControls);
 			playerSurface.removeEventListener("keydown", showFullscreenControls);
-			playerSurface.removeEventListener("pointerdown", showFullscreenControls);
-			playerSurface.removeEventListener("pointermove", showFullscreenControls);
-			playerSurface.removeEventListener("touchstart", showFullscreenControls);
+			playerSurface.removeEventListener("pointermove", handlePointerMove);
 		};
 	}, [playerSurfaceElement, showFullscreenControls]);
 

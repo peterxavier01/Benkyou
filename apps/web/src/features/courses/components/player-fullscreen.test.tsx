@@ -8,6 +8,7 @@ import {
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import {
 	FULLSCREEN_CONTROLS_HIDE_DELAY_MS,
+	shouldShowFullscreenControlsForPointerMovement,
 	useFullscreenControlVisibility,
 } from "./player-fullscreen";
 
@@ -24,7 +25,7 @@ function FullscreenControlsHarness({
 	isFullscreen: boolean;
 	isPlaying: boolean;
 }) {
-	const { controlsHidden, controlsVisible, showControls } =
+	const { controlsHidden, controlsVisible, hideControls, showControls } =
 		useFullscreenControlVisibility({
 			controlsFocused,
 			controlsInteracting,
@@ -43,6 +44,9 @@ function FullscreenControlsHarness({
 			</output>
 			<button type="button" onClick={showControls}>
 				activity
+			</button>
+			<button type="button" onClick={hideControls}>
+				hide
 			</button>
 		</div>
 	);
@@ -80,18 +84,22 @@ describe("useFullscreenControlVisibility", () => {
 		expect(screen.getByTestId("hidden").textContent).toBe("hidden");
 	});
 
-	test("does not hide while paused", () => {
+	test("hides after the inactivity delay while paused", () => {
 		render(<FullscreenControlsHarness isFullscreen isPlaying={false} />);
 
 		act(() => {
-			vi.advanceTimersByTime(FULLSCREEN_CONTROLS_HIDE_DELAY_MS);
+			vi.advanceTimersByTime(FULLSCREEN_CONTROLS_HIDE_DELAY_MS - 1);
 		});
-
 		expect(screen.getByTestId("state").textContent).toBe("visible");
-		expect(screen.getByTestId("hidden").textContent).toBe("available");
+
+		act(() => {
+			vi.advanceTimersByTime(1);
+		});
+		expect(screen.getByTestId("state").textContent).toBe("hidden");
+		expect(screen.getByTestId("hidden").textContent).toBe("hidden");
 	});
 
-	test("pausing after controls hide makes them visible", () => {
+	test("pausing after controls hide shows them and restarts the timer", () => {
 		const { rerender } = render(
 			<FullscreenControlsHarness isFullscreen isPlaying />,
 		);
@@ -105,6 +113,11 @@ describe("useFullscreenControlVisibility", () => {
 
 		expect(screen.getByTestId("state").textContent).toBe("visible");
 		expect(screen.getByTestId("hidden").textContent).toBe("available");
+
+		act(() => {
+			vi.advanceTimersByTime(FULLSCREEN_CONTROLS_HIDE_DELAY_MS);
+		});
+		expect(screen.getByTestId("state").textContent).toBe("hidden");
 	});
 
 	test("resuming playback restarts the hide timer", () => {
@@ -122,6 +135,15 @@ describe("useFullscreenControlVisibility", () => {
 			vi.advanceTimersByTime(1);
 		});
 		expect(screen.getByTestId("state").textContent).toBe("hidden");
+	});
+
+	test("manual hide works while paused", () => {
+		render(<FullscreenControlsHarness isFullscreen isPlaying={false} />);
+
+		fireEvent.click(screen.getByRole("button", { name: "hide" }));
+
+		expect(screen.getByTestId("state").textContent).toBe("hidden");
+		expect(screen.getByTestId("hidden").textContent).toBe("hidden");
 	});
 
 	test("activity keeps controls visible and restarts the timer", () => {
@@ -189,5 +211,13 @@ describe("useFullscreenControlVisibility", () => {
 			vi.advanceTimersByTime(FULLSCREEN_CONTROLS_HIDE_DELAY_MS);
 		});
 		expect(screen.getByTestId("state").textContent).toBe("hidden");
+	});
+});
+
+describe("fullscreen pointer activity", () => {
+	test("only mouse movement reveals controls outside the gesture overlay", () => {
+		expect(shouldShowFullscreenControlsForPointerMovement("mouse")).toBe(true);
+		expect(shouldShowFullscreenControlsForPointerMovement("touch")).toBe(false);
+		expect(shouldShowFullscreenControlsForPointerMovement("pen")).toBe(false);
 	});
 });

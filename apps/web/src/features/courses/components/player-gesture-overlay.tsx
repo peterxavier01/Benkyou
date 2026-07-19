@@ -5,17 +5,20 @@ import { useCallback, useEffect, useRef, useState } from "react";
 const DOUBLE_TAP_WINDOW_MS = 250;
 const MAX_TAP_DURATION_MS = 350;
 const MAX_TAP_MOVEMENT_PX = 12;
+const PLAYBACK_CONTROL_HIT_RADIUS_PX = 48;
 
 type PlayerGestureAction =
 	| "show_controls"
 	| "hide_controls"
 	| "seek_backward"
 	| "seek_forward"
+	| "toggle_playback"
 	| "none";
 
 interface TapInput {
-	controlsHidden: boolean;
+	controlsHiddenAtStart: boolean;
 	isDoubleTap: boolean;
+	isPlaybackControlHit: boolean;
 	isPrimary: boolean;
 	pointerType: string;
 	durationMs: number;
@@ -31,6 +34,13 @@ interface PlayerGestureOverlayProps {
 	onTogglePlayback: () => void;
 }
 
+interface SingleTapActionHandlers {
+	controlsHidden: boolean;
+	onHideControls: () => void;
+	onShowControls: () => void;
+	onTogglePlayback: () => void;
+}
+
 function classifyPlayerGesture(input: TapInput): PlayerGestureAction {
 	if (
 		!input.isPrimary ||
@@ -40,11 +50,30 @@ function classifyPlayerGesture(input: TapInput): PlayerGestureAction {
 	) {
 		return "none";
 	}
+	if (!input.isDoubleTap && input.isPlaybackControlHit)
+		return "toggle_playback";
 	if (!input.isDoubleTap)
-		return input.controlsHidden ? "show_controls" : "hide_controls";
+		return input.controlsHiddenAtStart ? "show_controls" : "hide_controls";
 	if (input.xRatio < 1 / 3) return "seek_backward";
 	if (input.xRatio > 2 / 3) return "seek_forward";
 	return "none";
+}
+
+function performSingleTapAction(
+	action: Extract<
+		PlayerGestureAction,
+		"hide_controls" | "show_controls" | "toggle_playback"
+	>,
+	handlers: SingleTapActionHandlers,
+) {
+	if (action === "toggle_playback") {
+		if (handlers.controlsHidden) handlers.onShowControls();
+		handlers.onTogglePlayback();
+		return;
+	}
+
+	if (action === "show_controls") handlers.onShowControls();
+	else handlers.onHideControls();
 }
 
 function PlayerGestureOverlay({
@@ -55,6 +84,7 @@ function PlayerGestureOverlay({
 	onTogglePlayback,
 }: PlayerGestureOverlayProps) {
 	const pointerStartRef = useRef<{
+		controlsHiddenAtStart: boolean;
 		id: number;
 		time: number;
 		x: number;
@@ -97,6 +127,7 @@ function PlayerGestureOverlay({
 		)
 			return;
 		pointerStartRef.current = {
+			controlsHiddenAtStart: controlsHidden,
 			id: event.pointerId,
 			time: event.timeStamp,
 			x: event.clientX,
@@ -115,6 +146,11 @@ function PlayerGestureOverlay({
 		if (!start || start.id !== event.pointerId) return;
 
 		const rect = event.currentTarget.getBoundingClientRect();
+		const isPlaybackControlHit =
+			Math.hypot(
+				event.clientX - (rect.left + rect.width / 2),
+				event.clientY - (rect.top + rect.height / 2),
+			) <= PLAYBACK_CONTROL_HIT_RADIUS_PX;
 		const xRatio =
 			rect.width > 0 ? (event.clientX - rect.left) / rect.width : 0.5;
 		const zone = xRatio < 1 / 3 ? "left" : xRatio > 2 / 3 ? "right" : "center";
@@ -125,9 +161,10 @@ function PlayerGestureOverlay({
 				previousTap.zone === zone,
 		);
 		const action = classifyPlayerGesture({
-			controlsHidden,
+			controlsHiddenAtStart: start.controlsHiddenAtStart,
 			durationMs: event.timeStamp - start.time,
 			isDoubleTap,
+			isPlaybackControlHit,
 			isPrimary: event.isPrimary,
 			movementPx: Math.hypot(event.clientX - start.x, event.clientY - start.y),
 			pointerType: event.pointerType,
@@ -145,12 +182,17 @@ function PlayerGestureOverlay({
 			return;
 		}
 		if (action === "none") return;
+		if (action === "seek_backward" || action === "seek_forward") return;
 
 		lastTapRef.current = { time: event.timeStamp, zone };
 		clearSingleTap();
 		singleTapTimerRef.current = setTimeout(() => {
-			if (action === "show_controls") onShowControls();
-			else onHideControls();
+			performSingleTapAction(action, {
+				controlsHidden,
+				onHideControls,
+				onShowControls,
+				onTogglePlayback,
+			});
 			lastTapRef.current = null;
 			singleTapTimerRef.current = null;
 		}, DOUBLE_TAP_WINDOW_MS);
@@ -184,5 +226,7 @@ export {
 	DOUBLE_TAP_WINDOW_MS,
 	MAX_TAP_DURATION_MS,
 	MAX_TAP_MOVEMENT_PX,
+	PLAYBACK_CONTROL_HIT_RADIUS_PX,
+	performSingleTapAction,
 	PlayerGestureOverlay,
 };
