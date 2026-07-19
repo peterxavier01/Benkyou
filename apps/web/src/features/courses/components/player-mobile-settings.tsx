@@ -50,7 +50,10 @@ function PlayerMobileSettings({
 					<HugeIcon name="settings" className="size-5" />
 				</Button>
 			</DrawerTrigger>
-			<DrawerContent portalContainer={portalContainer}>
+			<DrawerContent
+				className="overflow-y-auto overscroll-contain"
+				portalContainer={portalContainer}
+			>
 				<DrawerHeader className="text-left">
 					<DrawerTitle>Playback settings</DrawerTitle>
 					<DrawerDescription>
