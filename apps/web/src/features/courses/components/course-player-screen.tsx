@@ -1117,7 +1117,10 @@ function CoursePlayerScreen({
 	};
 
 	const seekBy = useCallback(
-		(deltaSeconds: number) => {
+		(
+			deltaSeconds: number,
+			{ showControls = true }: { showControls?: boolean } = {},
+		) => {
 			const latest = latestProgressRef.current;
 			const duration =
 				latest.durationSeconds || data.video.durationSeconds || 0;
@@ -1145,7 +1148,7 @@ function CoursePlayerScreen({
 			};
 			setSeekToSeconds(targetSeconds);
 			youtubePlayerRef.current?.seekTo(targetSeconds);
-			showFullscreenControls();
+			if (showControls) showFullscreenControls();
 			persistProgress({ refreshFromPlayer: false });
 		},
 		[
@@ -1500,7 +1503,9 @@ function CoursePlayerScreen({
 							<PlayerGestureOverlay
 								controlsHidden={fullscreenControlsHidden}
 								onHideControls={hideFullscreenControls}
-								onSeek={seekBy}
+								onSeek={(deltaSeconds) =>
+									seekBy(deltaSeconds, { showControls: false })
+								}
 								onShowControls={showFullscreenControls}
 								onTogglePlayback={togglePlayback}
 							/>
