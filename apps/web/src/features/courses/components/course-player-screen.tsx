@@ -59,7 +59,14 @@ import type {
 	FocusEvent as ReactFocusEvent,
 	PointerEvent as ReactPointerEvent,
 } from "react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+	useCallback,
+	useEffect,
+	useId,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import { workspaceQueryKeys } from "#/features/workspace/workspace.queries";
 import { trackAnalyticsEvent } from "#/integrations/posthog/analytics";
 import {
@@ -93,6 +100,7 @@ import {
 } from "./player-fullscreen";
 import { PlayerGestureHint } from "./player-gesture-hint";
 import { PlayerGestureOverlay } from "./player-gesture-overlay";
+import { usePlayerKeyboardShortcuts } from "./player-keyboard-shortcuts";
 import { PlayerMobileSettings } from "./player-mobile-settings";
 import { PlayerPlaybackSpeedMenu } from "./player-playback-speed-menu";
 import { PlayerVolumeControl } from "./player-volume-control";
@@ -104,6 +112,11 @@ interface CoursePlayerScreenProps {
 	initialBookmarkId?: string;
 	initialChapterId?: string;
 }
+
+type PlayerPlaybackSource =
+	| "keyboard_shortcut"
+	| "player_button"
+	| "player_state";
 
 function CoursePlayerScreen({
 	initialData,
@@ -200,6 +213,7 @@ function CoursePlayerScreen({
 	const trackedPlayingStateRef = useRef(playerPlaying);
 	const controlsFocusFromPointerRef = useRef(false);
 	const youtubePlayerRef = useRef<YouTubePlayerHandle | null>(null);
+	const shortcutDescriptionId = useId();
 	const {
 		fullscreenError,
 		isFullscreen,
@@ -1072,7 +1086,7 @@ function CoursePlayerScreen({
 	);
 
 	const trackPlaybackState = useCallback(
-		(playing: boolean, source: "player_button" | "player_state") => {
+		(playing: boolean, source: PlayerPlaybackSource) => {
 			if (!isPlaybackStateTransition(trackedPlayingStateRef.current, playing)) {
 				return false;
 			}
@@ -1086,7 +1100,7 @@ function CoursePlayerScreen({
 	);
 
 	const setPlaybackPlaying = useCallback(
-		(playing: boolean, source: "player_button" | "player_state") => {
+		(playing: boolean, source: PlayerPlaybackSource) => {
 			showFullscreenControls();
 
 			if (playing) {
@@ -1111,11 +1125,26 @@ function CoursePlayerScreen({
 		setPlaybackPlaying(!playerPlaying, "player_button");
 	}, [playerPlaying, setPlaybackPlaying]);
 
-	const handleFullscreenToggle = () => {
+	const togglePlaybackFromKeyboard = () => {
+		setPlaybackPlaying(!playerPlaying, "keyboard_shortcut");
+	};
+
+	const toggleFullscreenFromSource = (
+		source: "keyboard_shortcut" | "player_button",
+	) => {
 		trackAnalyticsEvent("fullscreen_toggled", {
 			next_state: isFullscreen ? "exit" : "enter",
+			source,
 		});
 		void toggleFullscreen();
+	};
+
+	const handleFullscreenToggle = () => {
+		toggleFullscreenFromSource("player_button");
+	};
+
+	const handleFullscreenShortcut = () => {
+		toggleFullscreenFromSource("keyboard_shortcut");
 	};
 
 	const seekBy = useCallback(
@@ -1336,29 +1365,29 @@ function CoursePlayerScreen({
 		setFullscreenControlsInteracting(false);
 	}, []);
 
-	useEffect(() => {
-		const playerSurface = playerSurfaceElement;
-
-		if (!playerSurface) {
+	const focusPlayerSurfaceFromPointer = (
+		event: ReactPointerEvent<HTMLElement>,
+	) => {
+		if (event.pointerType !== "mouse") return;
+		const target = event.target;
+		if (target instanceof Element && target.closest("[data-player-controls]")) {
 			return;
 		}
 
-		const handlePointerMove = (event: PointerEvent) => {
-			if (shouldShowFullscreenControlsForPointerMovement(event.pointerType)) {
-				showFullscreenControls();
-			}
-		};
+		event.currentTarget.focus({ preventScroll: true });
+	};
 
-		playerSurface.addEventListener("focusin", showFullscreenControls);
-		playerSurface.addEventListener("keydown", showFullscreenControls);
-		playerSurface.addEventListener("pointermove", handlePointerMove);
-
-		return () => {
-			playerSurface.removeEventListener("focusin", showFullscreenControls);
-			playerSurface.removeEventListener("keydown", showFullscreenControls);
-			playerSurface.removeEventListener("pointermove", handlePointerMove);
-		};
-	}, [playerSurfaceElement, showFullscreenControls]);
+	usePlayerKeyboardShortcuts({
+		muted: playerMuted,
+		onActivity: showFullscreenControls,
+		onMutedChange: changePlayerMuted,
+		onSeek: seekBy,
+		onToggleFullscreen: handleFullscreenShortcut,
+		onTogglePlayback: togglePlaybackFromKeyboard,
+		onVolumeChange: changePlayerVolume,
+		target: playerSurfaceElement,
+		volume: playerVolume,
+	});
 
 	const toggleChapterComplete = (chapter: CourseChapterDTO) => {
 		const nextCompleted = !completedByChapter[chapter.id];
@@ -1473,14 +1502,33 @@ function CoursePlayerScreen({
 						</div>
 					</ContentPanel>
 
-					<div
+					<section
 						ref={playerSurfaceRef}
-						className="order-1 flex flex-col gap-3 lg:order-2"
+						aria-describedby={shortcutDescriptionId}
+						aria-label="Course video player"
+						className="order-1 flex flex-col gap-3 outline-none focus-visible:ring-2 focus-visible:ring-ring/50 lg:order-2"
 						data-course-player-surface
 						data-player-controls-hidden={
 							fullscreenControlsHidden ? "" : undefined
 						}
+						onFocusCapture={showFullscreenControls}
+						onPointerDownCapture={focusPlayerSurfaceFromPointer}
+						onPointerMove={(event) => {
+							if (
+								shouldShowFullscreenControlsForPointerMovement(
+									event.pointerType,
+								)
+							) {
+								showFullscreenControls();
+							}
+						}}
+						tabIndex={-1}
 					>
+						<p className="sr-only" id={shortcutDescriptionId}>
+							Player shortcuts: Space or K plays and pauses; Left and Right seek
+							10 seconds; J and L seek 10 seconds; Up and Down adjust volume; M
+							mutes; F toggles fullscreen.
+						</p>
 						<PlayerVideoFrame className="rounded-none border-0 lg:rounded-lg lg:border lg:shadow-sm">
 							<YouTubePlayer
 								ref={youtubePlayerRef}
@@ -1549,23 +1597,26 @@ function CoursePlayerScreen({
 								<div className="flex items-center justify-between gap-3">
 									<div className="flex items-center gap-2">
 										<Button
+											aria-keyshortcuts="J"
 											aria-label="Rewind 10 seconds"
 											className="size-11"
 											onClick={() => seekBy(-10)}
 											size="icon-lg"
-											title="Rewind 10 seconds"
+											title="Rewind 10 seconds (J)"
 											type="button"
 											variant="outline"
 										>
 											<HugeIcon name="goBackward10Seconds" className="size-5" />
 										</Button>
 										<Button
+											aria-keyshortcuts="Space K"
 											aria-label={
 												playerPlaying ? "Pause chapter" : "Play chapter"
 											}
 											className="size-11"
 											onClick={togglePlayback}
 											size="icon-lg"
+											title={`${playerPlaying ? "Pause" : "Play"} (Space or K)`}
 											type="button"
 										>
 											<HugeIcon
@@ -1574,11 +1625,12 @@ function CoursePlayerScreen({
 											/>
 										</Button>
 										<Button
+											aria-keyshortcuts="L"
 											aria-label="Forward 10 seconds"
 											className="size-11"
 											onClick={() => seekBy(10)}
 											size="icon-lg"
-											title="Forward 10 seconds"
+											title="Forward 10 seconds (L)"
 											type="button"
 											variant="outline"
 										>
@@ -1611,11 +1663,12 @@ function CoursePlayerScreen({
 							<div className="hidden gap-3 lg:grid lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:items-center">
 								<div className="flex items-center gap-2">
 									<Button
+										aria-keyshortcuts="J"
 										aria-label="Rewind 10 seconds"
 										className="size-8"
 										onClick={() => seekBy(-10)}
 										size="icon-sm"
-										title="Rewind 10 seconds"
+										title="Rewind 10 seconds (J)"
 										type="button"
 										variant="outline"
 									>
@@ -1623,10 +1676,12 @@ function CoursePlayerScreen({
 										<span className="sr-only">Rewind 10 seconds</span>
 									</Button>
 									<Button
+										aria-keyshortcuts="Space K"
 										type="button"
 										size="icon-sm"
 										variant="outline"
 										onClick={togglePlayback}
+										title={`${playerPlaying ? "Pause" : "Play"} (Space or K)`}
 									>
 										<HugeIcon
 											name={playerPlaying ? "pause" : "play"}
@@ -1637,11 +1692,12 @@ function CoursePlayerScreen({
 										</span>
 									</Button>
 									<Button
+										aria-keyshortcuts="L"
 										aria-label="Forward 10 seconds"
 										className="relative size-8 after:absolute after:-inset-1.5 after:content-['']"
 										onClick={() => seekBy(10)}
 										size="icon-sm"
-										title="Forward 10 seconds"
+										title="Forward 10 seconds (L)"
 										type="button"
 										variant="outline"
 									>
@@ -1697,7 +1753,7 @@ function CoursePlayerScreen({
 								</output>
 							) : null}
 						</ContentPanel>
-					</div>
+					</section>
 
 					<MobileLessonContext
 						chapter={selectedChapter}

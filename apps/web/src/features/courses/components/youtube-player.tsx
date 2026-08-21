@@ -192,6 +192,8 @@ function YouTubePlayer({
 					playerRef.current = new yt.Player(container, {
 						videoId: providerVideoId,
 						playerVars: {
+							disablekb: 1,
+							fs: 0,
 							rel: 0,
 							modestbranding: 1,
 							playsinline: 1,

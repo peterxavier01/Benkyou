@@ -32,8 +32,10 @@ function PlayerVolumeControl({
 		<Popover>
 			<PopoverTrigger asChild>
 				<Button
+					aria-keyshortcuts="M"
 					aria-label={`Volume, ${volumeLabel}`}
 					size="icon-sm"
+					title="Volume controls (M to mute)"
 					type="button"
 					variant="outline"
 				>

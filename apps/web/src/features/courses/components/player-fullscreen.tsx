@@ -35,9 +35,10 @@ interface UseFullscreenControlVisibilityOptions {
 }
 
 function usePlayerFullscreen() {
-	const playerSurfaceNodeRef = useRef<HTMLDivElement | null>(null);
+	const playerSurfaceNodeRef = useRef<HTMLElement | null>(null);
+	const restoreFocusTargetRef = useRef<HTMLElement | null>(null);
 	const [playerSurfaceElement, setPlayerSurfaceElement] =
-		useState<HTMLDivElement | null>(null);
+		useState<HTMLElement | null>(null);
 	const [isFullscreen, setIsFullscreen] = useState(false);
 	const [isSupported, setIsSupported] = useState(true);
 	const [fullscreenError, setFullscreenError] = useState<string | null>(null);
@@ -58,6 +59,11 @@ function usePlayerFullscreen() {
 			}
 
 			unlockScreenOrientation();
+			const restoreTarget = restoreFocusTargetRef.current;
+			restoreFocusTargetRef.current = null;
+			if (restoreTarget?.isConnected) {
+				restoreTarget.focus({ preventScroll: true });
+			}
 		};
 
 		document.addEventListener("fullscreenchange", handleFullscreenChange);
@@ -73,7 +79,7 @@ function usePlayerFullscreen() {
 		};
 	}, []);
 
-	const playerSurfaceRef = useCallback((node: HTMLDivElement | null) => {
+	const playerSurfaceRef = useCallback((node: HTMLElement | null) => {
 		playerSurfaceNodeRef.current = node;
 		setPlayerSurfaceElement(node);
 	}, []);
@@ -90,7 +96,6 @@ function usePlayerFullscreen() {
 		try {
 			if (getFullscreenElement() === surface) {
 				await exitFullscreen();
-				unlockScreenOrientation();
 				return;
 			}
 
@@ -102,9 +107,14 @@ function usePlayerFullscreen() {
 				return;
 			}
 
+			restoreFocusTargetRef.current =
+				document.activeElement instanceof HTMLElement
+					? document.activeElement
+					: null;
 			await requestFullscreen(surface);
-			setIsFullscreen(true);
+			surface.focus({ preventScroll: true });
 		} catch {
+			restoreFocusTargetRef.current = null;
 			setFullscreenError(
 				"Fullscreen could not start here. Rotate your device manually.",
 			);
@@ -242,12 +252,17 @@ function PlayerFullscreenButton({
 
 	return (
 		<Button
+			aria-keyshortcuts="F"
 			aria-label={label}
 			className={className}
 			disabled={!isSupported}
 			onClick={onToggle}
 			size="icon-sm"
-			title={isSupported ? label : "Fullscreen is unavailable in this browser."}
+			title={
+				isSupported
+					? `${label} (F)`
+					: "Fullscreen is unavailable in this browser."
+			}
 			type="button"
 			variant="outline"
 		>

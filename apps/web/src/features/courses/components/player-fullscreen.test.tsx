@@ -4,6 +4,7 @@ import {
 	fireEvent,
 	render,
 	screen,
+	waitFor,
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import {
@@ -11,7 +12,10 @@ import {
 	isPlaybackStateTransition,
 	shouldShowFullscreenControlsForPointerMovement,
 	useFullscreenControlVisibility,
+	usePlayerFullscreen,
 } from "./player-fullscreen";
+
+afterEach(cleanup);
 
 function FullscreenControlsHarness({
 	controlsFocused = false,
@@ -53,13 +57,29 @@ function FullscreenControlsHarness({
 	);
 }
 
+function PlayerFullscreenHarness() {
+	const { fullscreenError, isFullscreen, playerSurfaceRef, toggleFullscreen } =
+		usePlayerFullscreen();
+
+	return (
+		<div ref={playerSurfaceRef} data-testid="player-surface" tabIndex={-1}>
+			<button type="button" onClick={() => void toggleFullscreen()}>
+				Toggle fullscreen
+			</button>
+			<output data-testid="fullscreen-state">
+				{isFullscreen ? "active" : "inactive"}
+			</output>
+			<output data-testid="fullscreen-error">{fullscreenError}</output>
+		</div>
+	);
+}
+
 describe("useFullscreenControlVisibility", () => {
 	beforeEach(() => {
 		vi.useFakeTimers();
 	});
 
 	afterEach(() => {
-		cleanup();
 		vi.useRealTimers();
 	});
 
@@ -229,5 +249,88 @@ describe("playback state activity", () => {
 		expect(isPlaybackStateTransition(true, false)).toBe(true);
 		expect(isPlaybackStateTransition(true, true)).toBe(false);
 		expect(isPlaybackStateTransition(false, false)).toBe(false);
+	});
+});
+
+describe("usePlayerFullscreen", () => {
+	test("focuses the player on entry and restores the trigger on exit", async () => {
+		let fullscreenElement: Element | null = null;
+		Object.defineProperty(document, "fullscreenEnabled", {
+			configurable: true,
+			value: true,
+		});
+		Object.defineProperty(document, "fullscreenElement", {
+			configurable: true,
+			get: () => fullscreenElement,
+		});
+
+		render(<PlayerFullscreenHarness />);
+		const surface = screen.getByTestId("player-surface");
+		const trigger = screen.getByRole("button", { name: "Toggle fullscreen" });
+		const requestFullscreen = vi.fn(async () => {
+			fullscreenElement = surface;
+			document.dispatchEvent(new Event("fullscreenchange"));
+		});
+		const exitFullscreen = vi.fn(async () => {
+			fullscreenElement = null;
+			document.dispatchEvent(new Event("fullscreenchange"));
+		});
+		Object.defineProperty(surface, "requestFullscreen", {
+			configurable: true,
+			value: requestFullscreen,
+		});
+		Object.defineProperty(document, "exitFullscreen", {
+			configurable: true,
+			value: exitFullscreen,
+		});
+
+		trigger.focus();
+		fireEvent.click(trigger);
+
+		await waitFor(() => {
+			expect(screen.getByTestId("fullscreen-state").textContent).toBe("active");
+		});
+		expect(requestFullscreen).toHaveBeenCalledOnce();
+		expect(document.activeElement).toBe(surface);
+
+		fireEvent.click(trigger);
+
+		await waitFor(() => {
+			expect(screen.getByTestId("fullscreen-state").textContent).toBe(
+				"inactive",
+			);
+		});
+		expect(exitFullscreen).toHaveBeenCalledOnce();
+		expect(document.activeElement).toBe(trigger);
+	});
+
+	test("does not move focus when fullscreen entry fails", async () => {
+		Object.defineProperty(document, "fullscreenEnabled", {
+			configurable: true,
+			value: true,
+		});
+		Object.defineProperty(document, "fullscreenElement", {
+			configurable: true,
+			value: null,
+		});
+
+		render(<PlayerFullscreenHarness />);
+		const surface = screen.getByTestId("player-surface");
+		const trigger = screen.getByRole("button", { name: "Toggle fullscreen" });
+		Object.defineProperty(surface, "requestFullscreen", {
+			configurable: true,
+			value: vi.fn().mockRejectedValue(new Error("denied")),
+		});
+
+		trigger.focus();
+		fireEvent.click(trigger);
+
+		await waitFor(() => {
+			expect(screen.getByTestId("fullscreen-error").textContent).toContain(
+				"Fullscreen could not start",
+			);
+		});
+		expect(document.activeElement).toBe(trigger);
+		expect(screen.getByTestId("fullscreen-state").textContent).toBe("inactive");
 	});
 });
