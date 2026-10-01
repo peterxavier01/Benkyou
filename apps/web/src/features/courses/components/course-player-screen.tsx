@@ -1506,7 +1506,7 @@ function CoursePlayerScreen({
 						ref={playerSurfaceRef}
 						aria-describedby={shortcutDescriptionId}
 						aria-label="Course video player"
-						className="order-1 flex flex-col gap-3 outline-none focus-visible:ring-2 focus-visible:ring-ring/50 lg:order-2"
+						className="order-1 flex flex-col gap-3 outline-none focus-visible:ring-2 focus-visible:ring-ring lg:order-2"
 						data-course-player-surface
 						data-player-controls-hidden={
 							fullscreenControlsHidden ? "" : undefined
@@ -2133,7 +2133,7 @@ function ChapterItem({
 		>
 			<button
 				type="button"
-				className="min-h-11 min-w-0 cursor-pointer rounded-sm p-1.5 text-left transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35"
+				className="min-h-11 min-w-0 cursor-pointer rounded-sm p-1.5 text-left transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 				onClick={() => onSelect(chapter)}
 			>
 				<span className="line-clamp-2 font-medium text-sm leading-5">

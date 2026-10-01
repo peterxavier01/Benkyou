@@ -247,7 +247,7 @@ function AuthTextField({
 						type="button"
 						aria-label={isPasswordVisible ? "Hide password" : "Show password"}
 						aria-pressed={isPasswordVisible}
-						className="-translate-y-1/2 absolute top-1/2 right-2 flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35"
+						className="-translate-y-1/2 absolute top-1/2 right-2 flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 						onMouseDown={(event) => event.preventDefault()}
 						onClick={() => setIsPasswordVisible((current) => !current)}
 					>

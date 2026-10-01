@@ -13,19 +13,23 @@
     "./globals.css": "./src/styles/globals.css",
     "./components/*": "./src/components/*.tsx",
     "./hooks/*": "./src/hooks/*.ts",
-    "./lib/*": "./src/lib/*.ts"
+    "./lib/*": "./src/lib/*.ts",
+    "./tokens": "./src/tokens/tokens.ts"
   },
   "scripts": {
     "format": "biome format --write src",
     "lint": "biome lint src",
-    "check": "pnpm run lint && pnpm run check-types",
+    "check": "pnpm run tokens:check && pnpm run lint && pnpm run check-types",
     "generate:component": "turbo gen react-component",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "tokens": "tsx src/tokens/build.ts",
+    "tokens:check": "tsx src/tokens/build.ts --check"
   },
   "devDependencies": {
     "@types/node": "^22.15.3",
     "@types/react": "19.2.2",
     "@types/react-dom": "19.2.2",
+    "tsx": "^4.20.3",
     "typescript": "5.9.2"
   },
   "dependencies": {
