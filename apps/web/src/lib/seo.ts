@@ -1,11 +1,11 @@
 import { PRODUCT_NAME } from "@benkyou/core";
 
 const DEFAULT_SITE_URL = "http://localhost:3000";
-const DEFAULT_TITLE = "Benkyou | Focused study workspaces for long videos";
+const DEFAULT_TITLE = "Benkyou | Study notebooks for long videos";
 const DEFAULT_DESCRIPTION =
-	"Study tutorials, lectures, talks, and walkthroughs with chapters, notes, bookmarks, and progress in one recoverable workspace.";
+	"Turn long YouTube tutorials, lectures and talks into study notebooks with chapters, notes, bookmarks and progress.";
 const DEFAULT_IMAGE_PATH = "/social-card.png";
-const DEFAULT_THEME_COLOR = "#00694c";
+const DEFAULT_THEME_COLOR = "#00734b";
 
 type SeoIndexing = "index" | "noindex";
 type JsonLdPrimitive = boolean | number | string | null;
@@ -73,7 +73,10 @@ export function buildSeoHead(options: SeoOptions = {}) {
 			{ property: "og:description", content: description },
 			{ property: "og:url", content: canonicalUrl },
 			{ property: "og:image", content: imageUrl },
-			{ property: "og:image:alt", content: `${PRODUCT_NAME} study workspace` },
+			{
+				property: "og:image:alt",
+				content: `${PRODUCT_NAME}: study long videos, don’t just watch them`,
+			},
 			{ name: "twitter:card", content: "summary_large_image" },
 			{ name: "twitter:title", content: title },
 			{ name: "twitter:description", content: description },
@@ -85,7 +88,8 @@ export function buildSeoHead(options: SeoOptions = {}) {
 				: [{ rel: "canonical", href: canonicalUrl }]),
 			{ rel: "manifest", href: "/manifest.json" },
 			{ rel: "icon", href: "/favicon.ico", sizes: "any" },
-			{ rel: "apple-touch-icon", href: "/logo192.png" },
+			{ rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
+			{ rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
 		],
 		scripts: (options.jsonLd ?? []).map((jsonLd) => ({
 			type: "application/ld+json",
