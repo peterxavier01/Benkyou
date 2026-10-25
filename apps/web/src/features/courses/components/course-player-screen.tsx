@@ -2,7 +2,6 @@ import {
 	calculateProgressPercent,
 	DEFAULT_CHAPTER_COMPLETION_THRESHOLD,
 	DEFAULT_PROGRESS_SAVE_INTERVAL_MS,
-	formatCompactDuration,
 	formatTimestamp,
 	getChapterDurationSeconds,
 	getChapterEndSeconds,
@@ -21,30 +20,12 @@ import type {
 import {
 	Button,
 	ContentPanel,
-	Drawer,
-	DrawerContent,
-	DrawerDescription,
-	DrawerHeader,
-	DrawerTitle,
-	DrawerTrigger,
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuLabel,
-	DropdownMenuSeparator,
-	DropdownMenuTrigger,
 	HugeIcon,
 	PlayerAside,
 	PlayerPrimary,
 	PlayerVideoFrame,
 	PlayerWorkspace,
-	Progress,
 	Slider,
-	StatusBadge,
-	Tabs,
-	TabsContent,
-	TabsList,
-	TabsTrigger,
 	toast,
 } from "@benkyou/ui";
 import {
@@ -53,7 +34,7 @@ import {
 	AlertTitle,
 } from "@benkyou/ui/components/alert";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import type {
 	FocusEvent as ReactFocusEvent,
@@ -73,7 +54,6 @@ import {
 	useWorkspaceNavigationFlush,
 	WorkspacePage,
 } from "#components/workspace-layout";
-import BetterAuthHeader from "../../../integrations/better-auth/header-user";
 import { retryGenerationJob } from "../../course-generation/course-generation.functions";
 import {
 	createBookmark,
@@ -90,7 +70,14 @@ import {
 	writeLocalPreferences,
 } from "../learning-preferences.local";
 import { BookmarkDialog, type BookmarkDialogValues } from "./bookmark-dialog";
-import { NotesEditor } from "./notes-editor";
+import { ChapterPanel } from "./player/chapter-panel";
+import { LearningTabs } from "./player/learning-tabs";
+import { MobileLessonContext } from "./player/mobile-lesson-context";
+import { NoChaptersScreen } from "./player/no-chapters-screen";
+import {
+	CoursePlayerHeaderActions,
+	NotebookOverview,
+} from "./player/player-chrome";
 import {
 	isPlaybackStateTransition,
 	PlayerFullscreenButton,
@@ -1432,6 +1419,19 @@ function CoursePlayerScreen({
 		await createBookmarkMutation.mutateAsync(values);
 	};
 
+	const doneChapterCount = data.chapters.filter(
+		(chapter) => completedByChapter[chapter.id],
+	).length;
+	const chapterPanelProps = {
+		chapters: data.chapters,
+		selectedChapterId: selectedChapter?.id ?? null,
+		watchedByChapter,
+		completedByChapter,
+		durationSeconds,
+		onSelect: selectChapter,
+		onToggleComplete: toggleChapterComplete,
+	};
+
 	if (data.chapters.length === 0) {
 		return (
 			<NoChaptersScreen
@@ -1445,7 +1445,7 @@ function CoursePlayerScreen({
 	return (
 		<WorkspacePage
 			title={data.course.title}
-			description={selectedChapter?.title ?? "Course player"}
+			description={selectedChapter?.title ?? "Notebook"}
 			maxWidth="full"
 			className="p-0 sm:p-0"
 			action={
@@ -1457,55 +1457,21 @@ function CoursePlayerScreen({
 		>
 			<PlayerWorkspace className="p-0 lg:p-3">
 				<PlayerPrimary>
-					<ContentPanel className="order-1 hidden p-4 lg:block">
-						<div className="flex items-start justify-between gap-3">
-							<div className="min-w-0">
-								<div className="flex flex-wrap items-center gap-2">
-									<StatusBadge tone="success">Ready</StatusBadge>
-									<span className="text-muted-foreground text-xs">
-										{data.chapters.length} chapters
-									</span>
-									<span className="text-muted-foreground text-xs">
-										{selectedChapterEndSeconds === null
-											? "Chapter duration unknown"
-											: `${formatTimestamp(
-													selectedChapterCurrentSeconds,
-												)} / ${formatTimestamp(selectedChapterEndSeconds)}`}
-									</span>
-								</div>
-								<h2 className="mt-2 truncate font-semibold text-xl tracking-normal">
-									{data.course.title}
-								</h2>
-								<p className="mt-1 text-muted-foreground text-sm">
-									{data.video.channelTitle ?? "YouTube"} -{" "}
-									{formatTimestamp(currentSeconds)}
-									{selectedChapter ? ` in ${selectedChapter.title}` : ""}
-								</p>
-							</div>
-						</div>
-						<div className="mt-3 flex flex-wrap items-center gap-2">
-							<Button
-								type="button"
-								size="sm"
-								onClick={openCreateBookmarkDialog}
-							>
-								<HugeIcon name="bookmark" className="size-4" />
-								Add bookmark
-							</Button>
-							<span className="text-muted-foreground text-xs">
-								{formatTimestamp(currentSeconds)}
-								{selectedChapter ? ` in ${selectedChapter.title}` : ""}
-							</span>
-						</div>
-						<div className="mt-3">
-							<Progress value={courseProgressPercent} />
-						</div>
-					</ContentPanel>
+					<NotebookOverview
+						title={data.course.title}
+						channelTitle={data.video.channelTitle}
+						chapterCount={data.chapters.length}
+						doneCount={doneChapterCount}
+						progressPercent={courseProgressPercent}
+						currentSeconds={currentSeconds}
+						chapter={selectedChapter}
+						onAddBookmark={openCreateBookmarkDialog}
+					/>
 
 					<section
 						ref={playerSurfaceRef}
 						aria-describedby={shortcutDescriptionId}
-						aria-label="Course video player"
+						aria-label="Notebook video player"
 						className="order-1 flex flex-col gap-3 outline-none focus-visible:ring-2 focus-visible:ring-ring lg:order-2"
 						data-course-player-surface
 						data-player-controls-hidden={
@@ -1757,22 +1723,25 @@ function CoursePlayerScreen({
 
 					<MobileLessonContext
 						chapter={selectedChapter}
-						chapters={data.chapters}
-						completedByChapter={completedByChapter}
+						chapterIndex={
+							selectedChapter
+								? data.chapters.findIndex(
+										(chapter) => chapter.id === selectedChapter.id,
+									) + 1
+								: 0
+						}
+						chapterPanel={chapterPanelProps}
 						courseProgressPercent={courseProgressPercent}
 						currentSeconds={currentSeconds}
-						durationSeconds={durationSeconds}
+						doneCount={doneChapterCount}
 						nextChapter={nextChapter}
 						previousChapter={previousChapter}
 						showNextChapterPrompt={showNextChapterPrompt}
-						videoChannelTitle={data.video.channelTitle}
-						watchedByChapter={watchedByChapter}
 						onAddBookmark={openCreateBookmarkDialog}
 						onDismissNextChapter={() =>
 							setDismissedNextChapterId(nextChapter?.id ?? null)
 						}
 						onSelectChapter={selectChapter}
-						onToggleComplete={toggleChapterComplete}
 					/>
 
 					<div className="order-3 mx-3 flex flex-col gap-3 lg:mx-0">
@@ -1782,6 +1751,7 @@ function CoursePlayerScreen({
 							note={selectedNote}
 							bookmarks={selectedBookmarks}
 							deletingBookmark={deleteBookmarkMutation.isPending}
+							onAddBookmark={openCreateBookmarkDialog}
 							onDeleteBookmark={requestBookmarkDelete}
 							onEditBookmark={openEditBookmarkDialog}
 							onJumpToBookmark={jumpToBookmark}
@@ -1789,7 +1759,7 @@ function CoursePlayerScreen({
 
 						{saveError ? (
 							<Alert variant="destructive">
-								<AlertTitle>Save failed</AlertTitle>
+								<AlertTitle>Couldn’t save your progress</AlertTitle>
 								<AlertDescription>{saveError}</AlertDescription>
 							</Alert>
 						) : null}
@@ -1797,15 +1767,7 @@ function CoursePlayerScreen({
 				</PlayerPrimary>
 
 				<PlayerAside>
-					<ChapterPanel
-						chapters={data.chapters}
-						selectedChapterId={selectedChapter?.id ?? null}
-						watchedByChapter={watchedByChapter}
-						completedByChapter={completedByChapter}
-						durationSeconds={durationSeconds}
-						onSelect={selectChapter}
-						onToggleComplete={toggleChapterComplete}
-					/>
+					<ChapterPanel {...chapterPanelProps} />
 				</PlayerAside>
 			</PlayerWorkspace>
 			<BookmarkDialog
@@ -1832,564 +1794,6 @@ function CoursePlayerScreen({
 				}}
 				onSubmit={submitBookmarkDialog}
 			/>
-		</WorkspacePage>
-	);
-}
-
-function CoursePlayerHeaderActions({
-	courseId,
-	onNavigate,
-}: {
-	courseId: string;
-	onNavigate: () => void;
-}) {
-	return (
-		<div className="flex items-center gap-1.5 lg:gap-2">
-			<div className="lg:hidden">
-				<DropdownMenu>
-					<DropdownMenuTrigger asChild>
-						<Button
-							aria-label="Course actions"
-							className="size-11"
-							size="icon-lg"
-							type="button"
-							variant="ghost"
-						>
-							<HugeIcon name="settings" className="size-4" />
-						</Button>
-					</DropdownMenuTrigger>
-					<DropdownMenuContent align="end" className="w-48">
-						<DropdownMenuLabel>Course actions</DropdownMenuLabel>
-						<DropdownMenuSeparator />
-						<DropdownMenuItem asChild>
-							<Link
-								params={{ courseId }}
-								to="/courses/$courseId/manage"
-								onClick={onNavigate}
-							>
-								<HugeIcon name="settings" className="size-4" />
-								Manage course
-							</Link>
-						</DropdownMenuItem>
-						<DropdownMenuItem asChild>
-							<Link
-								search={{ q: "", filter: "all" }}
-								to="/courses"
-								onClick={onNavigate}
-							>
-								<HugeIcon name="library" className="size-4" />
-								Back to library
-							</Link>
-						</DropdownMenuItem>
-					</DropdownMenuContent>
-				</DropdownMenu>
-			</div>
-
-			<div className="hidden items-center gap-2 lg:flex">
-				<Button asChild size="sm" variant="outline">
-					<Link
-						params={{ courseId }}
-						to="/courses/$courseId/manage"
-						onClick={onNavigate}
-					>
-						<HugeIcon name="settings" className="size-4" />
-						Manage
-					</Link>
-				</Button>
-				<Button asChild size="sm" variant="outline">
-					<Link
-						search={{ q: "", filter: "all" }}
-						to="/courses"
-						onClick={onNavigate}
-					>
-						<HugeIcon name="arrowLeft" className="size-4" />
-						Library
-					</Link>
-				</Button>
-			</div>
-			<BetterAuthHeader />
-		</div>
-	);
-}
-
-function MobileLessonContext({
-	chapter,
-	chapters,
-	completedByChapter,
-	courseProgressPercent,
-	currentSeconds,
-	durationSeconds,
-	nextChapter,
-	previousChapter,
-	showNextChapterPrompt,
-	videoChannelTitle,
-	watchedByChapter,
-	onAddBookmark,
-	onDismissNextChapter,
-	onSelectChapter,
-	onToggleComplete,
-}: {
-	chapter: CourseChapterDTO | null;
-	chapters: CourseChapterDTO[];
-	completedByChapter: Record<string, boolean>;
-	courseProgressPercent: number;
-	currentSeconds: number;
-	durationSeconds: number;
-	nextChapter: CourseChapterDTO | null;
-	previousChapter: CourseChapterDTO | null;
-	showNextChapterPrompt: boolean;
-	videoChannelTitle: string | null | undefined;
-	watchedByChapter: Record<string, number>;
-	onAddBookmark: () => void;
-	onDismissNextChapter: () => void;
-	onSelectChapter: (chapter: CourseChapterDTO) => void;
-	onToggleComplete: (chapter: CourseChapterDTO) => void;
-}) {
-	return (
-		<section
-			className="order-2 mx-3 grid gap-3 lg:hidden"
-			aria-labelledby="lesson-heading"
-		>
-			<div className="grid gap-3 px-1">
-				<div className="flex items-start justify-between gap-3">
-					<div className="min-w-0">
-						<p className="text-muted-foreground text-sm">Current chapter</p>
-						<h2
-							id="lesson-heading"
-							className="mt-1 line-clamp-2 font-semibold text-lg leading-6"
-						>
-							{chapter?.title ?? "Choose a chapter"}
-						</h2>
-					</div>
-					<MobileChapterDrawer
-						chapters={chapters}
-						selectedChapterId={chapter?.id ?? null}
-						watchedByChapter={watchedByChapter}
-						completedByChapter={completedByChapter}
-						durationSeconds={durationSeconds}
-						onSelect={onSelectChapter}
-						onToggleComplete={onToggleComplete}
-					/>
-				</div>
-
-				<div className="flex items-center gap-2">
-					<Button
-						className="min-h-11 flex-1"
-						disabled={!previousChapter}
-						onClick={() => previousChapter && onSelectChapter(previousChapter)}
-						type="button"
-						variant="outline"
-					>
-						<HugeIcon name="arrowLeft" className="size-4" />
-						Previous
-					</Button>
-					<Button
-						className="min-h-11 flex-1"
-						disabled={!nextChapter}
-						onClick={() => nextChapter && onSelectChapter(nextChapter)}
-						type="button"
-						variant="outline"
-					>
-						Next
-						<HugeIcon name="arrowRight" className="size-4" />
-					</Button>
-					<Button
-						aria-label={`Add bookmark at ${formatTimestamp(currentSeconds)}`}
-						className="size-11"
-						onClick={onAddBookmark}
-						size="icon-lg"
-						type="button"
-					>
-						<HugeIcon name="bookmark" className="size-4" />
-					</Button>
-				</div>
-
-				<details className="group border-border border-y">
-					<summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 text-sm [&::-webkit-details-marker]:hidden">
-						<span className="font-medium">Course details</span>
-						<span className="text-muted-foreground">
-							{chapters.length} chapters · {Math.round(courseProgressPercent)}%
-						</span>
-					</summary>
-					<div className="grid gap-2 pb-3 text-muted-foreground text-sm">
-						<p>{videoChannelTitle ?? "YouTube"}</p>
-						<Progress value={courseProgressPercent} />
-					</div>
-				</details>
-			</div>
-
-			{showNextChapterPrompt && nextChapter ? (
-				<div className="rounded-lg border border-primary/25 bg-accent p-3 text-accent-foreground">
-					<p className="font-medium text-sm">Continue with the next chapter</p>
-					<p className="mt-1 line-clamp-2 text-sm">{nextChapter.title}</p>
-					<div className="mt-3 flex gap-2">
-						<Button
-							className="min-h-11 flex-1"
-							onClick={() => onSelectChapter(nextChapter)}
-							type="button"
-						>
-							Play next chapter
-						</Button>
-						<Button
-							className="min-h-11"
-							onClick={onDismissNextChapter}
-							type="button"
-							variant="ghost"
-						>
-							Not now
-						</Button>
-					</div>
-				</div>
-			) : null}
-		</section>
-	);
-}
-
-function ChapterPanel({
-	chapters,
-	selectedChapterId,
-	watchedByChapter,
-	completedByChapter,
-	durationSeconds,
-	onSelect,
-	onToggleComplete,
-	hideHeader = false,
-}: {
-	chapters: CourseChapterDTO[];
-	selectedChapterId: string | null;
-	watchedByChapter: Record<string, number>;
-	completedByChapter: Record<string, boolean>;
-	durationSeconds: number;
-	onSelect: (chapter: CourseChapterDTO) => void;
-	onToggleComplete: (chapter: CourseChapterDTO) => void;
-	hideHeader?: boolean;
-}) {
-	return (
-		<div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-			{hideHeader ? null : (
-				<div className="border-b border-border p-3">
-					<h2 className="font-semibold text-sm">Chapters</h2>
-					<p className="text-muted-foreground text-xs">
-						Jump through the generated outline.
-					</p>
-				</div>
-			)}
-			<div className="min-h-0 flex-1 divide-y divide-border overflow-auto p-2 md:max-h-[420px] lg:max-h-none">
-				{chapters.map((chapter) => (
-					<ChapterItem
-						key={chapter.id}
-						chapter={chapter}
-						chapters={chapters}
-						active={chapter.id === selectedChapterId}
-						watchedSeconds={watchedByChapter[chapter.id] ?? 0}
-						completed={completedByChapter[chapter.id] ?? false}
-						durationSeconds={durationSeconds}
-						onSelect={onSelect}
-						onToggleComplete={onToggleComplete}
-					/>
-				))}
-			</div>
-		</div>
-	);
-}
-
-function ChapterItem({
-	chapter,
-	chapters,
-	active,
-	watchedSeconds,
-	completed,
-	durationSeconds,
-	onSelect,
-	onToggleComplete,
-}: {
-	chapter: CourseChapterDTO;
-	chapters: CourseChapterDTO[];
-	active: boolean;
-	watchedSeconds: number;
-	completed: boolean;
-	durationSeconds: number;
-	onSelect: (chapter: CourseChapterDTO) => void;
-	onToggleComplete: (chapter: CourseChapterDTO) => void;
-}) {
-	const chapterDuration = getChapterDurationSeconds(
-		chapter,
-		chapters,
-		durationSeconds,
-	);
-	const chapterEnd = getChapterEndSeconds(chapter, chapters, durationSeconds);
-	const percent = calculateProgressPercent(watchedSeconds, chapterDuration);
-	const durationLabel =
-		chapterEnd === null ? null : formatCompactDuration(chapterDuration);
-
-	return (
-		<div
-			aria-current={active ? "true" : undefined}
-			className={`grid grid-cols-[minmax(0,1fr)_auto] items-start gap-1 rounded-md p-1 transition-colors ${
-				active
-					? "bg-accent text-accent-foreground ring-1 ring-primary/30"
-					: "hover:bg-muted/45"
-			}`}
-		>
-			<button
-				type="button"
-				className="min-h-11 min-w-0 cursor-pointer rounded-sm p-1.5 text-left transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-				onClick={() => onSelect(chapter)}
-			>
-				<span className="line-clamp-2 font-medium text-sm leading-5">
-					{chapter.title}
-				</span>
-				<span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-muted-foreground text-sm lg:text-xs">
-					<span>
-						{formatTimestamp(chapter.startSeconds)}
-						{chapter.endSeconds
-							? ` - ${formatTimestamp(chapter.endSeconds)}`
-							: ""}
-					</span>
-					{durationLabel ? <span>{durationLabel}</span> : null}
-					{active ? (
-						<span className="font-medium text-primary">Now playing</span>
-					) : null}
-				</span>
-			</button>
-			<Button
-				type="button"
-				size="icon-lg"
-				variant={completed ? "secondary" : "ghost"}
-				className="size-11 lg:size-7"
-				aria-pressed={completed}
-				onClick={() => onToggleComplete(chapter)}
-			>
-				<HugeIcon
-					name={completed ? "checkmarkCircle" : "circle"}
-					className={completed ? "size-4 text-primary" : "size-4"}
-				/>
-				<span className="sr-only">
-					{completed ? "Mark chapter incomplete" : "Mark chapter complete"}
-				</span>
-			</Button>
-			<div className="col-span-2 px-1.5 pb-1.5">
-				<Progress value={completed ? 100 : percent} />
-			</div>
-		</div>
-	);
-}
-
-function MobileChapterDrawer(props: Parameters<typeof ChapterPanel>[0]) {
-	const [open, setOpen] = useState(false);
-
-	return (
-		<div className="lg:hidden">
-			<Drawer open={open} onOpenChange={setOpen}>
-				<DrawerTrigger asChild>
-					<Button type="button" variant="outline" className="min-h-11">
-						<HugeIcon name="menu" className="size-4" />
-						Chapters
-					</Button>
-				</DrawerTrigger>
-				<DrawerContent>
-					<DrawerHeader>
-						<DrawerTitle>Chapters</DrawerTitle>
-						<DrawerDescription>Select a chapter to jump.</DrawerDescription>
-					</DrawerHeader>
-					<ChapterPanel
-						{...props}
-						hideHeader
-						onSelect={(chapter) => {
-							props.onSelect(chapter);
-							setOpen(false);
-						}}
-					/>
-				</DrawerContent>
-			</Drawer>
-		</div>
-	);
-}
-
-function LearningTabs({
-	courseId,
-	chapter,
-	note,
-	bookmarks,
-	deletingBookmark,
-	onDeleteBookmark,
-	onEditBookmark,
-	onJumpToBookmark,
-}: {
-	courseId: string;
-	chapter: CourseChapterDTO | null;
-	note: CoursePlayerDataDTO["notes"][number] | undefined;
-	bookmarks: BookmarkDTO[];
-	deletingBookmark: boolean;
-	onDeleteBookmark: (bookmark: BookmarkDTO) => void;
-	onEditBookmark: (bookmark: BookmarkDTO) => void;
-	onJumpToBookmark: (bookmark: BookmarkDTO) => void;
-}) {
-	return (
-		<ContentPanel className="min-w-0 overflow-hidden p-0">
-			<Tabs
-				key={chapter?.id ?? "no-chapter"}
-				defaultValue={chapter?.summary ? "summary" : "notes"}
-				className="flex-col gap-0"
-			>
-				<TabsList
-					variant="line"
-					className="h-11 w-full justify-start rounded-none border-border border-b lg:h-10"
-				>
-					<TabsTrigger value="summary" className="h-11 px-3 text-sm lg:h-10">
-						Summary
-					</TabsTrigger>
-					<TabsTrigger value="notes" className="h-11 px-3 text-sm lg:h-10">
-						Notes
-					</TabsTrigger>
-					<TabsTrigger value="bookmarks" className="h-11 px-3 text-sm lg:h-10">
-						Bookmarks
-					</TabsTrigger>
-				</TabsList>
-				<TabsContent value="summary" className="p-4">
-					<p className="max-w-3xl text-muted-foreground text-sm leading-6">
-						{chapter?.summary ??
-							"No summary is available. Use Notes to capture the important points."}
-					</p>
-				</TabsContent>
-				<TabsContent value="notes" className="p-4">
-					<NotesEditor courseId={courseId} chapter={chapter} note={note} />
-				</TabsContent>
-				<TabsContent value="bookmarks" className="p-4">
-					{bookmarks.length === 0 ? (
-						<p className="text-muted-foreground text-sm">
-							No bookmarks for this chapter yet.
-						</p>
-					) : (
-						<ul className="space-y-2">
-							{bookmarks.map((bookmark) => (
-								<li
-									key={bookmark.id}
-									className="rounded-md border border-border p-2 text-sm"
-								>
-									<div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-										<div className="min-w-0">
-											<p className="font-medium">
-												{bookmark.title ??
-													`Bookmark at ${formatTimestamp(
-														bookmark.timestampSeconds,
-													)}`}
-											</p>
-											<p className="text-muted-foreground text-sm lg:text-xs">
-												{formatTimestamp(bookmark.timestampSeconds)}
-											</p>
-											{bookmark.note ? (
-												<p className="mt-1 text-muted-foreground">
-													{bookmark.note}
-												</p>
-											) : null}
-										</div>
-										<div className="flex shrink-0 flex-wrap gap-1">
-											<Button
-												type="button"
-												className="min-h-11 lg:min-h-6"
-												size="xs"
-												variant="outline"
-												onClick={() => onJumpToBookmark(bookmark)}
-											>
-												Jump
-											</Button>
-											<Button
-												type="button"
-												className="size-11 lg:size-6"
-												size="icon-xs"
-												variant="ghost"
-												onClick={() => onEditBookmark(bookmark)}
-											>
-												<HugeIcon name="edit" className="size-4" />
-												<span className="sr-only">Edit bookmark</span>
-											</Button>
-											<Button
-												type="button"
-												className="size-11 lg:size-6"
-												size="icon-xs"
-												variant="ghost"
-												disabled={deletingBookmark}
-												onClick={() => onDeleteBookmark(bookmark)}
-											>
-												<HugeIcon name="delete" className="size-4" />
-												<span className="sr-only">Delete bookmark</span>
-											</Button>
-										</div>
-									</div>
-								</li>
-							))}
-						</ul>
-					)}
-				</TabsContent>
-			</Tabs>
-		</ContentPanel>
-	);
-}
-
-function NoChaptersScreen({
-	data,
-	onRetry,
-	retrying,
-}: {
-	data: CoursePlayerDataDTO;
-	onRetry: (generationJobId: string) => void;
-	retrying: boolean;
-}) {
-	const latestJob = data.latestGenerationJob;
-	const canOpenJob = Boolean(latestJob);
-	const canRetry =
-		Boolean(latestJob?.retryable) &&
-		(latestJob?.status === "failed" || latestJob?.status === "cancelled");
-
-	return (
-		<WorkspacePage
-			title="Course player"
-			description="This course is missing generated chapters."
-			maxWidth="narrow"
-			action={<BetterAuthHeader />}
-		>
-			<ContentPanel className="p-6">
-				<StatusBadge tone="warning">No chapters</StatusBadge>
-				<h1 className="mt-3 font-semibold text-2xl tracking-normal">
-					{data.course.title}
-				</h1>
-				<p className="mt-2 text-muted-foreground text-sm leading-6">
-					This course does not have generated chapters yet. Recover the latest
-					generation job, retry it, or return to your library.
-				</p>
-				<div className="mt-4 flex flex-wrap gap-2">
-					{canOpenJob ? (
-						<Button asChild>
-							<Link
-								to="/courses/new/$jobId"
-								params={{ jobId: latestJob?.id ?? "" }}
-							>
-								Open generation job
-							</Link>
-						</Button>
-					) : null}
-					{canRetry ? (
-						<Button
-							type="button"
-							variant="outline"
-							disabled={retrying}
-							onClick={() => onRetry(latestJob?.id ?? "")}
-						>
-							<HugeIcon name="refresh" className="size-4" />
-							{retrying ? "Retrying..." : "Retry generation"}
-						</Button>
-					) : null}
-					<Button asChild>
-						<Link to="/courses" search={{ q: "", filter: "all" }}>
-							Back to library
-						</Link>
-					</Button>
-					<Button asChild variant="outline">
-						<Link to="/">Use another URL</Link>
-					</Button>
-				</div>
-			</ContentPanel>
 		</WorkspacePage>
 	);
 }

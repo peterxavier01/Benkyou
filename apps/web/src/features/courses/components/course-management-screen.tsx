@@ -242,8 +242,8 @@ function CourseManagementScreen({
 
 	return (
 		<WorkspacePage
-			title="Manage course"
-			description="Correct metadata, chapters, and data ownership."
+			title="Edit notebook"
+			description="Fix the title, description and chapters, or export or delete this notebook."
 			maxWidth="wide"
 			action={
 				<div className="flex items-center gap-2">
@@ -253,7 +253,7 @@ function CourseManagementScreen({
 							params={{ courseId }}
 							search={{ chapter: undefined, bookmark: undefined }}
 						>
-							Open course
+							Open notebook
 						</Link>
 					</Button>
 					<BetterAuthHeader />
@@ -312,7 +312,7 @@ function CourseManagementScreen({
 
 			<div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
 				<ContentPanel className="min-w-0 p-4 sm:p-5">
-					<h2 className="font-semibold text-base">Course metadata</h2>
+					<h2 className="font-semibold text-base">Details</h2>
 					{formError ? (
 						<p className="mt-3 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-destructive text-sm">
 							{formError}
@@ -722,8 +722,8 @@ function DeleteDialog({
 				<AlertDialogHeader>
 					<AlertDialogTitle>Delete {title}?</AlertDialogTitle>
 					<AlertDialogDescription>
-						This removes the course from the library. The action is intentional
-						and can be recovered only from the database.
+						This removes the notebook from your notebooks. It can only be
+						recovered from the database.
 					</AlertDialogDescription>
 				</AlertDialogHeader>
 				<AlertDialogFooter>
@@ -733,7 +733,7 @@ function DeleteDialog({
 						disabled={pending}
 						onClick={onConfirm}
 					>
-						{pending ? "Deleting..." : "Delete course"}
+						{pending ? "Deleting…" : "Delete notebook"}
 					</AlertDialogAction>
 				</AlertDialogFooter>
 			</AlertDialogContent>

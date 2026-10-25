@@ -415,7 +415,7 @@ function NotesEditor({ courseId, chapter, note }: NotesEditorProps) {
 			</div>
 
 			{availableDraft ? (
-				<div className="rounded-md border border-[oklch(0.78_0.1_95)] bg-[oklch(0.98_0.025_95)] p-3">
+				<div className="rounded-md border border-mark bg-mark-tint p-3">
 					<div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
 						<div className="min-w-0">
 							<p className="font-medium text-sm">Local draft available</p>
@@ -486,7 +486,7 @@ function MarkdownPreview({ markdown }: { markdown: string }) {
 	}
 
 	return (
-		<div className="min-h-48 space-y-3 rounded-md border border-border bg-muted/20 p-4 text-sm leading-6 lg:min-h-64">
+		<div className="min-h-48 max-w-prose space-y-3 rounded-md border border-border bg-card p-5 font-serif text-prose lg:min-h-64">
 			{blocks}
 		</div>
 	);
@@ -564,7 +564,10 @@ function parseMarkdownBlocks(markdown: string) {
 			const text = heading[2];
 			if (level === 1) {
 				blocks.push(
-					<h2 key={`h-${blocks.length}`} className="font-semibold text-lg">
+					<h2
+						key={`h-${blocks.length}`}
+						className="font-semibold text-xl leading-snug"
+					>
 						{renderInline(text)}
 					</h2>,
 				);
