@@ -5,14 +5,14 @@ import {
 	signInInputSchema,
 	signUpInputSchema,
 } from "@benkyou/auth/schemas";
-import { Button, ContentPanel, HugeIcon, Input, Label } from "@benkyou/ui";
+import { Button, cn, HugeIcon, Input, Label } from "@benkyou/ui";
 import {
 	Alert,
 	AlertDescription,
 	AlertTitle,
 } from "@benkyou/ui/components/alert";
 import { useForm } from "@tanstack/react-form";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import type { z } from "zod";
 import { trackAnalyticsEvent } from "#/integrations/posthog/analytics";
@@ -23,7 +23,10 @@ type AuthFieldErrors = Partial<Record<keyof AuthFormValues, string>>;
 
 type AuthFormProps = {
 	redirectTo: string;
+	initialMode?: AuthMode;
 };
+
+const PASSWORD_HINT = "At least 8 characters.";
 
 const defaultValues = {
 	name: "",
@@ -31,25 +34,28 @@ const defaultValues = {
 	password: "",
 } satisfies AuthFormValues;
 
-function AuthForm({ redirectTo }: AuthFormProps) {
+function AuthForm({ redirectTo, initialMode = "sign-in" }: AuthFormProps) {
 	const navigate = useNavigate();
-	const [mode, setMode] = useState<AuthMode>("sign-in");
+	const [mode, setMode] = useState<AuthMode>(initialMode);
 	const [authError, setAuthError] = useState<string | null>(null);
 
 	const copy =
 		mode === "sign-in"
 			? {
-					title: "Sign in",
+					title: "Welcome back",
 					action: "Sign in",
-					description: "Resume your saved courses, notes, and bookmarks.",
-					switchAction: "Create account",
+					description: "Sign in to pick up your notebooks where you left them.",
+					error: "Couldn’t sign you in",
+					switchAction: "Create an account",
 					switchPrompt: "New to Benkyou?",
 				}
 			: {
-					title: "Create account",
+					title: "Create your account",
 					action: "Create account",
-					description: "Save your learning workspace for later sessions.",
-					switchAction: "Sign in instead",
+					description:
+						"Keep your notebooks in an account so they follow you to other devices.",
+					error: "Couldn’t create your account",
+					switchAction: "Sign in",
 					switchPrompt: "Already have an account?",
 				};
 
@@ -95,21 +101,24 @@ function AuthForm({ redirectTo }: AuthFormProps) {
 	});
 
 	return (
-		<ContentPanel className="w-full p-5">
-			<div className="mb-5">
-				<h2 className="font-semibold text-xl">{copy.title}</h2>
-				<p className="mt-1 text-muted-foreground text-sm">{copy.description}</p>
+		<div className="grid w-full gap-6">
+			<div className="grid gap-2">
+				<h1 className="font-semibold font-serif text-[32px] leading-tight tracking-[-0.02em]">
+					{copy.title}
+				</h1>
+				<p className="text-muted-foreground">{copy.description}</p>
 			</div>
 
 			{authError ? (
-				<Alert variant="destructive" className="mb-4">
-					<AlertTitle>Could not continue</AlertTitle>
+				<Alert variant="destructive">
+					<HugeIcon name="alertCircle" />
+					<AlertTitle>{copy.error}</AlertTitle>
 					<AlertDescription>{authError}</AlertDescription>
 				</Alert>
 			) : null}
 
 			<form
-				className="space-y-4"
+				className="grid gap-4"
 				onSubmit={(event) => {
 					event.preventDefault();
 					event.stopPropagation();
@@ -157,6 +166,7 @@ function AuthForm({ redirectTo }: AuthFormProps) {
 							}
 							error={getFieldError(field.state.meta.errors)}
 							fieldId={field.name}
+							hint={mode === "sign-up" ? PASSWORD_HINT : undefined}
 							label="Password"
 							name={field.name}
 							onBlur={field.handleBlur}
@@ -171,34 +181,42 @@ function AuthForm({ redirectTo }: AuthFormProps) {
 					{(state) => (
 						<Button
 							type="submit"
-							className="w-full cursor-pointer"
+							className="mt-1 h-11 w-full cursor-pointer text-[15px]"
 							disabled={state.isSubmitting}
 						>
-							{state.isSubmitting ? "Working..." : copy.action}
+							{state.isSubmitting
+								? mode === "sign-in"
+									? "Signing in…"
+									: "Creating your account…"
+								: copy.action}
 						</Button>
 					)}
 				</form.Subscribe>
 			</form>
 
-			<div className="mt-4 flex items-center justify-between gap-3 border-border border-t pt-4">
-				<p className="text-muted-foreground text-sm">{copy.switchPrompt}</p>
-				<Button
-					type="button"
-					variant="outline"
-					size="sm"
-					onClick={() => {
-						setAuthError(null);
-						form.reset();
-						trackAnalyticsEvent("auth_mode_changed", {
-							mode: mode === "sign-in" ? "sign-up" : "sign-in",
-						});
-						setMode(mode === "sign-in" ? "sign-up" : "sign-in");
-					}}
-				>
-					{copy.switchAction}
-				</Button>
+			<div className="grid gap-3 border-border border-t pt-5 text-sm">
+				<p className="text-muted-foreground">
+					{copy.switchPrompt}{" "}
+					<button
+						type="button"
+						className="cursor-pointer font-medium text-primary underline-offset-4 hover:underline"
+						onClick={() => {
+							setAuthError(null);
+							form.reset();
+							trackAnalyticsEvent("auth_mode_changed", {
+								mode: mode === "sign-in" ? "sign-up" : "sign-in",
+							});
+							setMode(mode === "sign-in" ? "sign-up" : "sign-in");
+						}}
+					>
+						{copy.switchAction}
+					</button>
+				</p>
+				<Link to="/" className="w-fit">
+					Keep studying without an account
+				</Link>
 			</div>
-		</ContentPanel>
+		</div>
 	);
 }
 
@@ -206,6 +224,7 @@ function AuthTextField({
 	autoComplete,
 	error,
 	fieldId,
+	hint,
 	label,
 	name,
 	onBlur,
@@ -216,6 +235,7 @@ function AuthTextField({
 	autoComplete: string;
 	error?: string;
 	fieldId: string;
+	hint?: string;
 	label: string;
 	name: string;
 	onBlur: () => void;
@@ -226,9 +246,12 @@ function AuthTextField({
 	const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 	const isPassword = type === "password";
 	const inputType = isPassword && isPasswordVisible ? "text" : type;
+	const hintId = hint ? `${fieldId}-hint` : undefined;
+	const errorId = error ? `${fieldId}-error` : undefined;
+	const describedBy = [hintId, errorId].filter(Boolean).join(" ") || undefined;
 
 	return (
-		<div className="space-y-2">
+		<div className="grid gap-2">
 			<Label htmlFor={fieldId}>{label}</Label>
 			<div className="relative">
 				<Input
@@ -238,7 +261,11 @@ function AuthTextField({
 					autoComplete={autoComplete}
 					value={value}
 					aria-invalid={Boolean(error)}
-					className={isPassword ? "ph-no-capture pr-10" : "ph-no-capture"}
+					aria-describedby={describedBy}
+					className={cn(
+						"ph-no-capture h-11 bg-card text-[15px]",
+						isPassword && "pr-11",
+					)}
 					onBlur={onBlur}
 					onChange={(event) => onChange(event.target.value)}
 				/>
@@ -247,7 +274,7 @@ function AuthTextField({
 						type="button"
 						aria-label={isPasswordVisible ? "Hide password" : "Show password"}
 						aria-pressed={isPasswordVisible}
-						className="-translate-y-1/2 absolute top-1/2 right-2 flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+						className="-translate-y-1/2 absolute top-1/2 right-1 flex size-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 						onMouseDown={(event) => event.preventDefault()}
 						onClick={() => setIsPasswordVisible((current) => !current)}
 					>
@@ -258,7 +285,16 @@ function AuthTextField({
 					</button>
 				) : null}
 			</div>
-			{error ? <p className="text-destructive text-sm">{error}</p> : null}
+			{hint ? (
+				<p id={hintId} className="text-muted-foreground text-[13px]">
+					{hint}
+				</p>
+			) : null}
+			{error ? (
+				<p id={errorId} className="text-destructive text-sm">
+					{error}
+				</p>
+			) : null}
 		</div>
 	);
 }
