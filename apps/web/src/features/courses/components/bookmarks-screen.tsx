@@ -4,6 +4,7 @@ import type {
 	GetBookmarksResponseV1,
 } from "@benkyou/types";
 import {
+	BookmarkItem,
 	Button,
 	ContentPanel,
 	HugeIcon,
@@ -28,6 +29,12 @@ import { bookmarksQueryOptions } from "#/features/workspace/workspace.queries";
 import { trackAnalyticsEvent } from "#/integrations/posthog/analytics";
 import { WorkspacePage } from "#components/workspace-layout";
 import BetterAuthHeader from "../../../integrations/better-auth/header-user";
+import {
+	filterBookmarks,
+	formatDay,
+	getCourseFilterOptions,
+	groupByNotebook,
+} from "./bookmarks/bookmarks-helpers";
 
 interface BookmarksScreenProps {
 	initialData: GetBookmarksResponseV1;
@@ -46,41 +53,35 @@ function BookmarksScreen({ initialData, search }: BookmarksScreenProps) {
 	const courses = getCourseFilterOptions(bookmarksQuery.data.items);
 	const filteredItems = filterBookmarks(bookmarksQuery.data.items, search);
 
+	const groups = groupByNotebook(filteredItems);
+
 	return (
 		<WorkspacePage
 			title="Bookmarks"
-			description="Saved timestamps across your courses."
+			description="Every moment you marked, across all your notebooks."
 			action={<BetterAuthHeader />}
 		>
-			<ContentPanel className="p-4 sm:p-5">
-				<div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-					<div>
-						<h1 className="font-semibold text-2xl tracking-normal">
-							Bookmarks
-						</h1>
-						<p className="mt-1 text-muted-foreground text-sm">
-							Find saved moments without reopening every course.
-						</p>
-					</div>
-					<div className="grid min-w-0 gap-2 sm:grid-cols-[minmax(0,18rem)_minmax(0,13rem)]">
+			{bookmarksQuery.data.items.length === 0 ? (
+				<EmptyBookmarksState />
+			) : (
+				<>
+					<div className="grid gap-2 sm:grid-cols-[minmax(0,22rem)_minmax(0,14rem)_1fr] sm:items-center">
 						<label htmlFor="bookmark-search" className="relative block min-w-0">
-							<span className="sr-only">Search bookmarks</span>
+							<span className="sr-only">Search bookmarks and notes</span>
 							<HugeIcon
 								name="search"
 								className="-translate-y-1/2 absolute top-1/2 left-3 size-4 text-muted-foreground"
 							/>
 							<Input
 								id="bookmark-search"
+								type="search"
 								value={search.q}
-								placeholder="Search bookmarks"
-								className="ph-no-capture pl-9"
+								placeholder="Search bookmarks and notes"
+								className="ph-no-capture h-11 pl-9 text-base sm:h-9 sm:text-sm"
 								onChange={(event) =>
 									void navigate({
 										to: "/bookmarks",
-										search: {
-											...search,
-											q: event.target.value,
-										},
+										search: { ...search, q: event.target.value },
 										replace: true,
 									})
 								}
@@ -95,20 +96,20 @@ function BookmarksScreen({ initialData, search }: BookmarksScreenProps) {
 								});
 								void navigate({
 									to: "/bookmarks",
-									search: {
-										...search,
-										course,
-									},
+									search: { ...search, course },
 									replace: true,
 								});
 							}}
 						>
-							<SelectTrigger className="w-full min-w-[0] **:data-[slot=select-value]:min-w-[0] **:data-[slot=select-value]:truncate">
-								<SelectValue placeholder="All courses" />
+							<SelectTrigger
+								aria-label="Filter by notebook"
+								className="h-11 w-full min-w-[0] sm:h-9 **:data-[slot=select-value]:min-w-[0] **:data-[slot=select-value]:truncate"
+							>
+								<SelectValue placeholder="All notebooks" />
 							</SelectTrigger>
 							<SelectContent className="w-(--radix-select-trigger-width) max-w-[calc(100vw-2rem)]">
 								<SelectItem value="all">
-									<span className="block truncate">All courses</span>
+									<span className="block truncate">All notebooks</span>
 								</SelectItem>
 								{courses.map((course) => (
 									<SelectItem key={course.id} value={course.id}>
@@ -117,32 +118,62 @@ function BookmarksScreen({ initialData, search }: BookmarksScreenProps) {
 								))}
 							</SelectContent>
 						</Select>
+						<p className="text-muted-foreground text-[13px] tabular-nums sm:text-right">
+							{filteredItems.length}{" "}
+							{filteredItems.length === 1 ? "bookmark" : "bookmarks"} in{" "}
+							{groups.length} {groups.length === 1 ? "notebook" : "notebooks"}
+						</p>
 					</div>
-				</div>
-			</ContentPanel>
 
-			{bookmarksQuery.data.items.length === 0 ? (
-				<EmptyBookmarksState />
-			) : filteredItems.length === 0 ? (
-				<ContentPanel className="p-8">
-					<Empty>
-						<EmptyHeader>
-							<EmptyMedia variant="icon">
-								<HugeIcon name="search" />
-							</EmptyMedia>
-							<EmptyTitle>No matching bookmarks</EmptyTitle>
-							<EmptyDescription>
-								Adjust the search or course filter to see more saved moments.
-							</EmptyDescription>
-						</EmptyHeader>
-					</Empty>
-				</ContentPanel>
-			) : (
-				<div className="grid gap-3">
-					{filteredItems.map((item) => (
-						<BookmarkRow key={item.bookmark.id} item={item} />
-					))}
-				</div>
+					{groups.length === 0 ? (
+						<ContentPanel className="p-8">
+							<Empty>
+								<EmptyHeader>
+									<EmptyMedia variant="icon">
+										<HugeIcon name="search" />
+									</EmptyMedia>
+									<EmptyTitle>No bookmarks match</EmptyTitle>
+									<EmptyDescription>
+										Try a different search, or show every notebook.
+									</EmptyDescription>
+								</EmptyHeader>
+							</Empty>
+						</ContentPanel>
+					) : (
+						groups.map((group) => (
+							<ContentPanel
+								key={group.course.id}
+								className="overflow-hidden p-0"
+								aria-labelledby={`bookmarks-${group.course.id}`}
+							>
+								<div className="flex items-center justify-between gap-3 px-4 pt-3.5 pb-1">
+									<h2
+										id={`bookmarks-${group.course.id}`}
+										className="min-w-0 truncate font-semibold font-serif text-lg"
+									>
+										{group.course.title}
+									</h2>
+									<Link
+										to="/courses/$courseId"
+										params={{ courseId: group.course.id }}
+										search={{ chapter: undefined, bookmark: undefined }}
+										className="inline-flex shrink-0 items-center gap-1 font-medium text-[13px]"
+									>
+										Open notebook
+										<HugeIcon name="arrowRight" className="size-3.5" />
+									</Link>
+								</div>
+								<ul className="divide-y divide-border">
+									{group.items.map((item) => (
+										<li key={item.bookmark.id}>
+											<BookmarkRow item={item} />
+										</li>
+									))}
+								</ul>
+							</ContentPanel>
+						))
+					)}
+				</>
 			)}
 		</WorkspacePage>
 	);
@@ -150,28 +181,23 @@ function BookmarksScreen({ initialData, search }: BookmarksScreenProps) {
 
 function EmptyBookmarksState() {
 	return (
-		<ContentPanel className="p-8">
+		<ContentPanel className="genko-grid p-8 sm:p-12">
 			<Empty>
 				<EmptyHeader>
-					<EmptyMedia variant="icon">
-						<HugeIcon name="bookmark" />
-					</EmptyMedia>
-					<EmptyTitle>No bookmarks yet</EmptyTitle>
+					<EmptyTitle className="font-serif text-2xl">
+						No bookmarks yet
+					</EmptyTitle>
 					<EmptyDescription>
-						Open a course and save the moments you want to revisit.
+						While you study, bookmark moments worth coming back to. They all
+						show up here.
 					</EmptyDescription>
 				</EmptyHeader>
 				<EmptyContent>
-					<div className="flex flex-wrap justify-center gap-2">
-						<Button asChild>
-							<Link to="/courses" search={{ q: "", filter: "all" }}>
-								Open courses
-							</Link>
-						</Button>
-						<Button asChild variant="outline">
-							<Link to="/">Create course</Link>
-						</Button>
-					</div>
+					<Button asChild>
+						<Link to="/courses" search={{ q: "", filter: "all" }}>
+							Go to your notebooks
+						</Link>
+					</Button>
 				</EmptyContent>
 			</Empty>
 		</ContentPanel>
@@ -179,109 +205,40 @@ function EmptyBookmarksState() {
 }
 
 function BookmarkRow({ item }: { item: BookmarkListItemDTO }) {
-	const title =
-		item.bookmark.title ??
-		`Bookmark at ${formatTimestamp(item.bookmark.timestampSeconds)}`;
+	const time = formatTimestamp(item.bookmark.timestampSeconds);
+	const label = item.bookmark.title ?? `Bookmark at ${time}`;
 
 	return (
-		<ContentPanel className="overflow-hidden p-0">
-			<div className="grid gap-4 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
-				<div className="min-w-0">
-					<div className="flex flex-wrap items-center gap-2 text-xs">
-						<span className="rounded-md border border-border bg-muted px-2 py-1 font-medium text-foreground">
-							{formatTimestamp(item.bookmark.timestampSeconds)}
-						</span>
-						<span className="text-muted-foreground">{item.course.title}</span>
-						{item.chapter ? (
-							<span className="text-muted-foreground">
-								{item.chapter.title}
-							</span>
-						) : null}
-					</div>
-					<h2 className="mt-2 truncate font-semibold text-base tracking-normal">
-						{title}
-					</h2>
-					{item.bookmark.note ? (
-						<p className="mt-1 line-clamp-2 text-muted-foreground text-sm">
-							{item.bookmark.note}
-						</p>
-					) : (
-						<p className="mt-1 text-muted-foreground text-sm">
-							No bookmark note.
-						</p>
-					)}
-					<p className="mt-2 truncate text-muted-foreground text-xs">
-						{item.video.channelTitle ?? "YouTube"}
-						{item.video.title ? ` - ${item.video.title}` : ""}
-					</p>
-				</div>
-				<div className="flex shrink-0 flex-wrap gap-2">
-					<Button asChild size="sm">
-						<Link
-							to="/courses/$courseId"
-							params={{ courseId: item.course.id }}
-							search={{
-								chapter: item.bookmark.chapterId ?? undefined,
-								bookmark: item.bookmark.id,
-							}}
-							onClick={() =>
-								trackAnalyticsEvent("bookmark_jumped_to", {
-									source: "bookmarks",
-									has_chapter: Boolean(item.bookmark.chapterId),
-									has_note: Boolean(item.bookmark.note),
-								})
-							}
-						>
-							Open moment
-						</Link>
-					</Button>
-				</div>
-			</div>
-		</ContentPanel>
+		<BookmarkItem
+			className="rounded-none px-4 py-3.5"
+			time={time}
+			label={
+				<Link
+					data-slot="bookmark-link"
+					to="/courses/$courseId"
+					params={{ courseId: item.course.id }}
+					search={{
+						chapter: item.bookmark.chapterId ?? undefined,
+						bookmark: item.bookmark.id,
+					}}
+					className="text-foreground no-underline hover:underline"
+					onClick={() =>
+						trackAnalyticsEvent("bookmark_jumped_to", {
+							source: "bookmarks",
+							has_chapter: Boolean(item.bookmark.chapterId),
+							has_note: Boolean(item.bookmark.note),
+						})
+					}
+				>
+					{label}
+				</Link>
+			}
+			context={[item.chapter?.title, formatDay(item.bookmark.createdAt)]
+				.filter(Boolean)
+				.join(" · ")}
+			note={item.bookmark.note}
+		/>
 	);
-}
-
-function getCourseFilterOptions(items: BookmarkListItemDTO[]) {
-	const options = new Map<string, { id: string; title: string }>();
-
-	for (const item of items) {
-		options.set(item.course.id, {
-			id: item.course.id,
-			title: item.course.title,
-		});
-	}
-
-	return Array.from(options.values()).sort((a, b) =>
-		a.title.localeCompare(b.title),
-	);
-}
-
-function filterBookmarks(
-	items: BookmarkListItemDTO[],
-	search: BookmarksScreenProps["search"],
-) {
-	const query = search.q.trim().toLowerCase();
-
-	return items.filter((item) => {
-		if (search.course !== "all" && item.course.id !== search.course) {
-			return false;
-		}
-
-		if (!query) {
-			return true;
-		}
-
-		return [
-			item.bookmark.title,
-			item.bookmark.note,
-			item.course.title,
-			item.video.title,
-			item.video.channelTitle,
-			item.chapter?.title,
-		]
-			.filter(Boolean)
-			.some((value) => value?.toLowerCase().includes(query));
-	});
 }
 
 export { BookmarksScreen };

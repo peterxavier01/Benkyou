@@ -19,20 +19,13 @@ function BookmarksPendingRoute() {
 	return (
 		<WorkspacePage
 			title="Bookmarks"
-			description="Saved timestamps across your courses."
+			description="Every moment you marked, across all your notebooks."
 		>
-			<ContentPanel className="p-4 sm:p-5">
-				<div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-					<div>
-						<Skeleton className="h-7 w-32" />
-						<Skeleton className="mt-2 h-4 w-72 max-w-full" />
-					</div>
-					<div className="grid min-w-0 gap-2 sm:grid-cols-[minmax(0,18rem)_minmax(0,13rem)]">
-						<Skeleton className="h-9 w-full" />
-						<Skeleton className="h-9 w-full" />
-					</div>
-				</div>
-			</ContentPanel>
+			<output className="sr-only">Loading your bookmarks</output>
+			<div className="grid gap-2 sm:grid-cols-[minmax(0,22rem)_minmax(0,14rem)]">
+				<Skeleton className="h-9 w-full" />
+				<Skeleton className="h-9 w-full" />
+			</div>
 			<ContentPanel className="p-0">
 				{[0, 1, 2, 3].map((item) => (
 					<div
