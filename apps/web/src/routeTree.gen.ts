@@ -15,6 +15,7 @@ import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as SelfHostingRouteImport } from './routes/self-hosting'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as HowItWorksRouteImport } from './routes/how-it-works'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as WorkspaceRouteImport } from './routes/_workspace'
 import { Route as IndexRouteImport } from './routes/index'
@@ -56,6 +57,11 @@ const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HowItWorksRoute = HowItWorksRouteImport.update({
+  id: '/how-it-works',
+  path: '/how-it-works',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AboutRoute = AboutRouteImport.update({
@@ -138,6 +144,7 @@ const WorkspaceCoursesCourseIdManageRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/how-it-works': typeof HowItWorksRoute
   '/privacy': typeof PrivacyRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/self-hosting': typeof SelfHostingRoute
@@ -157,6 +164,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/how-it-works': typeof HowItWorksRoute
   '/privacy': typeof PrivacyRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/self-hosting': typeof SelfHostingRoute
@@ -178,6 +186,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_workspace': typeof WorkspaceRouteWithChildren
   '/about': typeof AboutRoute
+  '/how-it-works': typeof HowItWorksRoute
   '/privacy': typeof PrivacyRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/self-hosting': typeof SelfHostingRoute
@@ -199,6 +208,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/about'
+    | '/how-it-works'
     | '/privacy'
     | '/robots.txt'
     | '/self-hosting'
@@ -218,6 +228,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/about'
+    | '/how-it-works'
     | '/privacy'
     | '/robots.txt'
     | '/self-hosting'
@@ -238,6 +249,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_workspace'
     | '/about'
+    | '/how-it-works'
     | '/privacy'
     | '/robots.txt'
     | '/self-hosting'
@@ -259,6 +271,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   WorkspaceRoute: typeof WorkspaceRouteWithChildren
   AboutRoute: typeof AboutRoute
+  HowItWorksRoute: typeof HowItWorksRoute
   PrivacyRoute: typeof PrivacyRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   SelfHostingRoute: typeof SelfHostingRoute
@@ -312,6 +325,13 @@ declare module '@tanstack/react-router' {
       path: '/privacy'
       fullPath: '/privacy'
       preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/how-it-works': {
+      id: '/how-it-works'
+      path: '/how-it-works'
+      fullPath: '/how-it-works'
+      preLoaderRoute: typeof HowItWorksRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/about': {
@@ -427,6 +447,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   WorkspaceRoute: WorkspaceRouteWithChildren,
   AboutRoute: AboutRoute,
+  HowItWorksRoute: HowItWorksRoute,
   PrivacyRoute: PrivacyRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
   SelfHostingRoute: SelfHostingRoute,

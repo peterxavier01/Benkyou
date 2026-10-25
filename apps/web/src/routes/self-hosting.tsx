@@ -1,10 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { SelfHostingPage } from "#/features/static/static-pages";
+import { SelfHostingPage } from "#/features/static/self-hosting-page";
 import { buildSeoHead, buildWebPageJsonLd } from "#lib/seo";
 
-const title = "Self-host Benkyou | Private video study workspace";
+const title = "Self-host Benkyou | Run it on your own server";
 const description =
-	"Run Benkyou with Docker Compose, Postgres, local-first study state, and server-side provider keys you control.";
+	"Run Benkyou with one Docker Compose command. Your notebooks stay in your own Postgres, and analytics stay off unless you turn them on.";
 
 export const Route = createFileRoute("/self-hosting")({
 	head: () =>

@@ -32,6 +32,10 @@ export const PUBLIC_SEO_ROUTES = [
 		priority: "1.0",
 	},
 	{
+		path: "/how-it-works",
+		priority: "0.8",
+	},
+	{
 		path: "/about",
 		priority: "0.7",
 	},
