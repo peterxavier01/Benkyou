@@ -42,6 +42,7 @@ function BrandLogo({
 	if (to) {
 		return (
 			<Link
+				data-slot="brand-logo"
 				to={to}
 				className={cn(
 					"inline-flex min-w-0 items-center gap-2 rounded-lg text-foreground no-underline outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0",

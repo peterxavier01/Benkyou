@@ -165,14 +165,14 @@ body {
   }
 }
 
-a:not([data-slot="button"]):not([data-sidebar="menu-button"]) {
+a:not([data-slot]):not([data-sidebar="menu-button"]) {
   color: var(--primary);
   text-decoration-color: color-mix(in oklab, var(--primary) 42%, transparent);
   text-decoration-thickness: 1px;
   text-underline-offset: 2px;
 }
 
-a:not([data-slot="button"]):not([data-sidebar="menu-button"]):hover {
+a:not([data-slot]):not([data-sidebar="menu-button"]):hover {
   color: color-mix(in oklab, var(--primary) 82%, var(--foreground));
 }
 
