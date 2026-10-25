@@ -2,7 +2,7 @@ import type {
 	GenerationJobDetailV1,
 	GenerationJobStatus,
 } from "@benkyou/types";
-import { Button, ContentPanel, HugeIcon, StatusBadge } from "@benkyou/ui";
+import { Button, ContentPanel, HugeIcon } from "@benkyou/ui";
 import {
 	Alert,
 	AlertDescription,
@@ -29,6 +29,12 @@ import {
 	processGenerationJob,
 	retryGenerationJob,
 } from "../course-generation.functions";
+import {
+	ChaptersPreview,
+	GenerationSteps,
+	headingFor,
+	VideoSummary,
+} from "./generation-parts";
 
 interface GenerationStatusScreenProps {
 	initialDetail: GenerationJobDetailV1;
@@ -151,247 +157,114 @@ function GenerationStatusScreen({
 		}
 	}, [detail.chapterCount, detail.job.failureReason, detail.job.status]);
 
-	const terminal = isTerminalStatus(detail.job.status);
+	const status = detail.job.status;
+	const terminal = isTerminalStatus(status);
+	const failed = status === "failed" || status === "cancelled";
 
 	return (
 		<WorkspacePage
-			title="Generation"
-			description="Prepare this video as a study workspace."
-			className="lg:grid-cols-[minmax(0,1fr)_360px]"
+			title={headingFor(status)}
+			description={detail.course.title}
+			className="lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start"
 			action={<BetterAuthHeader />}
 		>
-			<ContentPanel className="p-4 sm:p-6">
-				<div className="flex flex-col gap-5 sm:flex-row sm:items-start">
-					<VideoPreview detail={detail} />
-					<div className="min-w-0 flex-1">
-						<div className="flex flex-wrap items-center gap-2">
-							<StatusBadge tone={getBadgeTone(detail.job.status)}>
-								{formatStatus(detail.job.status)}
-							</StatusBadge>
-							{jobQuery.isFetching && !terminal ? (
-								<span className="text-muted-foreground text-xs">
-									Refreshing
-								</span>
-							) : null}
-						</div>
-						<h1 className="mt-3 font-semibold text-2xl leading-tight tracking-normal">
-							{detail.course.title}
-						</h1>
-						<p className="mt-2 max-w-2xl text-muted-foreground text-sm leading-6">
-							{getStatusCopy(detail.job.status)}
-						</p>
+			<ContentPanel className="grid gap-6 p-5 sm:p-7" aria-live="polite">
+				<VideoSummary detail={detail} />
+				<div className="h-px bg-border" />
+				<GenerationSteps steps={detail.timeline} />
 
-						{detail.job.status === "failed" ? (
-							<Alert variant="destructive" className="mt-4">
-								<AlertTitle>Generation failed</AlertTitle>
-								<AlertDescription>
-									{detail.job.failureReason ??
-										"Benkyou could not prepare this study workspace."}
-								</AlertDescription>
-							</Alert>
-						) : null}
+				{status === "failed" ? (
+					<Alert variant="destructive">
+						<HugeIcon name="alertCircle" />
+						<AlertTitle>Chapters couldn’t be created</AlertTitle>
+						<AlertDescription className="text-pretty">
+							{detail.job.failureReason ??
+								"Something stopped the job before chapters were saved. Try again, or use a different video."}
+						</AlertDescription>
+					</Alert>
+				) : null}
+				{status === "cancelled" ? (
+					<p className="text-muted-foreground text-sm">
+						This was cancelled before the chapters were ready. You can try again
+						or use a different video.
+					</p>
+				) : null}
 
-						<div className="mt-5 flex flex-wrap gap-2">
-							{detail.canOpenCourse ? (
-								<Button asChild>
-									<Link
-										to="/courses/$courseId"
-										params={{ courseId: detail.course.id }}
-										search={{ chapter: undefined, bookmark: undefined }}
-									>
-										Open course
-										<HugeIcon name="arrowRight" className="size-4" />
-									</Link>
-								</Button>
-							) : null}
-							{detail.canRetry ? (
-								<Button
-									type="button"
-									variant="outline"
-									disabled={retryMutation.isPending}
-									onClick={() => retryMutation.mutate()}
-								>
-									<HugeIcon name="refresh" className="size-4" />
-									{retryMutation.isPending ? "Retrying..." : "Retry"}
-								</Button>
-							) : null}
-							{detail.canCancel ? (
-								<Button
-									type="button"
-									variant="outline"
-									disabled={cancelMutation.isPending}
-									onClick={() => cancelMutation.mutate()}
-								>
-									<HugeIcon name="pause" className="size-4" />
-									{cancelMutation.isPending ? "Cancelling..." : "Cancel"}
-								</Button>
-							) : null}
-							<Button asChild type="button" variant="outline">
-								<Link to="/">Use another URL</Link>
-							</Button>
-							<Button asChild type="button" variant="ghost">
-								<Link to="/courses" search={{ q: "", filter: "all" }}>
-									Keep working in background
-								</Link>
-							</Button>
-						</div>
-
-						{processMutation.isError ? (
-							<p className="mt-3 text-destructive text-sm">
-								{processMutation.error instanceof Error
-									? processMutation.error.message
-									: "Could not start generation."}
-							</p>
-						) : null}
-						{cancelMutation.isError ? (
-							<p className="mt-3 text-destructive text-sm">
-								{cancelMutation.error instanceof Error
-									? cancelMutation.error.message
-									: "Could not cancel generation."}
-							</p>
-						) : null}
-					</div>
-				</div>
-			</ContentPanel>
-
-			<ContentPanel className="p-5">
-				<div className="flex items-center justify-between gap-3">
-					<h2 className="font-semibold text-base">Timeline</h2>
-					<span className="text-muted-foreground text-xs">
-						{detail.chapterCount} chapters
-					</span>
-				</div>
-				<ol className="mt-4 space-y-3">
-					{detail.timeline.map((step) => (
-						<li
-							key={step.key}
-							className="rounded-md border border-border bg-muted/25 p-3"
+				<div className="flex flex-wrap items-center gap-2 border-border border-t pt-5">
+					{detail.canOpenCourse ? (
+						<Button asChild>
+							<Link
+								to="/courses/$courseId"
+								params={{ courseId: detail.course.id }}
+								search={{ chapter: undefined, bookmark: undefined }}
+							>
+								Open notebook
+								<HugeIcon name="arrowRight" className="size-4" />
+							</Link>
+						</Button>
+					) : null}
+					{detail.canRetry ? (
+						<Button
+							type="button"
+							variant={failed ? "default" : "outline"}
+							disabled={retryMutation.isPending}
+							onClick={() => retryMutation.mutate()}
 						>
-							<div className="flex items-start gap-3">
-								<span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md border border-border bg-background">
-									<TimelineIcon status={step.status} />
-								</span>
-								<div className="min-w-0">
-									<div className="flex flex-wrap items-center gap-2">
-										<p className="font-medium text-sm">{step.label}</p>
-										<StatusBadge tone={getTimelineTone(step.status)}>
-											{step.status}
-										</StatusBadge>
-									</div>
-									<p className="mt-1 text-muted-foreground text-xs leading-5">
-										{step.description}
-									</p>
-								</div>
-							</div>
-						</li>
-					))}
-				</ol>
+							<HugeIcon name="refresh" className="size-4" />
+							{retryMutation.isPending ? "Trying again…" : "Try again"}
+						</Button>
+					) : null}
+					{failed ? (
+						<Button asChild variant="outline">
+							<Link to="/">Use a different video</Link>
+						</Button>
+					) : null}
+					{detail.canCancel ? (
+						<Button
+							type="button"
+							variant="ghost"
+							disabled={cancelMutation.isPending}
+							onClick={() => cancelMutation.mutate()}
+						>
+							{cancelMutation.isPending ? "Cancelling…" : "Cancel"}
+						</Button>
+					) : null}
+					{terminal ? null : (
+						<p className="basis-full text-[13px] text-muted-foreground sm:ml-auto sm:basis-auto">
+							You can leave this page. It will be waiting in{" "}
+							<Link to="/courses" search={{ q: "", filter: "all" }}>
+								Notebooks
+							</Link>
+							.
+						</p>
+					)}
+				</div>
+
+				{processMutation.isError ? (
+					<p role="alert" className="text-destructive text-sm">
+						{processMutation.error instanceof Error
+							? processMutation.error.message
+							: "Couldn’t start preparing this notebook. Try again."}
+					</p>
+				) : null}
+				{cancelMutation.isError ? (
+					<p role="alert" className="text-destructive text-sm">
+						{cancelMutation.error instanceof Error
+							? cancelMutation.error.message
+							: "Couldn’t cancel. Try again."}
+					</p>
+				) : null}
 			</ContentPanel>
+
+			{status === "completed" ? null : <ChaptersPreview status={status} />}
 		</WorkspacePage>
 	);
-}
-
-function VideoPreview({ detail }: { detail: GenerationJobDetailV1 }) {
-	if (!detail.video.thumbnailUrl) {
-		return (
-			<div className="flex aspect-video w-full shrink-0 items-center justify-center rounded-md border border-border bg-muted text-muted-foreground sm:w-64">
-				<HugeIcon name="aiVideo" className="size-8" />
-			</div>
-		);
-	}
-
-	return (
-		<img
-			src={detail.video.thumbnailUrl}
-			alt={`${detail.video.title ?? detail.course.title} thumbnail`}
-			className="aspect-video w-full shrink-0 rounded-md border border-border object-cover sm:w-64"
-		/>
-	);
-}
-
-function TimelineIcon({
-	status,
-}: {
-	status: GenerationJobDetailV1["timeline"][number]["status"];
-}) {
-	const iconName =
-		status === "completed"
-			? "checkmarkCircle"
-			: status === "failed"
-				? "alertCircle"
-				: status === "processing"
-					? "loading"
-					: "circle";
-
-	return <HugeIcon name={iconName} className="size-4 text-primary" />;
 }
 
 function isTerminalStatus(status: GenerationJobStatus) {
 	return (
 		status === "completed" || status === "failed" || status === "cancelled"
 	);
-}
-
-function getBadgeTone(status: GenerationJobStatus) {
-	if (status === "completed") {
-		return "success";
-	}
-
-	if (status === "failed" || status === "cancelled") {
-		return "danger";
-	}
-
-	if (status === "processing") {
-		return "info";
-	}
-
-	return "warning";
-}
-
-function getTimelineTone(
-	status: GenerationJobDetailV1["timeline"][number]["status"],
-) {
-	if (status === "completed") {
-		return "success";
-	}
-
-	if (status === "failed") {
-		return "danger";
-	}
-
-	if (status === "processing") {
-		return "info";
-	}
-
-	if (status === "skipped") {
-		return "neutral";
-	}
-
-	return "neutral";
-}
-
-function formatStatus(status: GenerationJobStatus) {
-	return status.charAt(0).toUpperCase() + status.slice(1);
-}
-
-function getStatusCopy(status: GenerationJobStatus) {
-	if (status === "queued") {
-		return "Benkyou is preparing this video for generation.";
-	}
-
-	if (status === "processing") {
-		return "Captions are being converted into a chapter outline.";
-	}
-
-	if (status === "completed") {
-		return "Your study workspace is ready to open.";
-	}
-
-	if (status === "failed") {
-		return "The job stopped before chapters could be saved.";
-	}
-
-	return "This generation job was cancelled. You can retry it or use another URL.";
 }
 
 export { GenerationStatusScreen };

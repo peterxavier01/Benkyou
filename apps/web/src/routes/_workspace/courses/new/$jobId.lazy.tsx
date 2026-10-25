@@ -18,8 +18,7 @@ function GenerationStatusRoute() {
 function GenerationStatusPendingRoute() {
 	return (
 		<WorkspacePage
-			title="Generation"
-			description="Prepare this video as a study workspace."
+			title="Preparing your notebook"
 			className="lg:grid-cols-[minmax(0,1fr)_360px]"
 		>
 			<ContentPanel className="p-4 sm:p-6">

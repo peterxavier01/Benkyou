@@ -7,13 +7,13 @@ function GlobalErrorScreen({ error, reset }: ErrorComponentProps) {
 
 	return (
 		<AppRecoveryScreen
-			title="Something went wrong"
-			description="Benkyou hit a problem while opening this screen. You can retry the current route, return to your library, or start from the course entry flow."
+			title="Something went wrong on this page"
+			description="Your notebooks, notes and bookmarks are saved and weren’t affected. Reloading usually fixes this."
 			iconTone="destructive"
 			onRetry={reset}
 			detail={
 				import.meta.env.DEV ? (
-					<pre className="mt-4 max-h-40 overflow-auto rounded-md border border-border bg-muted p-3 text-muted-foreground text-xs">
+					<pre className="max-h-40 w-full overflow-auto rounded-md border border-border bg-card p-3 text-left text-muted-foreground text-xs">
 						{errorMessage}
 					</pre>
 				) : null

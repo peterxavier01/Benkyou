@@ -1,5 +1,4 @@
-import { CORE_PROMISE } from "@benkyou/core";
-import { Button, ContentPanel, HugeIcon } from "@benkyou/ui";
+import { Button, HugeIcon } from "@benkyou/ui";
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { BrandLogo } from "#components/brand-logo";
@@ -12,6 +11,7 @@ type AppRecoveryScreenProps = {
 	title: ReactNode;
 };
 
+/** Full-page fallback for crashes and unknown routes. */
 function AppRecoveryScreen({
 	detail,
 	description,
@@ -19,49 +19,48 @@ function AppRecoveryScreen({
 	onRetry,
 	title,
 }: AppRecoveryScreenProps) {
-	const iconToneClass =
-		iconTone === "destructive" ? "text-destructive" : "text-primary";
-
 	return (
-		<main className="min-h-dvh bg-background text-foreground">
-			<div className="mx-auto flex min-h-dvh w-full max-w-3xl items-center px-4 py-8">
-				<ContentPanel className="w-full p-5 sm:p-7">
-					<div className="flex flex-col gap-5 sm:flex-row sm:items-start">
-						<div
-							className={`flex size-10 shrink-0 items-center justify-center rounded-md border border-border bg-muted ${iconToneClass}`}
-						>
-							<HugeIcon name="alertCircle" className="size-5" />
-						</div>
-						<div className="min-w-0 flex-1">
-							<BrandLogo subtitle={null} />
-							<h1 className="mt-2 font-semibold text-2xl tracking-normal">
-								{title}
-							</h1>
-							<p className="mt-2 max-w-xl text-muted-foreground text-sm leading-6">
-								{description}
-							</p>
-							{detail}
-							<div className="mt-5 flex flex-wrap gap-2">
-								{onRetry ? (
-									<Button type="button" onClick={onRetry}>
-										Try again
-									</Button>
-								) : null}
-								<Button asChild variant={onRetry ? "outline" : "default"}>
-									<Link to="/courses" search={{ q: "", filter: "all" }}>
-										Open library
-									</Link>
-								</Button>
-								<Button asChild variant="outline">
-									<Link to="/">Create course</Link>
-								</Button>
-								<Button asChild variant="ghost">
-									<Link to="/about">{CORE_PROMISE}</Link>
-								</Button>
-							</div>
-						</div>
-					</div>
-				</ContentPanel>
+		<main className="genko-grid flex min-h-dvh flex-col bg-background text-foreground">
+			<header className="flex h-16 items-center px-4 sm:px-8">
+				<BrandLogo to="/" subtitle={null} />
+			</header>
+			<div className="mx-auto flex w-full max-w-lg flex-1 flex-col items-center gap-4 px-4 pt-10 pb-16 text-center sm:pt-16">
+				<span
+					aria-hidden="true"
+					className={
+						iconTone === "destructive"
+							? "flex size-16 items-center justify-center rounded-full bg-destructive/10 text-destructive"
+							: "flex size-16 items-center justify-center rounded-full border-2 border-input border-dashed text-muted-foreground"
+					}
+				>
+					<HugeIcon
+						name={iconTone === "destructive" ? "alert" : "notebook"}
+						className="size-7"
+					/>
+				</span>
+				<h1 className="text-balance font-semibold font-serif text-3xl leading-tight sm:text-4xl">
+					{title}
+				</h1>
+				<p className="text-muted-foreground leading-relaxed">{description}</p>
+				{detail}
+				<div className="flex flex-wrap justify-center gap-2 pt-2">
+					{onRetry ? (
+						<Button type="button" onClick={onRetry}>
+							<HugeIcon name="refresh" className="size-4" />
+							Reload
+						</Button>
+					) : null}
+					<Button asChild variant={onRetry ? "outline" : "default"}>
+						<Link to="/courses" search={{ q: "", filter: "all" }}>
+							Go to your notebooks
+						</Link>
+					</Button>
+					{onRetry ? null : (
+						<Button asChild variant="outline">
+							<Link to="/">New notebook</Link>
+						</Button>
+					)}
+				</div>
 			</div>
 		</main>
 	);
