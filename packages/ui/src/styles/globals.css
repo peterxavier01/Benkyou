@@ -51,3 +51,12 @@
 		);
 	}
 }
+
+/* Genkō yōshi grid: entry and empty states only (see DESIGN.md). */
+@utility genko-grid {
+	background-image:
+		linear-gradient(to right, var(--grid) 1px, transparent 1px),
+		linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+	background-size: 28px 28px;
+	background-position: -1px -1px;
+}
