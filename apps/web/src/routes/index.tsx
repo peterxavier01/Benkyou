@@ -7,9 +7,9 @@ import {
 	buildWebsiteJsonLd,
 } from "#lib/seo";
 
-const title = "Benkyou | Turn long videos into focused study workspaces";
+const title = "Benkyou | Study notebooks for long videos";
 const description =
-	"Study tutorials, lectures, talks, and walkthroughs with chapters, notes, bookmarks, and progress in one recoverable workspace.";
+	"Paste a YouTube link. Benkyou gives it chapters, notes, bookmarks and progress, and keeps them right where you left them. Free and open source.";
 
 export const Route = createFileRoute("/")({
 	head: () =>

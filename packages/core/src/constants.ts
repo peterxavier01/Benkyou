@@ -2,7 +2,9 @@ import type { VideoProvider } from "@benkyou/types";
 
 export const PRODUCT_NAME = "Benkyou";
 
-export const CORE_PROMISE = "Turn long videos into focused study workspaces.";
+export const CORE_PROMISE = "Study long videos. Don’t just watch them.";
+
+export const REPOSITORY_URL = "https://github.com/peterxavier01/Benkyou";
 
 export const SUPPORTED_VIDEO_PROVIDERS = [
 	"youtube",
