@@ -62,8 +62,13 @@ function NotebookRow({
 	]
 		.filter(Boolean)
 		.join(" · ");
-	const timeLeft = formatTimeLeft(percent, item.video.durationSeconds);
 	const resuming = percent > 0 && percent < 100;
+	// The percent already sits beside the ring, so without a length to count
+	// down from, say where the notebook stands instead of repeating it.
+	const timeLeft =
+		resuming && !length
+			? "In progress"
+			: formatTimeLeft(percent, item.video.durationSeconds);
 
 	return (
 		<li className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 px-4 py-3.5 sm:grid-cols-[auto_minmax(0,1fr)_200px_96px_auto]">
