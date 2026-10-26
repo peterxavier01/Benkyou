@@ -9,61 +9,35 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as TermsRouteImport } from './routes/terms'
-import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
-import { Route as SignInRouteImport } from './routes/sign-in'
-import { Route as SelfHostingRouteImport } from './routes/self-hosting'
-import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
-import { Route as PrivacyRouteImport } from './routes/privacy'
-import { Route as HowItWorksRouteImport } from './routes/how-it-works'
-import { Route as AboutRouteImport } from './routes/about'
-import { Route as WorkspaceRouteImport } from './routes/_workspace'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ApiHealthRouteImport } from './routes/api/health'
-import { Route as WorkspaceSettingsRouteImport } from './routes/_workspace/settings'
+import { Route as WorkspaceRouteImport } from './routes/_workspace'
+import { Route as AboutRouteImport } from './routes/about'
+import { Route as HowItWorksRouteImport } from './routes/how-it-works'
+import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
+import { Route as SelfHostingRouteImport } from './routes/self-hosting'
+import { Route as SignInRouteImport } from './routes/sign-in'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as WorkspaceBookmarksRouteImport } from './routes/_workspace/bookmarks'
-import { Route as WorkspaceShelvesIndexRouteImport } from './routes/_workspace/shelves/index'
+import { Route as WorkspaceSettingsRouteImport } from './routes/_workspace/settings'
+import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as WorkspaceCoursesIndexRouteImport } from './routes/_workspace/courses/index'
-import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
-import { Route as WorkspaceShelvesShelfIdRouteImport } from './routes/_workspace/shelves/$shelfId'
 import { Route as WorkspaceCoursesCourseIdRouteImport } from './routes/_workspace/courses/$courseId'
-import { Route as ApiV1ProgressPlaybackRouteImport } from './routes/api/v1/progress/playback'
-import { Route as WorkspaceCoursesNewJobIdRouteImport } from './routes/_workspace/courses/new/$jobId'
+import { Route as WorkspaceShelvesIndexRouteImport } from './routes/_workspace/shelves/index'
+import { Route as WorkspaceShelvesShelfIdRouteImport } from './routes/_workspace/shelves/$shelfId'
+import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as WorkspaceCoursesCourseIdManageRouteImport } from './routes/_workspace/courses/$courseId_.manage'
+import { Route as WorkspaceCoursesNewJobIdRouteImport } from './routes/_workspace/courses/new/$jobId'
+import { Route as ApiV1ProgressPlaybackRouteImport } from './routes/api/v1/progress/playback'
 
-const TermsRoute = TermsRouteImport.update({
-  id: '/terms',
-  path: '/terms',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
-  id: '/sitemap.xml',
-  path: '/sitemap.xml',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SignInRoute = SignInRouteImport.update({
-  id: '/sign-in',
-  path: '/sign-in',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SelfHostingRoute = SelfHostingRouteImport.update({
-  id: '/self-hosting',
-  path: '/self-hosting',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
-  id: '/robots.txt',
-  path: '/robots.txt',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PrivacyRoute = PrivacyRouteImport.update({
-  id: '/privacy',
-  path: '/privacy',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HowItWorksRoute = HowItWorksRouteImport.update({
-  id: '/how-it-works',
-  path: '/how-it-works',
+const WorkspaceRoute = WorkspaceRouteImport.update({
+  id: '/_workspace',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AboutRoute = AboutRouteImport.update({
@@ -71,27 +45,41 @@ const AboutRoute = AboutRouteImport.update({
   path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
-const WorkspaceRoute = WorkspaceRouteImport.update({
-  id: '/_workspace',
+const HowItWorksRoute = HowItWorksRouteImport.update({
+  id: '/how-it-works',
+  path: '/how-it-works',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiHealthRoute = ApiHealthRouteImport.update({
-  id: '/api/health',
-  path: '/api/health',
+const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
+  id: '/robots.txt',
+  path: '/robots.txt',
   getParentRoute: () => rootRouteImport,
 } as any)
-const WorkspaceSettingsRoute = WorkspaceSettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => WorkspaceRoute,
-} as any).lazy(() =>
-  import('./routes/_workspace/settings.lazy').then((d) => d.Route),
-)
+const SelfHostingRoute = SelfHostingRouteImport.update({
+  id: '/self-hosting',
+  path: '/self-hosting',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignInRoute = SignInRouteImport.update({
+  id: '/sign-in',
+  path: '/sign-in',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const WorkspaceBookmarksRoute = WorkspaceBookmarksRouteImport.update({
   id: '/bookmarks',
   path: '/bookmarks',
@@ -99,31 +87,24 @@ const WorkspaceBookmarksRoute = WorkspaceBookmarksRouteImport.update({
 } as any).lazy(() =>
   import('./routes/_workspace/bookmarks.lazy').then((d) => d.Route),
 )
-const WorkspaceShelvesIndexRoute = WorkspaceShelvesIndexRouteImport.update({
-  id: '/shelves/',
-  path: '/shelves/',
+const WorkspaceSettingsRoute = WorkspaceSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => WorkspaceRoute,
 } as any).lazy(() =>
-  import('./routes/_workspace/shelves/index.lazy').then((d) => d.Route),
+  import('./routes/_workspace/settings.lazy').then((d) => d.Route),
 )
+const ApiHealthRoute = ApiHealthRouteImport.update({
+  id: '/api/health',
+  path: '/api/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const WorkspaceCoursesIndexRoute = WorkspaceCoursesIndexRouteImport.update({
   id: '/courses/',
   path: '/courses/',
   getParentRoute: () => WorkspaceRoute,
 } as any).lazy(() =>
   import('./routes/_workspace/courses/index.lazy').then((d) => d.Route),
-)
-const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
-  id: '/api/auth/$',
-  path: '/api/auth/$',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const WorkspaceShelvesShelfIdRoute = WorkspaceShelvesShelfIdRouteImport.update({
-  id: '/shelves/$shelfId',
-  path: '/shelves/$shelfId',
-  getParentRoute: () => WorkspaceRoute,
-} as any).lazy(() =>
-  import('./routes/_workspace/shelves/$shelfId.lazy').then((d) => d.Route),
 )
 const WorkspaceCoursesCourseIdRoute =
   WorkspaceCoursesCourseIdRouteImport.update({
@@ -133,19 +114,25 @@ const WorkspaceCoursesCourseIdRoute =
   } as any).lazy(() =>
     import('./routes/_workspace/courses/$courseId.lazy').then((d) => d.Route),
   )
-const ApiV1ProgressPlaybackRoute = ApiV1ProgressPlaybackRouteImport.update({
-  id: '/api/v1/progress/playback',
-  path: '/api/v1/progress/playback',
+const WorkspaceShelvesIndexRoute = WorkspaceShelvesIndexRouteImport.update({
+  id: '/shelves/',
+  path: '/shelves/',
+  getParentRoute: () => WorkspaceRoute,
+} as any).lazy(() =>
+  import('./routes/_workspace/shelves/index.lazy').then((d) => d.Route),
+)
+const WorkspaceShelvesShelfIdRoute = WorkspaceShelvesShelfIdRouteImport.update({
+  id: '/shelves/$shelfId',
+  path: '/shelves/$shelfId',
+  getParentRoute: () => WorkspaceRoute,
+} as any).lazy(() =>
+  import('./routes/_workspace/shelves/$shelfId.lazy').then((d) => d.Route),
+)
+const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
+  id: '/api/auth/$',
+  path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
-const WorkspaceCoursesNewJobIdRoute =
-  WorkspaceCoursesNewJobIdRouteImport.update({
-    id: '/courses/new/$jobId',
-    path: '/courses/new/$jobId',
-    getParentRoute: () => WorkspaceRoute,
-  } as any).lazy(() =>
-    import('./routes/_workspace/courses/new/$jobId.lazy').then((d) => d.Route),
-  )
 const WorkspaceCoursesCourseIdManageRoute =
   WorkspaceCoursesCourseIdManageRouteImport.update({
     id: '/courses/$courseId_/manage',
@@ -156,6 +143,19 @@ const WorkspaceCoursesCourseIdManageRoute =
       (d) => d.Route,
     ),
   )
+const WorkspaceCoursesNewJobIdRoute =
+  WorkspaceCoursesNewJobIdRouteImport.update({
+    id: '/courses/new/$jobId',
+    path: '/courses/new/$jobId',
+    getParentRoute: () => WorkspaceRoute,
+  } as any).lazy(() =>
+    import('./routes/_workspace/courses/new/$jobId.lazy').then((d) => d.Route),
+  )
+const ApiV1ProgressPlaybackRoute = ApiV1ProgressPlaybackRouteImport.update({
+  id: '/api/v1/progress/playback',
+  path: '/api/v1/progress/playback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -313,60 +313,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/terms': {
-      id: '/terms'
-      path: '/terms'
-      fullPath: '/terms'
-      preLoaderRoute: typeof TermsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/sitemap.xml': {
-      id: '/sitemap.xml'
-      path: '/sitemap.xml'
-      fullPath: '/sitemap.xml'
-      preLoaderRoute: typeof SitemapDotxmlRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/sign-in': {
-      id: '/sign-in'
-      path: '/sign-in'
-      fullPath: '/sign-in'
-      preLoaderRoute: typeof SignInRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/self-hosting': {
-      id: '/self-hosting'
-      path: '/self-hosting'
-      fullPath: '/self-hosting'
-      preLoaderRoute: typeof SelfHostingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/robots.txt': {
-      id: '/robots.txt'
-      path: '/robots.txt'
-      fullPath: '/robots.txt'
-      preLoaderRoute: typeof RobotsDottxtRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/privacy': {
-      id: '/privacy'
-      path: '/privacy'
-      fullPath: '/privacy'
-      preLoaderRoute: typeof PrivacyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/how-it-works': {
-      id: '/how-it-works'
-      path: '/how-it-works'
-      fullPath: '/how-it-works'
-      preLoaderRoute: typeof HowItWorksRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/about': {
-      id: '/about'
-      path: '/about'
-      fullPath: '/about'
-      preLoaderRoute: typeof AboutRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_workspace': {
@@ -376,26 +327,61 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkspaceRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/health': {
-      id: '/api/health'
-      path: '/api/health'
-      fullPath: '/api/health'
-      preLoaderRoute: typeof ApiHealthRouteImport
+    '/how-it-works': {
+      id: '/how-it-works'
+      path: '/how-it-works'
+      fullPath: '/how-it-works'
+      preLoaderRoute: typeof HowItWorksRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_workspace/settings': {
-      id: '/_workspace/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof WorkspaceSettingsRouteImport
-      parentRoute: typeof WorkspaceRoute
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/robots.txt': {
+      id: '/robots.txt'
+      path: '/robots.txt'
+      fullPath: '/robots.txt'
+      preLoaderRoute: typeof RobotsDottxtRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/self-hosting': {
+      id: '/self-hosting'
+      path: '/self-hosting'
+      fullPath: '/self-hosting'
+      preLoaderRoute: typeof SelfHostingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sign-in': {
+      id: '/sign-in'
+      path: '/sign-in'
+      fullPath: '/sign-in'
+      preLoaderRoute: typeof SignInRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_workspace/bookmarks': {
       id: '/_workspace/bookmarks'
@@ -404,32 +390,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkspaceBookmarksRouteImport
       parentRoute: typeof WorkspaceRoute
     }
-    '/_workspace/shelves/': {
-      id: '/_workspace/shelves/'
-      path: '/shelves'
-      fullPath: '/shelves/'
-      preLoaderRoute: typeof WorkspaceShelvesIndexRouteImport
+    '/_workspace/settings': {
+      id: '/_workspace/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof WorkspaceSettingsRouteImport
       parentRoute: typeof WorkspaceRoute
+    }
+    '/api/health': {
+      id: '/api/health'
+      path: '/api/health'
+      fullPath: '/api/health'
+      preLoaderRoute: typeof ApiHealthRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_workspace/courses/': {
       id: '/_workspace/courses/'
       path: '/courses'
       fullPath: '/courses/'
       preLoaderRoute: typeof WorkspaceCoursesIndexRouteImport
-      parentRoute: typeof WorkspaceRoute
-    }
-    '/api/auth/$': {
-      id: '/api/auth/$'
-      path: '/api/auth/$'
-      fullPath: '/api/auth/$'
-      preLoaderRoute: typeof ApiAuthSplatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_workspace/shelves/$shelfId': {
-      id: '/_workspace/shelves/$shelfId'
-      path: '/shelves/$shelfId'
-      fullPath: '/shelves/$shelfId'
-      preLoaderRoute: typeof WorkspaceShelvesShelfIdRouteImport
       parentRoute: typeof WorkspaceRoute
     }
     '/_workspace/courses/$courseId': {
@@ -439,12 +418,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkspaceCoursesCourseIdRouteImport
       parentRoute: typeof WorkspaceRoute
     }
-    '/api/v1/progress/playback': {
-      id: '/api/v1/progress/playback'
-      path: '/api/v1/progress/playback'
-      fullPath: '/api/v1/progress/playback'
-      preLoaderRoute: typeof ApiV1ProgressPlaybackRouteImport
+    '/_workspace/shelves/': {
+      id: '/_workspace/shelves/'
+      path: '/shelves'
+      fullPath: '/shelves/'
+      preLoaderRoute: typeof WorkspaceShelvesIndexRouteImport
+      parentRoute: typeof WorkspaceRoute
+    }
+    '/_workspace/shelves/$shelfId': {
+      id: '/_workspace/shelves/$shelfId'
+      path: '/shelves/$shelfId'
+      fullPath: '/shelves/$shelfId'
+      preLoaderRoute: typeof WorkspaceShelvesShelfIdRouteImport
+      parentRoute: typeof WorkspaceRoute
+    }
+    '/api/auth/$': {
+      id: '/api/auth/$'
+      path: '/api/auth/$'
+      fullPath: '/api/auth/$'
+      preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_workspace/courses/$courseId_/manage': {
+      id: '/_workspace/courses/$courseId_/manage'
+      path: '/courses/$courseId/manage'
+      fullPath: '/courses/$courseId/manage'
+      preLoaderRoute: typeof WorkspaceCoursesCourseIdManageRouteImport
+      parentRoute: typeof WorkspaceRoute
     }
     '/_workspace/courses/new/$jobId': {
       id: '/_workspace/courses/new/$jobId'
@@ -453,12 +453,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkspaceCoursesNewJobIdRouteImport
       parentRoute: typeof WorkspaceRoute
     }
-    '/_workspace/courses/$courseId_/manage': {
-      id: '/_workspace/courses/$courseId_/manage'
-      path: '/courses/$courseId/manage'
-      fullPath: '/courses/$courseId/manage'
-      preLoaderRoute: typeof WorkspaceCoursesCourseIdManageRouteImport
-      parentRoute: typeof WorkspaceRoute
+    '/api/v1/progress/playback': {
+      id: '/api/v1/progress/playback'
+      path: '/api/v1/progress/playback'
+      fullPath: '/api/v1/progress/playback'
+      preLoaderRoute: typeof ApiV1ProgressPlaybackRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }

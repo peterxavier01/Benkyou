@@ -11,9 +11,10 @@ import {
 } from "@benkyou/ui";
 import { Link, useRouter, useRouterState } from "@tanstack/react-router";
 import { trackAnalyticsEvent } from "#/integrations/posthog/analytics";
+import { useHydratedSession } from "./use-hydrated-session";
 
 export default function BetterAuthHeader() {
-	const { data: session, isPending } = authClient.useSession();
+	const { data: session, isPending } = useHydratedSession();
 	const router = useRouter();
 	const pathname = useRouterState({
 		select: (state) => state.location.pathname,

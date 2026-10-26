@@ -1,4 +1,3 @@
-import { authClient } from "@benkyou/auth/client";
 import { REPOSITORY_URL } from "@benkyou/core";
 import {
 	Button,
@@ -13,6 +12,7 @@ import {
 } from "@benkyou/ui";
 import { Link } from "@tanstack/react-router";
 import { type ReactNode, useState } from "react";
+import { useHydratedSession } from "#/integrations/better-auth/use-hydrated-session";
 import { BrandLogo } from "#components/brand-logo";
 
 const publicNav = [
@@ -77,7 +77,7 @@ function PublicHeader() {
 }
 
 function AccountButton() {
-	const { data: session, isPending } = authClient.useSession();
+	const { data: session, isPending } = useHydratedSession();
 
 	if (isPending) {
 		return <span className="h-9 w-[76px] animate-pulse rounded-md bg-muted" />;
@@ -205,7 +205,7 @@ function PublicPageIntro({
 		<section className="relative overflow-hidden border-border border-b">
 			<div
 				aria-hidden="true"
-				className="genko-grid absolute inset-0 [mask-image:linear-gradient(to_bottom,#000_55%,transparent)]"
+				className="genko-grid absolute inset-0 mask-[linear-gradient(to_bottom,#000_55%,transparent)]"
 			/>
 			<div className="relative mx-auto grid w-full max-w-6xl items-center gap-10 px-4 pt-10 pb-11 sm:px-6 sm:pt-16 sm:pb-16 lg:grid-cols-[minmax(0,1fr)_auto]">
 				<div className="grid max-w-3xl gap-4">
