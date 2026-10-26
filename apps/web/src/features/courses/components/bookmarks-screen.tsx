@@ -104,7 +104,7 @@ function BookmarksScreen({ initialData, search }: BookmarksScreenProps) {
 						>
 							<SelectTrigger
 								aria-label="Filter by notebook"
-								className="h-11 w-full min-w-[0] sm:h-9 **:data-[slot=select-value]:min-w-[0] **:data-[slot=select-value]:truncate"
+								className="w-full min-w-[0] data-[size=default]:h-11 sm:data-[size=default]:h-9 **:data-[slot=select-value]:min-w-[0] **:data-[slot=select-value]:truncate"
 							>
 								<SelectValue placeholder="All notebooks" />
 							</SelectTrigger>
