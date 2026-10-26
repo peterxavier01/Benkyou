@@ -63,7 +63,7 @@ function ShelfNotebookRow({
 			<div className="grid min-w-0 flex-1 gap-0.5">
 				<Link
 					data-slot="notebook-link"
-					to="/courses/$courseId"
+					to="/notebooks/$courseId"
 					params={{ courseId: item.course.id }}
 					search={{ chapter: undefined, bookmark: undefined }}
 					className="truncate font-medium text-foreground text-sm no-underline hover:underline sm:font-semibold sm:font-serif sm:text-base"

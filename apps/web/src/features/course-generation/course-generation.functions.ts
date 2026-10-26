@@ -95,7 +95,7 @@ export const createCourseFromUrl = createServerFn({ method: "POST" })
 			sourceUrl: data.url,
 			canonicalUrl: parsedUrl.value.canonicalUrl,
 			title:
-				metadata?.title ?? `YouTube course ${parsedUrl.value.providerVideoId}`,
+				metadata?.title ?? `YouTube video ${parsedUrl.value.providerVideoId}`,
 			channelName: metadata?.channelName,
 			channelUrl: metadata?.channelUrl,
 			thumbnailUrl:
@@ -513,7 +513,7 @@ export const openSampleCourse = createServerFn({ method: "POST" }).handler(
 		const sample = await getOrCopySampleCourse(learner.id);
 
 		if (!sample) {
-			throw new Error("Sample course data has not been seeded yet.");
+			throw new Error("The sample notebook hasn’t been set up yet.");
 		}
 
 		return { courseId: sample.id };
@@ -728,7 +728,7 @@ async function assertGenerationRateLimit(
 
 	if (!result.allowed) {
 		throw new Error(
-			`Course generation is limited to ${result.limit} attempts per ${Math.round(
+			`Notebook creation is limited to ${result.limit} attempts per ${Math.round(
 				windowMs / 60 / 60 / 1000,
 			)} hours. Try again later.`,
 		);
@@ -943,7 +943,7 @@ function getRecord(value: unknown) {
 
 function toUserSafeGenerationFailure(error: unknown) {
 	if (error instanceof Error && error.message.includes("AI_API_KEY")) {
-		return "Course generation is not configured yet.";
+		return "Notebook creation isn’t set up yet.";
 	}
 
 	if (isYouTubeTranscriptFetchError(error)) {

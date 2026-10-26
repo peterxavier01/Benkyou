@@ -10,7 +10,7 @@ const filters = new Set<CourseLibraryFilterV1>([
 	"failed",
 ]);
 
-export const Route = createFileRoute("/_workspace/courses/")({
+export const Route = createFileRoute("/_workspace/notebooks/")({
 	validateSearch: (search: Record<string, unknown>) => ({
 		q: typeof search.q === "string" ? search.q : "",
 		filter:
@@ -20,5 +20,5 @@ export const Route = createFileRoute("/_workspace/courses/")({
 				: "all",
 	}),
 	loader: ({ context: { queryClient } }) =>
-		queryClient.ensureQueryData(courseLibraryQueryOptions()),
+		queryClient.query(courseLibraryQueryOptions()),
 });

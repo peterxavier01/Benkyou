@@ -176,7 +176,7 @@ function CourseManagementScreen({
 					queryKey: workspaceQueryKeys.courseLibrary,
 				}),
 			]);
-			await navigate({ href: `/courses/new/${result.generationJobId}` });
+			await navigate({ href: `/notebooks/new/${result.generationJobId}` });
 		},
 	});
 
@@ -195,7 +195,7 @@ function CourseManagementScreen({
 			await queryClient.invalidateQueries({
 				queryKey: workspaceQueryKeys.courseLibrary,
 			});
-			await navigate({ to: "/courses", search: { q: "", filter: "all" } });
+			await navigate({ to: "/notebooks", search: { q: "", filter: "all" } });
 		},
 	});
 
@@ -249,7 +249,7 @@ function CourseManagementScreen({
 				<div className="flex items-center gap-2">
 					<Button asChild size="sm" variant="outline">
 						<Link
-							to="/courses/$courseId"
+							to="/notebooks/$courseId"
 							params={{ courseId }}
 							search={{ chapter: undefined, bookmark: undefined }}
 						>

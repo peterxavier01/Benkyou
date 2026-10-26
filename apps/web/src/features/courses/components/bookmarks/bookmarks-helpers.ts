@@ -48,12 +48,12 @@ function getCourseFilterOptions(items: BookmarkListItemDTO[]) {
 
 function filterBookmarks(
 	items: BookmarkListItemDTO[],
-	search: { course: string; q: string },
+	search: { notebook: string; q: string },
 ) {
 	const query = search.q.trim().toLowerCase();
 
 	return items.filter((item) => {
-		if (search.course !== "all" && item.course.id !== search.course) {
+		if (search.notebook !== "all" && item.course.id !== search.notebook) {
 			return false;
 		}
 

@@ -67,9 +67,9 @@ export default function BetterAuthHeader() {
 					</DropdownMenuLabel>
 					<DropdownMenuSeparator className="sm:hidden" />
 					<DropdownMenuItem asChild>
-						<Link to="/courses" search={{ q: "", filter: "all" }}>
+						<Link to="/notebooks" search={{ q: "", filter: "all" }}>
 							<HugeIcon name="library" className="size-4" />
-							<span>Courses</span>
+							<span>Notebooks</span>
 						</Link>
 					</DropdownMenuItem>
 					<DropdownMenuItem asChild>
@@ -98,8 +98,8 @@ export default function BetterAuthHeader() {
 		<div className="flex items-center gap-2">
 			{!isCoursesPath(pathname) ? (
 				<Button asChild variant="ghost" size="sm">
-					<Link to="/courses" search={{ q: "", filter: "all" }}>
-						Courses
+					<Link to="/notebooks" search={{ q: "", filter: "all" }}>
+						Notebooks
 					</Link>
 				</Button>
 			) : null}
@@ -118,5 +118,5 @@ export default function BetterAuthHeader() {
 }
 
 function isCoursesPath(pathname: string) {
-	return pathname === "/courses" || pathname.startsWith("/courses/");
+	return pathname === "/notebooks" || pathname.startsWith("/notebooks/");
 }

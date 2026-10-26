@@ -3,7 +3,7 @@ import { createLazyFileRoute } from "@tanstack/react-router";
 import { WorkspacePage } from "#/components/workspace-layout";
 import { CourseLibraryScreen } from "#/features/courses/components/course-library-screen";
 
-export const Route = createLazyFileRoute("/_workspace/courses/")({
+export const Route = createLazyFileRoute("/_workspace/notebooks/")({
 	component: CoursesRoute,
 	pendingComponent: CourseLibraryPendingRoute,
 });

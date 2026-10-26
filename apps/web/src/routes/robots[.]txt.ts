@@ -23,7 +23,10 @@ function buildRobotsTxt() {
 		"Allow: /privacy$",
 		"Allow: /terms$",
 		"Disallow: /sign-in",
+		"Disallow: /notebooks",
+		// Old notebook URLs, which now redirect to /notebooks.
 		"Disallow: /courses",
+		"Disallow: /shelves",
 		"Disallow: /bookmarks",
 		"Disallow: /settings",
 		"Disallow: /api",

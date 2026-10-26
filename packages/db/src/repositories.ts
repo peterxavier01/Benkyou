@@ -498,7 +498,7 @@ export async function createCourseFromUrlRecord(
 					.values({
 						videoId: videoRow.id,
 						ownerId: input.ownerId,
-						title: input.title ?? `YouTube course ${input.providerVideoId}`,
+						title: input.title ?? `YouTube video ${input.providerVideoId}`,
 						description: input.description,
 						visibility: "private",
 					})

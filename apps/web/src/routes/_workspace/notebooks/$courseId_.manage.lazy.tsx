@@ -4,7 +4,7 @@ import { WorkspacePage } from "#/components/workspace-layout";
 import { CourseManagementScreen } from "#/features/courses/components/course-management-screen";
 
 export const Route = createLazyFileRoute(
-	"/_workspace/courses/$courseId_/manage",
+	"/_workspace/notebooks/$courseId_/manage",
 )({
 	component: CourseManageRoute,
 	errorComponent: CourseManageErrorRoute,
@@ -23,7 +23,7 @@ function CourseManageRoute() {
 function CourseManagePendingRoute() {
 	return (
 		<WorkspacePage
-			title="Manage course"
+			title="Manage notebook"
 			description="Loading course controls."
 			maxWidth="wide"
 		>
@@ -44,8 +44,8 @@ function CourseManagePendingRoute() {
 function CourseManageErrorRoute() {
 	return (
 		<WorkspacePage
-			title="Manage course"
-			description="This course could not be managed."
+			title="Manage notebook"
+			description="This notebook could not be opened for editing."
 			maxWidth="narrow"
 		>
 			<ContentPanel className="p-6">
@@ -63,7 +63,7 @@ function CourseManageErrorRoute() {
 						</p>
 						<div className="mt-5 flex flex-wrap gap-2">
 							<Button asChild>
-								<Link to="/courses" search={{ q: "", filter: "all" }}>
+								<Link to="/notebooks" search={{ q: "", filter: "all" }}>
 									Open library
 								</Link>
 							</Button>

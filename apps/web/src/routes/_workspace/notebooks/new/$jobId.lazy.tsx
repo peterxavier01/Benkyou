@@ -3,7 +3,7 @@ import { createLazyFileRoute } from "@tanstack/react-router";
 import { WorkspacePage } from "#/components/workspace-layout";
 import { GenerationStatusScreen } from "#/features/course-generation/components/generation-status-screen";
 
-export const Route = createLazyFileRoute("/_workspace/courses/new/$jobId")({
+export const Route = createLazyFileRoute("/_workspace/notebooks/new/$jobId")({
 	component: GenerationStatusRoute,
 	pendingComponent: GenerationStatusPendingRoute,
 });

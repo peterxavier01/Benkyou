@@ -96,7 +96,7 @@ function GenerationStatusScreen({
 			await queryClient.invalidateQueries({
 				queryKey: workspaceQueryKeys.courseLibrary,
 			});
-			await navigate({ href: `/courses/new/${result.generationJobId}` });
+			await navigate({ href: `/notebooks/new/${result.generationJobId}` });
 		},
 	});
 
@@ -194,7 +194,7 @@ function GenerationStatusScreen({
 					{detail.canOpenCourse ? (
 						<Button asChild>
 							<Link
-								to="/courses/$courseId"
+								to="/notebooks/$courseId"
 								params={{ courseId: detail.course.id }}
 								search={{ chapter: undefined, bookmark: undefined }}
 							>
@@ -232,7 +232,7 @@ function GenerationStatusScreen({
 					{terminal ? null : (
 						<p className="basis-full text-[13px] text-muted-foreground sm:ml-auto sm:basis-auto">
 							You can leave this page. It will be waiting in{" "}
-							<Link to="/courses" search={{ q: "", filter: "all" }}>
+							<Link to="/notebooks" search={{ q: "", filter: "all" }}>
 								Notebooks
 							</Link>
 							.

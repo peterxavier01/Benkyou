@@ -43,7 +43,7 @@ function CoursePlayerHeaderActions({
 						<DropdownMenuItem asChild>
 							<Link
 								params={{ courseId }}
-								to="/courses/$courseId/manage"
+								to="/notebooks/$courseId/manage"
 								onClick={onNavigate}
 							>
 								<HugeIcon name="edit" className="size-4" />
@@ -53,7 +53,7 @@ function CoursePlayerHeaderActions({
 						<DropdownMenuItem asChild>
 							<Link
 								search={{ q: "", filter: "all" }}
-								to="/courses"
+								to="/notebooks"
 								onClick={onNavigate}
 							>
 								<HugeIcon name="notebook" className="size-4" />
@@ -68,7 +68,7 @@ function CoursePlayerHeaderActions({
 				<Button asChild size="sm" variant="outline">
 					<Link
 						params={{ courseId }}
-						to="/courses/$courseId/manage"
+						to="/notebooks/$courseId/manage"
 						onClick={onNavigate}
 					>
 						<HugeIcon name="edit" className="size-4" />

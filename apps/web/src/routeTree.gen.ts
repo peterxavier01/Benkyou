@@ -22,13 +22,15 @@ import { Route as TermsRouteImport } from './routes/terms'
 import { Route as WorkspaceBookmarksRouteImport } from './routes/_workspace/bookmarks'
 import { Route as WorkspaceSettingsRouteImport } from './routes/_workspace/settings'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
-import { Route as WorkspaceCoursesIndexRouteImport } from './routes/_workspace/courses/index'
-import { Route as WorkspaceCoursesCourseIdRouteImport } from './routes/_workspace/courses/$courseId'
+import { Route as CoursesIndexRouteImport } from './routes/courses/index'
+import { Route as CoursesSplatRouteImport } from './routes/courses/$'
+import { Route as WorkspaceNotebooksIndexRouteImport } from './routes/_workspace/notebooks/index'
+import { Route as WorkspaceNotebooksCourseIdRouteImport } from './routes/_workspace/notebooks/$courseId'
 import { Route as WorkspaceShelvesIndexRouteImport } from './routes/_workspace/shelves/index'
 import { Route as WorkspaceShelvesShelfIdRouteImport } from './routes/_workspace/shelves/$shelfId'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
-import { Route as WorkspaceCoursesCourseIdManageRouteImport } from './routes/_workspace/courses/$courseId_.manage'
-import { Route as WorkspaceCoursesNewJobIdRouteImport } from './routes/_workspace/courses/new/$jobId'
+import { Route as WorkspaceNotebooksCourseIdManageRouteImport } from './routes/_workspace/notebooks/$courseId_.manage'
+import { Route as WorkspaceNotebooksNewJobIdRouteImport } from './routes/_workspace/notebooks/new/$jobId'
 import { Route as ApiV1ProgressPlaybackRouteImport } from './routes/api/v1/progress/playback'
 
 const IndexRoute = IndexRouteImport.update({
@@ -99,20 +101,30 @@ const ApiHealthRoute = ApiHealthRouteImport.update({
   path: '/api/health',
   getParentRoute: () => rootRouteImport,
 } as any)
-const WorkspaceCoursesIndexRoute = WorkspaceCoursesIndexRouteImport.update({
+const CoursesIndexRoute = CoursesIndexRouteImport.update({
   id: '/courses/',
   path: '/courses/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CoursesSplatRoute = CoursesSplatRouteImport.update({
+  id: '/courses/$',
+  path: '/courses/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkspaceNotebooksIndexRoute = WorkspaceNotebooksIndexRouteImport.update({
+  id: '/notebooks/',
+  path: '/notebooks/',
   getParentRoute: () => WorkspaceRoute,
 } as any).lazy(() =>
-  import('./routes/_workspace/courses/index.lazy').then((d) => d.Route),
+  import('./routes/_workspace/notebooks/index.lazy').then((d) => d.Route),
 )
-const WorkspaceCoursesCourseIdRoute =
-  WorkspaceCoursesCourseIdRouteImport.update({
-    id: '/courses/$courseId',
-    path: '/courses/$courseId',
+const WorkspaceNotebooksCourseIdRoute =
+  WorkspaceNotebooksCourseIdRouteImport.update({
+    id: '/notebooks/$courseId',
+    path: '/notebooks/$courseId',
     getParentRoute: () => WorkspaceRoute,
   } as any).lazy(() =>
-    import('./routes/_workspace/courses/$courseId.lazy').then((d) => d.Route),
+    import('./routes/_workspace/notebooks/$courseId.lazy').then((d) => d.Route),
   )
 const WorkspaceShelvesIndexRoute = WorkspaceShelvesIndexRouteImport.update({
   id: '/shelves/',
@@ -133,23 +145,25 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
-const WorkspaceCoursesCourseIdManageRoute =
-  WorkspaceCoursesCourseIdManageRouteImport.update({
-    id: '/courses/$courseId_/manage',
-    path: '/courses/$courseId/manage',
+const WorkspaceNotebooksCourseIdManageRoute =
+  WorkspaceNotebooksCourseIdManageRouteImport.update({
+    id: '/notebooks/$courseId_/manage',
+    path: '/notebooks/$courseId/manage',
     getParentRoute: () => WorkspaceRoute,
   } as any).lazy(() =>
-    import('./routes/_workspace/courses/$courseId_.manage.lazy').then(
+    import('./routes/_workspace/notebooks/$courseId_.manage.lazy').then(
       (d) => d.Route,
     ),
   )
-const WorkspaceCoursesNewJobIdRoute =
-  WorkspaceCoursesNewJobIdRouteImport.update({
-    id: '/courses/new/$jobId',
-    path: '/courses/new/$jobId',
+const WorkspaceNotebooksNewJobIdRoute =
+  WorkspaceNotebooksNewJobIdRouteImport.update({
+    id: '/notebooks/new/$jobId',
+    path: '/notebooks/new/$jobId',
     getParentRoute: () => WorkspaceRoute,
   } as any).lazy(() =>
-    import('./routes/_workspace/courses/new/$jobId.lazy').then((d) => d.Route),
+    import('./routes/_workspace/notebooks/new/$jobId.lazy').then(
+      (d) => d.Route,
+    ),
   )
 const ApiV1ProgressPlaybackRoute = ApiV1ProgressPlaybackRouteImport.update({
   id: '/api/v1/progress/playback',
@@ -170,13 +184,15 @@ export interface FileRoutesByFullPath {
   '/bookmarks': typeof WorkspaceBookmarksRoute
   '/settings': typeof WorkspaceSettingsRoute
   '/api/health': typeof ApiHealthRoute
-  '/courses/$courseId': typeof WorkspaceCoursesCourseIdRoute
+  '/courses/$': typeof CoursesSplatRoute
+  '/courses/': typeof CoursesIndexRoute
+  '/notebooks/$courseId': typeof WorkspaceNotebooksCourseIdRoute
   '/shelves/$shelfId': typeof WorkspaceShelvesShelfIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
-  '/courses/': typeof WorkspaceCoursesIndexRoute
+  '/notebooks/': typeof WorkspaceNotebooksIndexRoute
   '/shelves/': typeof WorkspaceShelvesIndexRoute
-  '/courses/$courseId/manage': typeof WorkspaceCoursesCourseIdManageRoute
-  '/courses/new/$jobId': typeof WorkspaceCoursesNewJobIdRoute
+  '/notebooks/$courseId/manage': typeof WorkspaceNotebooksCourseIdManageRoute
+  '/notebooks/new/$jobId': typeof WorkspaceNotebooksNewJobIdRoute
   '/api/v1/progress/playback': typeof ApiV1ProgressPlaybackRoute
 }
 export interface FileRoutesByTo {
@@ -192,13 +208,15 @@ export interface FileRoutesByTo {
   '/bookmarks': typeof WorkspaceBookmarksRoute
   '/settings': typeof WorkspaceSettingsRoute
   '/api/health': typeof ApiHealthRoute
-  '/courses/$courseId': typeof WorkspaceCoursesCourseIdRoute
+  '/courses/$': typeof CoursesSplatRoute
+  '/courses': typeof CoursesIndexRoute
+  '/notebooks/$courseId': typeof WorkspaceNotebooksCourseIdRoute
   '/shelves/$shelfId': typeof WorkspaceShelvesShelfIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
-  '/courses': typeof WorkspaceCoursesIndexRoute
+  '/notebooks': typeof WorkspaceNotebooksIndexRoute
   '/shelves': typeof WorkspaceShelvesIndexRoute
-  '/courses/$courseId/manage': typeof WorkspaceCoursesCourseIdManageRoute
-  '/courses/new/$jobId': typeof WorkspaceCoursesNewJobIdRoute
+  '/notebooks/$courseId/manage': typeof WorkspaceNotebooksCourseIdManageRoute
+  '/notebooks/new/$jobId': typeof WorkspaceNotebooksNewJobIdRoute
   '/api/v1/progress/playback': typeof ApiV1ProgressPlaybackRoute
 }
 export interface FileRoutesById {
@@ -216,13 +234,15 @@ export interface FileRoutesById {
   '/_workspace/bookmarks': typeof WorkspaceBookmarksRoute
   '/_workspace/settings': typeof WorkspaceSettingsRoute
   '/api/health': typeof ApiHealthRoute
-  '/_workspace/courses/$courseId': typeof WorkspaceCoursesCourseIdRoute
+  '/courses/$': typeof CoursesSplatRoute
+  '/courses/': typeof CoursesIndexRoute
+  '/_workspace/notebooks/$courseId': typeof WorkspaceNotebooksCourseIdRoute
   '/_workspace/shelves/$shelfId': typeof WorkspaceShelvesShelfIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
-  '/_workspace/courses/': typeof WorkspaceCoursesIndexRoute
+  '/_workspace/notebooks/': typeof WorkspaceNotebooksIndexRoute
   '/_workspace/shelves/': typeof WorkspaceShelvesIndexRoute
-  '/_workspace/courses/$courseId_/manage': typeof WorkspaceCoursesCourseIdManageRoute
-  '/_workspace/courses/new/$jobId': typeof WorkspaceCoursesNewJobIdRoute
+  '/_workspace/notebooks/$courseId_/manage': typeof WorkspaceNotebooksCourseIdManageRoute
+  '/_workspace/notebooks/new/$jobId': typeof WorkspaceNotebooksNewJobIdRoute
   '/api/v1/progress/playback': typeof ApiV1ProgressPlaybackRoute
 }
 export interface FileRouteTypes {
@@ -240,13 +260,15 @@ export interface FileRouteTypes {
     | '/bookmarks'
     | '/settings'
     | '/api/health'
-    | '/courses/$courseId'
+    | '/courses/$'
+    | '/courses/'
+    | '/notebooks/$courseId'
     | '/shelves/$shelfId'
     | '/api/auth/$'
-    | '/courses/'
+    | '/notebooks/'
     | '/shelves/'
-    | '/courses/$courseId/manage'
-    | '/courses/new/$jobId'
+    | '/notebooks/$courseId/manage'
+    | '/notebooks/new/$jobId'
     | '/api/v1/progress/playback'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -262,13 +284,15 @@ export interface FileRouteTypes {
     | '/bookmarks'
     | '/settings'
     | '/api/health'
-    | '/courses/$courseId'
+    | '/courses/$'
+    | '/courses'
+    | '/notebooks/$courseId'
     | '/shelves/$shelfId'
     | '/api/auth/$'
-    | '/courses'
+    | '/notebooks'
     | '/shelves'
-    | '/courses/$courseId/manage'
-    | '/courses/new/$jobId'
+    | '/notebooks/$courseId/manage'
+    | '/notebooks/new/$jobId'
     | '/api/v1/progress/playback'
   id:
     | '__root__'
@@ -285,13 +309,15 @@ export interface FileRouteTypes {
     | '/_workspace/bookmarks'
     | '/_workspace/settings'
     | '/api/health'
-    | '/_workspace/courses/$courseId'
+    | '/courses/$'
+    | '/courses/'
+    | '/_workspace/notebooks/$courseId'
     | '/_workspace/shelves/$shelfId'
     | '/api/auth/$'
-    | '/_workspace/courses/'
+    | '/_workspace/notebooks/'
     | '/_workspace/shelves/'
-    | '/_workspace/courses/$courseId_/manage'
-    | '/_workspace/courses/new/$jobId'
+    | '/_workspace/notebooks/$courseId_/manage'
+    | '/_workspace/notebooks/new/$jobId'
     | '/api/v1/progress/playback'
   fileRoutesById: FileRoutesById
 }
@@ -307,6 +333,8 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermsRoute: typeof TermsRoute
   ApiHealthRoute: typeof ApiHealthRoute
+  CoursesSplatRoute: typeof CoursesSplatRoute
+  CoursesIndexRoute: typeof CoursesIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiV1ProgressPlaybackRoute: typeof ApiV1ProgressPlaybackRoute
 }
@@ -404,18 +432,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_workspace/courses/': {
-      id: '/_workspace/courses/'
+    '/courses/': {
+      id: '/courses/'
       path: '/courses'
       fullPath: '/courses/'
-      preLoaderRoute: typeof WorkspaceCoursesIndexRouteImport
+      preLoaderRoute: typeof CoursesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/courses/$': {
+      id: '/courses/$'
+      path: '/courses/$'
+      fullPath: '/courses/$'
+      preLoaderRoute: typeof CoursesSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_workspace/notebooks/': {
+      id: '/_workspace/notebooks/'
+      path: '/notebooks'
+      fullPath: '/notebooks/'
+      preLoaderRoute: typeof WorkspaceNotebooksIndexRouteImport
       parentRoute: typeof WorkspaceRoute
     }
-    '/_workspace/courses/$courseId': {
-      id: '/_workspace/courses/$courseId'
-      path: '/courses/$courseId'
-      fullPath: '/courses/$courseId'
-      preLoaderRoute: typeof WorkspaceCoursesCourseIdRouteImport
+    '/_workspace/notebooks/$courseId': {
+      id: '/_workspace/notebooks/$courseId'
+      path: '/notebooks/$courseId'
+      fullPath: '/notebooks/$courseId'
+      preLoaderRoute: typeof WorkspaceNotebooksCourseIdRouteImport
       parentRoute: typeof WorkspaceRoute
     }
     '/_workspace/shelves/': {
@@ -439,18 +481,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_workspace/courses/$courseId_/manage': {
-      id: '/_workspace/courses/$courseId_/manage'
-      path: '/courses/$courseId/manage'
-      fullPath: '/courses/$courseId/manage'
-      preLoaderRoute: typeof WorkspaceCoursesCourseIdManageRouteImport
+    '/_workspace/notebooks/$courseId_/manage': {
+      id: '/_workspace/notebooks/$courseId_/manage'
+      path: '/notebooks/$courseId/manage'
+      fullPath: '/notebooks/$courseId/manage'
+      preLoaderRoute: typeof WorkspaceNotebooksCourseIdManageRouteImport
       parentRoute: typeof WorkspaceRoute
     }
-    '/_workspace/courses/new/$jobId': {
-      id: '/_workspace/courses/new/$jobId'
-      path: '/courses/new/$jobId'
-      fullPath: '/courses/new/$jobId'
-      preLoaderRoute: typeof WorkspaceCoursesNewJobIdRouteImport
+    '/_workspace/notebooks/new/$jobId': {
+      id: '/_workspace/notebooks/new/$jobId'
+      path: '/notebooks/new/$jobId'
+      fullPath: '/notebooks/new/$jobId'
+      preLoaderRoute: typeof WorkspaceNotebooksNewJobIdRouteImport
       parentRoute: typeof WorkspaceRoute
     }
     '/api/v1/progress/playback': {
@@ -466,23 +508,23 @@ declare module '@tanstack/react-router' {
 interface WorkspaceRouteChildren {
   WorkspaceBookmarksRoute: typeof WorkspaceBookmarksRoute
   WorkspaceSettingsRoute: typeof WorkspaceSettingsRoute
-  WorkspaceCoursesCourseIdRoute: typeof WorkspaceCoursesCourseIdRoute
+  WorkspaceNotebooksCourseIdRoute: typeof WorkspaceNotebooksCourseIdRoute
   WorkspaceShelvesShelfIdRoute: typeof WorkspaceShelvesShelfIdRoute
-  WorkspaceCoursesIndexRoute: typeof WorkspaceCoursesIndexRoute
+  WorkspaceNotebooksIndexRoute: typeof WorkspaceNotebooksIndexRoute
   WorkspaceShelvesIndexRoute: typeof WorkspaceShelvesIndexRoute
-  WorkspaceCoursesCourseIdManageRoute: typeof WorkspaceCoursesCourseIdManageRoute
-  WorkspaceCoursesNewJobIdRoute: typeof WorkspaceCoursesNewJobIdRoute
+  WorkspaceNotebooksCourseIdManageRoute: typeof WorkspaceNotebooksCourseIdManageRoute
+  WorkspaceNotebooksNewJobIdRoute: typeof WorkspaceNotebooksNewJobIdRoute
 }
 
 const WorkspaceRouteChildren: WorkspaceRouteChildren = {
   WorkspaceBookmarksRoute: WorkspaceBookmarksRoute,
   WorkspaceSettingsRoute: WorkspaceSettingsRoute,
-  WorkspaceCoursesCourseIdRoute: WorkspaceCoursesCourseIdRoute,
+  WorkspaceNotebooksCourseIdRoute: WorkspaceNotebooksCourseIdRoute,
   WorkspaceShelvesShelfIdRoute: WorkspaceShelvesShelfIdRoute,
-  WorkspaceCoursesIndexRoute: WorkspaceCoursesIndexRoute,
+  WorkspaceNotebooksIndexRoute: WorkspaceNotebooksIndexRoute,
   WorkspaceShelvesIndexRoute: WorkspaceShelvesIndexRoute,
-  WorkspaceCoursesCourseIdManageRoute: WorkspaceCoursesCourseIdManageRoute,
-  WorkspaceCoursesNewJobIdRoute: WorkspaceCoursesNewJobIdRoute,
+  WorkspaceNotebooksCourseIdManageRoute: WorkspaceNotebooksCourseIdManageRoute,
+  WorkspaceNotebooksNewJobIdRoute: WorkspaceNotebooksNewJobIdRoute,
 }
 
 const WorkspaceRouteWithChildren = WorkspaceRoute._addFileChildren(
@@ -501,6 +543,8 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermsRoute: TermsRoute,
   ApiHealthRoute: ApiHealthRoute,
+  CoursesSplatRoute: CoursesSplatRoute,
+  CoursesIndexRoute: CoursesIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiV1ProgressPlaybackRoute: ApiV1ProgressPlaybackRoute,
 }

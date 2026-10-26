@@ -76,7 +76,7 @@ function NotebookRow({
 			<div className="min-w-0">
 				<Link
 					data-slot="notebook-link"
-					to="/courses/$courseId"
+					to="/notebooks/$courseId"
 					params={{ courseId: item.course.id }}
 					search={{ chapter: undefined, bookmark: undefined }}
 					className="line-clamp-2 font-semibold font-serif text-[17px] text-foreground leading-snug no-underline hover:underline"
@@ -173,7 +173,7 @@ function PreparingRow({
 			<div className="flex shrink-0 items-center gap-2">
 				{job ? (
 					<Button asChild size="sm" variant="outline">
-						<Link to="/courses/new/$jobId" params={{ jobId: job.id }}>
+						<Link to="/notebooks/new/$jobId" params={{ jobId: job.id }}>
 							{failed ? "Details" : "View progress"}
 						</Link>
 					</Button>

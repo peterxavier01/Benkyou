@@ -5,12 +5,12 @@ import type { MouseEvent } from "react";
 type TabItem = {
 	icon: HugeIconName;
 	label: string;
-	to: "/" | "/courses" | "/shelves" | "/bookmarks" | "/settings";
+	to: "/" | "/notebooks" | "/shelves" | "/bookmarks" | "/settings";
 };
 
 const tabItems: TabItem[] = [
 	{ icon: "add", label: "New", to: "/" },
-	{ icon: "notebook", label: "Notebooks", to: "/courses" },
+	{ icon: "notebook", label: "Notebooks", to: "/notebooks" },
 	{ icon: "library", label: "Shelves", to: "/shelves" },
 	{ icon: "bookmark", label: "Bookmarks", to: "/bookmarks" },
 	{ icon: "settings", label: "Settings", to: "/settings" },
@@ -64,7 +64,7 @@ function WorkspaceTabBar({
  * its own back navigation and hides the tab bar.
  */
 function isImmersiveRoute(pathname: string) {
-	return /^\/courses\/(?!new(?:\/|$))[^/]+\/?$/.test(pathname);
+	return /^\/notebooks\/(?!new(?:\/|$))[^/]+\/?$/.test(pathname);
 }
 
 export { WorkspaceTabBar, isImmersiveRoute };

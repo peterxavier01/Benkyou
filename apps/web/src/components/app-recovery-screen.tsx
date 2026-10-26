@@ -51,7 +51,7 @@ function AppRecoveryScreen({
 						</Button>
 					) : null}
 					<Button asChild variant={onRetry ? "outline" : "default"}>
-						<Link to="/courses" search={{ q: "", filter: "all" }}>
+						<Link to="/notebooks" search={{ q: "", filter: "all" }}>
 							Go to your notebooks
 						</Link>
 					</Button>

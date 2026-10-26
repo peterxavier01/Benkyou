@@ -60,7 +60,7 @@ function UpNext({
 				</div>
 				<Button asChild className="ml-auto">
 					<Link
-						to="/courses/$courseId"
+						to="/notebooks/$courseId"
 						params={{ courseId: item.course.id }}
 						search={{ chapter: undefined, bookmark: undefined }}
 					>

@@ -63,14 +63,14 @@ function NewCourseForm({
 					reused_existing_course: result.reusedExistingCourse,
 				});
 				if (result.reusedExistingCourse || result.generationJobId === null) {
-					await navigate({ href: `/courses/${result.courseId}` });
+					await navigate({ href: `/notebooks/${result.courseId}` });
 					return;
 				}
 
 				trackAnalyticsEvent("generation_job_started", {
 					source: "course_create",
 				});
-				await navigate({ href: `/courses/new/${result.generationJobId}` });
+				await navigate({ href: `/notebooks/new/${result.generationJobId}` });
 			} catch (error) {
 				trackAnalyticsEvent("course_create_failed", {
 					reason: error instanceof Error ? "server_error" : "unknown",
@@ -88,7 +88,7 @@ function NewCourseForm({
 			const result = await openSample();
 			trackAnalyticsEvent("sample_course_opened");
 			setOpeningSample(false);
-			await navigate({ href: `/courses/${result.courseId}` });
+			await navigate({ href: `/notebooks/${result.courseId}` });
 		} catch (error) {
 			setFormError(toErrorMessage(error));
 			setOpeningSample(false);

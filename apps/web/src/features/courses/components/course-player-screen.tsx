@@ -610,7 +610,7 @@ function CoursePlayerScreen({
 			await queryClient.invalidateQueries({
 				queryKey: playerQueryKey,
 			});
-			await navigate({ href: `/courses/new/${result.generationJobId}` });
+			await navigate({ href: `/notebooks/new/${result.generationJobId}` });
 		},
 	});
 
@@ -945,7 +945,7 @@ function CoursePlayerScreen({
 				youtubePlayerRef.current?.seekTo(nextSeconds);
 			}
 			void navigate({
-				to: "/courses/$courseId",
+				to: "/notebooks/$courseId",
 				params: { courseId },
 				search: { chapter: chapter.id, bookmark: undefined },
 				replace: true,
@@ -985,7 +985,7 @@ function CoursePlayerScreen({
 					),
 				};
 				void navigate({
-					to: "/courses/$courseId",
+					to: "/notebooks/$courseId",
 					params: { courseId },
 					search: {
 						chapter: chapter.id,

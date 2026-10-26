@@ -3,5 +3,5 @@ import { shelvesQueryOptions } from "#/features/workspace/workspace.queries";
 
 export const Route = createFileRoute("/_workspace/shelves/$shelfId")({
 	loader: ({ context: { queryClient } }) =>
-		queryClient.ensureQueryData(shelvesQueryOptions()),
+		queryClient.query(shelvesQueryOptions()),
 });

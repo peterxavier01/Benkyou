@@ -46,7 +46,7 @@ function NoChaptersScreen({
 					) : null}
 					{latestJob ? (
 						<Button asChild variant="outline">
-							<Link to="/courses/new/$jobId" params={{ jobId: latestJob.id }}>
+							<Link to="/notebooks/new/$jobId" params={{ jobId: latestJob.id }}>
 								See what happened
 							</Link>
 						</Button>

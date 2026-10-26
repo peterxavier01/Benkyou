@@ -3,7 +3,7 @@ import { createLazyFileRoute, Link } from "@tanstack/react-router";
 import { WorkspacePage } from "#/components/workspace-layout";
 import { CoursePlayerScreen } from "#/features/courses/components/course-player-screen";
 
-export const Route = createLazyFileRoute("/_workspace/courses/$courseId")({
+export const Route = createLazyFileRoute("/_workspace/notebooks/$courseId")({
 	component: CoursePlayerRoute,
 	errorComponent: CoursePlayerErrorRoute,
 	pendingComponent: CoursePlayerPendingRoute,
@@ -27,7 +27,7 @@ function CoursePlayerRoute() {
 function CoursePlayerPendingRoute() {
 	return (
 		<WorkspacePage
-			title="Course player"
+			title="Notebook"
 			description="Loading study workspace."
 			maxWidth="full"
 			className="p-0 sm:p-0"
@@ -70,8 +70,8 @@ function CoursePlayerPendingRoute() {
 function CoursePlayerErrorRoute() {
 	return (
 		<WorkspacePage
-			title="Course player"
-			description="This course could not be opened."
+			title="Notebook"
+			description="This notebook could not be opened."
 			maxWidth="narrow"
 		>
 			<ContentPanel className="p-6">
@@ -89,7 +89,7 @@ function CoursePlayerErrorRoute() {
 						</p>
 						<div className="mt-5 flex flex-wrap gap-2">
 							<Button asChild>
-								<Link to="/courses" search={{ q: "", filter: "all" }}>
+								<Link to="/notebooks" search={{ q: "", filter: "all" }}>
 									Open library
 								</Link>
 							</Button>

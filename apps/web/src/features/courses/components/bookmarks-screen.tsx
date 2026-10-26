@@ -40,7 +40,7 @@ import {
 interface BookmarksScreenProps {
 	initialData: GetBookmarksResponseV1;
 	search: {
-		course: string;
+		notebook: string;
 		q: string;
 	};
 }
@@ -89,15 +89,15 @@ function BookmarksScreen({ initialData, search }: BookmarksScreenProps) {
 							/>
 						</label>
 						<Select
-							value={search.course}
-							onValueChange={(course) => {
+							value={search.notebook}
+							onValueChange={(notebook) => {
 								trackAnalyticsEvent("bookmark_filter_changed", {
-									course_filter: course === "all" ? "all" : "specific",
+									course_filter: notebook === "all" ? "all" : "specific",
 									query_length: search.q.length,
 								});
 								void navigate({
 									to: "/bookmarks",
-									search: { ...search, course },
+									search: { ...search, notebook },
 									replace: true,
 								});
 							}}
@@ -169,7 +169,7 @@ function BookmarksScreen({ initialData, search }: BookmarksScreenProps) {
 										{group.course.title}
 									</h2>
 									<Link
-										to="/courses/$courseId"
+										to="/notebooks/$courseId"
 										params={{ courseId: group.course.id }}
 										search={{ chapter: undefined, bookmark: undefined }}
 										className="inline-flex shrink-0 items-center gap-1 font-medium text-[13px]"
@@ -209,7 +209,7 @@ function EmptyBookmarksState() {
 				</EmptyHeader>
 				<EmptyContent>
 					<Button asChild>
-						<Link to="/courses" search={{ q: "", filter: "all" }}>
+						<Link to="/notebooks" search={{ q: "", filter: "all" }}>
 							Go to your notebooks
 						</Link>
 					</Button>
@@ -230,7 +230,7 @@ function BookmarkRow({ item }: { item: BookmarkListItemDTO }) {
 			label={
 				<Link
 					data-slot="bookmark-link"
-					to="/courses/$courseId"
+					to="/notebooks/$courseId"
 					params={{ courseId: item.course.id }}
 					search={{
 						chapter: item.bookmark.chapterId ?? undefined,

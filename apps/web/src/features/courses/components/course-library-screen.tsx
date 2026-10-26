@@ -81,7 +81,7 @@ function CourseLibraryScreen({
 			await queryClient.invalidateQueries({
 				queryKey: workspaceQueryKeys.courseLibrary,
 			});
-			await navigate({ href: `/courses/new/${result.generationJobId}` });
+			await navigate({ href: `/notebooks/new/${result.generationJobId}` });
 		},
 	});
 
@@ -104,7 +104,7 @@ function CourseLibraryScreen({
 			await queryClient.invalidateQueries({
 				queryKey: workspaceQueryKeys.courseLibrary,
 			});
-			await navigate({ href: `/courses/${result.courseId}` });
+			await navigate({ href: `/notebooks/${result.courseId}` });
 		},
 	});
 
@@ -123,7 +123,7 @@ function CourseLibraryScreen({
 
 	const setSearch = (next: Partial<CourseLibraryScreenProps["search"]>) =>
 		void navigate({
-			to: "/courses",
+			to: "/notebooks",
 			search: { ...search, ...next },
 			replace: true,
 		});
@@ -150,7 +150,7 @@ function CourseLibraryScreen({
 							action={
 								<Button asChild size="sm">
 									<Link
-										to="/courses/$courseId"
+										to="/notebooks/$courseId"
 										params={{ courseId: resume.course.id }}
 										search={{ chapter: undefined, bookmark: undefined }}
 									>

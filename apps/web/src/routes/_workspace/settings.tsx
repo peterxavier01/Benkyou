@@ -18,9 +18,9 @@ export const Route = createFileRoute("/_workspace/settings")({
 	}),
 	loader: async ({ context: { queryClient } }) => {
 		const [currentUser, library, preferences] = await Promise.all([
-			queryClient.ensureQueryData(currentUserQueryOptions()),
-			queryClient.ensureQueryData(courseLibraryQueryOptions()),
-			queryClient.ensureQueryData(learningPreferencesQueryOptions()),
+			queryClient.query(currentUserQueryOptions()),
+			queryClient.query(courseLibraryQueryOptions()),
+			queryClient.query(learningPreferencesQueryOptions()),
 		]);
 
 		return { currentUser, library, preferences };
