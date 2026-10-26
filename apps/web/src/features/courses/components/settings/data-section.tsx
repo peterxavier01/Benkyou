@@ -103,10 +103,21 @@ function DataSection({
 								>
 									<SelectValue placeholder="Choose a notebook" />
 								</SelectTrigger>
-								<SelectContent className="w-(--radix-select-trigger-width) max-w-[calc(100vw-2rem)]">
+								<SelectContent
+									position="popper"
+									side="bottom"
+									align="start"
+									collisionPadding={16}
+									className="max-h-[min(20rem,var(--radix-select-content-available-height))] min-w-(--radix-select-trigger-width) max-w-[min(28rem,calc(100vw-2rem))] p-1"
+								>
 									{notebooks.map((item) => (
-										<SelectItem key={item.course.id} value={item.course.id}>
-											<span className="block truncate">
+										<SelectItem
+											key={item.course.id}
+											value={item.course.id}
+											title={item.course.title}
+											className="py-1.5 *:[span]:last:min-w-0"
+										>
+											<span className="block min-w-0 truncate">
 												{item.course.title}
 											</span>
 										</SelectItem>

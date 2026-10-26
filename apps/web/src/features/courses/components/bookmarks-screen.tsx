@@ -12,6 +12,7 @@ import {
 	Select,
 	SelectContent,
 	SelectItem,
+	SelectSeparator,
 	SelectTrigger,
 	SelectValue,
 } from "@benkyou/ui";
@@ -107,13 +108,27 @@ function BookmarksScreen({ initialData, search }: BookmarksScreenProps) {
 							>
 								<SelectValue placeholder="All notebooks" />
 							</SelectTrigger>
-							<SelectContent className="w-(--radix-select-trigger-width) max-w-[calc(100vw-2rem)]">
-								<SelectItem value="all">
-									<span className="block truncate">All notebooks</span>
+							<SelectContent
+								position="popper"
+								side="bottom"
+								align="start"
+								collisionPadding={16}
+								className="max-h-[min(20rem,var(--radix-select-content-available-height))] min-w-(--radix-select-trigger-width) max-w-[min(28rem,calc(100vw-2rem))] p-1"
+							>
+								<SelectItem value="all" className="py-1.5 *:[span]:last:min-w-0">
+									<span className="block min-w-0 truncate">All notebooks</span>
 								</SelectItem>
+								{courses.length > 0 ? <SelectSeparator /> : null}
 								{courses.map((course) => (
-									<SelectItem key={course.id} value={course.id}>
-										<span className="block truncate">{course.title}</span>
+									<SelectItem
+										key={course.id}
+										value={course.id}
+										title={course.title}
+										className="py-1.5 *:[span]:last:min-w-0"
+									>
+										<span className="block min-w-0 truncate">
+											{course.title}
+										</span>
 									</SelectItem>
 								))}
 							</SelectContent>
