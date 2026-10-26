@@ -1,6 +1,9 @@
 # Benkyou
 
-![Benkyou banner](./apps/web/public/banner.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./apps/web/public/readme-banner-dark.png">
+  <img alt="Benkyou: study long videos, don't just watch them" src="./apps/web/public/readme-banner-light.png">
+</picture>
 
 Benkyou turns long videos into focused study workspaces: chapters, notes,
 bookmarks, progress, and resume state.
