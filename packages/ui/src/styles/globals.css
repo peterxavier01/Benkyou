@@ -2,6 +2,7 @@
 @import "tw-animate-css";
 
 @import "./tokens.css";
+@import "./note-markdown.css";
 
 @custom-variant dark (&:is(.dark *));
 

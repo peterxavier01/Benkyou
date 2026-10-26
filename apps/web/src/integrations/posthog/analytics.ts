@@ -41,6 +41,8 @@ export type AnalyticsEventName =
 	| "note_preview_opened"
 	| "note_save_failed"
 	| "note_saved"
+	| "note_timestamp_inserted"
+	| "note_timestamp_jumped_to"
 	| "playback_milestone_reached"
 	| "playback_paused"
 	| "playback_speed_changed"

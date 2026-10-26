@@ -1,0 +1,178 @@
+/*
+ * Rendered chapter notes (`NoteMarkdown`). Serif reading text, sans/mono for
+ * structure and code. Syntax colors are muted to sit on the paper background;
+ * TanStack Highlight emits `th-*` token classes with no inline colors.
+ */
+@layer components {
+	.note-markdown {
+		--th-token: var(--foreground);
+		--th-comment: oklch(0.56 0.012 85);
+		--th-keyword: oklch(0.5 0.15 25);
+		--th-string: oklch(0.48 0.1 155);
+		--th-number: oklch(0.5 0.12 250);
+		--th-function: oklch(0.48 0.13 300);
+		--th-type: oklch(0.52 0.11 60);
+		--th-property: oklch(0.5 0.1 240);
+		--th-tag: oklch(0.47 0.1 160);
+		--th-inserted: var(--success);
+		--th-deleted: var(--destructive);
+
+		min-width: 0;
+		font-family: var(--font-serif);
+		font-size: var(--text-prose);
+		line-height: var(--text-prose--line-height);
+		overflow-wrap: anywhere;
+
+		& > * + * {
+			margin-top: 0.75em;
+		}
+
+		& :is(h1, h2, h3, h4, h5, h6) {
+			font-family: var(--font-sans);
+			font-weight: 600;
+			line-height: 1.3;
+		}
+		& h1 {
+			font-size: 1.25rem;
+		}
+		& h2 {
+			font-size: 1.0625rem;
+		}
+		& :is(h3, h4, h5, h6) {
+			font-size: 0.9375rem;
+		}
+		& * + :is(h1, h2, h3, h4, h5, h6) {
+			margin-top: 1.25em;
+		}
+
+		& :is(ul, ol) {
+			padding-left: 1.25em;
+		}
+		& ul {
+			list-style: disc;
+		}
+		& ol {
+			list-style: decimal;
+		}
+		& li + li,
+		& li > :is(ul, ol) {
+			margin-top: 0.25em;
+		}
+		& li > input[type="checkbox"] {
+			margin-right: 0.5em;
+			vertical-align: -0.1em;
+			accent-color: var(--primary);
+		}
+		& ul:has(> li > input[type="checkbox"]) {
+			list-style: none;
+			padding-left: 0.25em;
+		}
+
+		& a {
+			color: var(--primary);
+			text-decoration: underline;
+			text-underline-offset: 0.2em;
+		}
+
+		& blockquote {
+			border-left: 2px solid var(--border);
+			padding-left: 0.875em;
+			color: var(--muted-foreground);
+		}
+
+		& hr {
+			border-color: var(--border);
+		}
+
+		& mark {
+			border-radius: 0.125rem;
+			background: var(--mark-tint);
+			padding: 0 0.125em;
+			color: inherit;
+		}
+
+		& :not(pre) > code {
+			border-radius: 0.25rem;
+			background: var(--muted);
+			padding: 0.1em 0.3em;
+			font-family: var(--font-mono);
+			font-size: 0.82em;
+		}
+
+		& pre.tm-code {
+			overflow-x: auto;
+			border: 1px solid var(--border);
+			border-radius: var(--radius-surface);
+			background: color-mix(in oklch, var(--muted) 55%, var(--card));
+			padding: 0.75rem 0.875rem;
+			color: var(--th-token);
+			font-family: var(--font-mono);
+			font-size: 0.8125rem;
+			line-height: 1.6;
+		}
+
+		& table {
+			display: block;
+			max-width: 100%;
+			overflow-x: auto;
+			border-collapse: collapse;
+			font-family: var(--font-sans);
+			font-size: 0.875rem;
+		}
+		& :is(th, td) {
+			border: 1px solid var(--border);
+			padding: 0.375rem 0.625rem;
+			text-align: left;
+		}
+		& th {
+			background: var(--muted);
+			font-weight: 600;
+		}
+
+		& .th-comment {
+			color: var(--th-comment);
+			font-style: italic;
+		}
+		& :is(.th-keyword, .th-command, .th-operator) {
+			color: var(--th-keyword);
+		}
+		& .th-string {
+			color: var(--th-string);
+		}
+		& :is(.th-number, .th-literal) {
+			color: var(--th-number);
+		}
+		& .th-function {
+			color: var(--th-function);
+		}
+		& :is(.th-type, .th-variable, .th-code-inline) {
+			color: var(--th-type);
+		}
+		& :is(.th-property, .th-attr, .th-heading, .th-link) {
+			color: var(--th-property);
+		}
+		& :is(.th-tag, .th-selector) {
+			color: var(--th-tag);
+		}
+		& .th-meta {
+			color: var(--muted-foreground);
+		}
+		& .th-inserted {
+			color: var(--th-inserted);
+		}
+		& .th-deleted {
+			color: var(--th-deleted);
+		}
+	}
+
+	.dark .note-markdown {
+		--th-comment: oklch(0.66 0.012 85);
+		--th-keyword: oklch(0.74 0.13 25);
+		--th-string: oklch(0.76 0.1 155);
+		--th-number: oklch(0.76 0.1 250);
+		--th-function: oklch(0.76 0.11 300);
+		--th-type: oklch(0.8 0.1 70);
+		--th-property: oklch(0.76 0.09 230);
+		--th-tag: oklch(0.76 0.1 160);
+	}
+}

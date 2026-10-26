@@ -514,7 +514,7 @@ function getCreatorTimestampSkipReason(input: {
 	return "fewer_than_two_parseable_chapters";
 }
 
-function parseTimestamp(timestamp: string): number | null {
+export function parseTimestamp(timestamp: string): number | null {
 	const parts = timestamp.split(":").map((part) => Number.parseInt(part, 10));
 
 	if (

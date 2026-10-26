@@ -27,6 +27,8 @@ function LearningTabs({
 	onDeleteBookmark,
 	onEditBookmark,
 	onJumpToBookmark,
+	getCurrentSeconds,
+	onSeekTimestamp,
 }: {
 	courseId: string;
 	chapter: CourseChapterDTO | null;
@@ -37,6 +39,8 @@ function LearningTabs({
 	onDeleteBookmark: (bookmark: BookmarkDTO) => void;
 	onEditBookmark: (bookmark: BookmarkDTO) => void;
 	onJumpToBookmark: (bookmark: BookmarkDTO) => void;
+	getCurrentSeconds: () => number;
+	onSeekTimestamp: (seconds: number) => void;
 }) {
 	return (
 		<ContentPanel className="min-w-0 overflow-hidden p-0">
@@ -76,7 +80,13 @@ function LearningTabs({
 					)}
 				</TabsContent>
 				<TabsContent value="notes" className="p-4">
-					<NotesEditor courseId={courseId} chapter={chapter} note={note} />
+					<NotesEditor
+						courseId={courseId}
+						chapter={chapter}
+						note={note}
+						getCurrentSeconds={getCurrentSeconds}
+						onSeekTimestamp={onSeekTimestamp}
+					/>
 				</TabsContent>
 				<TabsContent value="bookmarks" className="p-2">
 					{bookmarks.length === 0 ? (

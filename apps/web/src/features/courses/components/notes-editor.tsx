@@ -1,17 +1,25 @@
 import {
 	DEFAULT_NOTE_AUTOSAVE_DEBOUNCE_MS,
+	formatNoteTimestamp,
+	insertIntoText,
 	LOCAL_STORAGE_KEYS,
+	parseNoteMarkdown,
 } from "@benkyou/core";
 import type {
 	ChapterNoteDTO,
 	CourseChapterDTO,
 	CoursePlayerDataDTO,
 } from "@benkyou/types";
-import { Button, HugeIcon, StatusBadge, Textarea } from "@benkyou/ui";
+import {
+	Button,
+	HugeIcon,
+	NoteMarkdown,
+	StatusBadge,
+	Textarea,
+} from "@benkyou/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import type { ReactNode } from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { trackAnalyticsEvent } from "#/integrations/posthog/analytics";
 import { upsertChapterNote } from "../course-workspace.functions";
 
@@ -22,6 +30,10 @@ interface NotesEditorProps {
 	courseId: string;
 	chapter: CourseChapterDTO | null;
 	note: ChapterNoteDTO | undefined;
+	/** Current video time, used by "Insert timestamp". Omit to hide the button. */
+	getCurrentSeconds?: () => number;
+	/** Called when a `[12:34]` timestamp in the preview is clicked. */
+	onSeekTimestamp?: (seconds: number) => void;
 }
 
 interface NoteDraft {
@@ -40,7 +52,13 @@ interface SaveSnapshot {
 
 const draftStorageKey = `${LOCAL_STORAGE_KEYS.notes}:drafts`;
 
-function NotesEditor({ courseId, chapter, note }: NotesEditorProps) {
+function NotesEditor({
+	courseId,
+	chapter,
+	note,
+	getCurrentSeconds,
+	onSeekTimestamp,
+}: NotesEditorProps) {
 	const queryClient = useQueryClient();
 	const saveNote = useServerFn(upsertChapterNote);
 	const [mode, setMode] = useState<"write" | "preview">("write");
@@ -62,6 +80,7 @@ function NotesEditor({ courseId, chapter, note }: NotesEditorProps) {
 	const inFlightRef = useRef(false);
 	const queuedSaveRef = useRef<SaveSnapshot | null>(null);
 	const copyResetTimeoutRef = useRef<number | null>(null);
+	const textareaRef = useRef<HTMLTextAreaElement>(null);
 	const copyDisabled = markdown.trim().length === 0;
 
 	useEffect(
@@ -342,6 +361,39 @@ function NotesEditor({ courseId, chapter, note }: NotesEditorProps) {
 		});
 	};
 
+	const seekFromNote = useCallback(
+		(seconds: number) => {
+			trackAnalyticsEvent("note_timestamp_jumped_to", {});
+			onSeekTimestamp?.(seconds);
+		},
+		[onSeekTimestamp],
+	);
+
+	const insertTimestamp = () => {
+		if (!chapter || !getCurrentSeconds) {
+			return;
+		}
+
+		// In preview the textarea is unmounted, so the time goes at the end.
+		const textarea = mode === "write" ? textareaRef.current : null;
+		const next = insertIntoText(
+			markdown,
+			textarea?.selectionStart ?? markdown.length,
+			textarea?.selectionEnd ?? markdown.length,
+			formatNoteTimestamp(getCurrentSeconds()),
+		);
+
+		setMode("write");
+		updateMarkdown(next.text);
+		trackAnalyticsEvent("note_timestamp_inserted", {
+			from_preview: mode === "preview",
+		});
+		window.requestAnimationFrame(() => {
+			textareaRef.current?.focus();
+			textareaRef.current?.setSelectionRange(next.caret, next.caret);
+		});
+	};
+
 	return (
 		<div className="space-y-3">
 			<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -359,6 +411,19 @@ function NotesEditor({ courseId, chapter, note }: NotesEditorProps) {
 					</p>
 				</div>
 				<div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:gap-3">
+					{getCurrentSeconds ? (
+						<Button
+							className="min-h-11 lg:min-h-6"
+							disabled={!chapter}
+							type="button"
+							size="xs"
+							variant="outline"
+							onClick={insertTimestamp}
+						>
+							<HugeIcon name="clock" className="size-3.5" />
+							Insert timestamp
+						</Button>
+					) : null}
 					<fieldset className="flex rounded-md border border-border bg-background p-0.5">
 						<legend className="sr-only">Note editor mode</legend>
 						<Button
@@ -449,15 +514,19 @@ function NotesEditor({ courseId, chapter, note }: NotesEditorProps) {
 
 			{mode === "write" ? (
 				<Textarea
+					ref={textareaRef}
 					value={markdown}
 					disabled={!chapter}
 					aria-label="Chapter notes"
-					placeholder="Write Markdown notes for this chapter."
+					placeholder="Write Markdown notes for this chapter. [12:34] links to a moment in the video, ==text== highlights."
 					className="ph-no-capture min-h-48 resize-y leading-6 lg:min-h-64"
 					onChange={(event) => updateMarkdown(event.target.value)}
 				/>
 			) : (
-				<MarkdownPreview markdown={markdown} />
+				<MarkdownPreview
+					markdown={markdown}
+					onSeekTimestamp={onSeekTimestamp ? seekFromNote : undefined}
+				/>
 			)}
 
 			{saveState === "failed" || saveState === "conflict" ? (
@@ -474,10 +543,16 @@ function NotesEditor({ courseId, chapter, note }: NotesEditorProps) {
 	);
 }
 
-function MarkdownPreview({ markdown }: { markdown: string }) {
-	const blocks = parseMarkdownBlocks(markdown);
+function MarkdownPreview({
+	markdown,
+	onSeekTimestamp,
+}: {
+	markdown: string;
+	onSeekTimestamp?: (seconds: number) => void;
+}) {
+	const document = useMemo(() => parseNoteMarkdown(markdown), [markdown]);
 
-	if (blocks.length === 0) {
+	if (document.children.length === 0) {
 		return (
 			<div className="min-h-48 rounded-md border border-border bg-muted/30 p-4 text-muted-foreground text-sm lg:min-h-64">
 				Nothing to preview yet.
@@ -486,173 +561,12 @@ function MarkdownPreview({ markdown }: { markdown: string }) {
 	}
 
 	return (
-		<div className="min-h-48 max-w-prose space-y-3 rounded-md border border-border bg-card p-5 font-serif text-prose lg:min-h-64">
-			{blocks}
-		</div>
+		<NoteMarkdown
+			document={document}
+			onSeekTimestamp={onSeekTimestamp}
+			className="min-h-48 max-w-prose rounded-md border border-border bg-card p-5 lg:min-h-64"
+		/>
 	);
-}
-
-function parseMarkdownBlocks(markdown: string) {
-	const lines = markdown.split(/\r?\n/);
-	const blocks: ReactNode[] = [];
-	let paragraph: string[] = [];
-	let list: string[] = [];
-	let code: string[] | null = null;
-
-	const flushParagraph = () => {
-		if (paragraph.length === 0) {
-			return;
-		}
-		blocks.push(
-			<p key={`p-${blocks.length}`}>{renderInline(paragraph.join(" "))}</p>,
-		);
-		paragraph = [];
-	};
-	const flushList = () => {
-		if (list.length === 0) {
-			return;
-		}
-		const seenItems = new Map<string, number>();
-		blocks.push(
-			<ul key={`ul-${blocks.length}`} className="list-disc space-y-1 pl-5">
-				{list.map((item) => {
-					const count = seenItems.get(item) ?? 0;
-					seenItems.set(item, count + 1);
-					return <li key={`${item}-${count}`}>{renderInline(item)}</li>;
-				})}
-			</ul>,
-		);
-		list = [];
-	};
-
-	for (const line of lines) {
-		if (line.trim().startsWith("```")) {
-			if (code) {
-				blocks.push(
-					<pre
-						key={`code-${blocks.length}`}
-						className="overflow-auto rounded-md border border-border bg-background p-3 font-mono text-xs"
-					>
-						<code>{code.join("\n")}</code>
-					</pre>,
-				);
-				code = null;
-			} else {
-				flushParagraph();
-				flushList();
-				code = [];
-			}
-			continue;
-		}
-
-		if (code) {
-			code.push(line);
-			continue;
-		}
-
-		if (line.trim() === "") {
-			flushParagraph();
-			flushList();
-			continue;
-		}
-
-		const heading = /^(#{1,3})\s+(.+)$/.exec(line);
-		if (heading) {
-			flushParagraph();
-			flushList();
-			const level = heading[1].length;
-			const text = heading[2];
-			if (level === 1) {
-				blocks.push(
-					<h2
-						key={`h-${blocks.length}`}
-						className="font-semibold text-xl leading-snug"
-					>
-						{renderInline(text)}
-					</h2>,
-				);
-			} else if (level === 2) {
-				blocks.push(
-					<h3 key={`h-${blocks.length}`} className="font-semibold">
-						{renderInline(text)}
-					</h3>,
-				);
-			} else {
-				blocks.push(
-					<h4 key={`h-${blocks.length}`} className="font-semibold text-sm">
-						{renderInline(text)}
-					</h4>,
-				);
-			}
-			continue;
-		}
-
-		const listItem = /^[-*]\s+(.+)$/.exec(line);
-		if (listItem) {
-			flushParagraph();
-			list.push(listItem[1]);
-			continue;
-		}
-
-		if (line.startsWith(">")) {
-			flushParagraph();
-			flushList();
-			blocks.push(
-				<blockquote
-					key={`quote-${blocks.length}`}
-					className="rounded-md border border-border bg-background px-3 py-2 text-muted-foreground"
-				>
-					{renderInline(line.replace(/^>\s?/, ""))}
-				</blockquote>,
-			);
-			continue;
-		}
-
-		paragraph.push(line.trim());
-	}
-
-	flushParagraph();
-	flushList();
-
-	if (code) {
-		blocks.push(
-			<pre
-				key={`code-${blocks.length}`}
-				className="overflow-auto rounded-md border border-border bg-background p-3 font-mono text-xs"
-			>
-				<code>{code.join("\n")}</code>
-			</pre>,
-		);
-	}
-
-	return blocks;
-}
-
-function renderInline(text: string) {
-	const parts = text.split(/(`[^`]+`|\*\*[^*]+\*\*)/g);
-	let cursor = 0;
-
-	return parts.map((part) => {
-		cursor += part.length;
-		const key = `${cursor}-${part}`;
-
-		if (part.startsWith("`") && part.endsWith("`")) {
-			return (
-				<code
-					key={key}
-					className="rounded bg-background px-1 py-0.5 font-mono text-xs"
-				>
-					{part.slice(1, -1)}
-				</code>
-			);
-		}
-
-		if (part.startsWith("**") && part.endsWith("**")) {
-			return <strong key={key}>{part.slice(2, -2)}</strong>;
-		}
-
-		return part;
-	});
 }
 
 function mergeNote(current: ChapterNoteDTO[], next: ChapterNoteDTO) {

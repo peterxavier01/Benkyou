@@ -12,6 +12,7 @@ export * from "./components/feedback-state";
 export * from "./components/hugeicon";
 export * from "./components/input";
 export * from "./components/label";
+export * from "./components/note-markdown";
 export * from "./components/playback-timeline";
 export * from "./components/player-layout";
 export * from "./components/progress";

@@ -1177,6 +1177,21 @@ function CoursePlayerScreen({
 		],
 	);
 
+	const seekToNoteTimestamp = useCallback(
+		(seconds: number) =>
+			seekBy(seconds - latestProgressRef.current.currentSeconds, {
+				showControls: false,
+			}),
+		[seekBy],
+	);
+
+	const getPlaybackSeconds = useCallback(
+		() =>
+			youtubePlayerRef.current?.getPlaybackSnapshot()?.timeSeconds ??
+			latestProgressRef.current.currentSeconds,
+		[],
+	);
+
 	const changePlayerMuted = (muted: boolean) => {
 		const nextVolume =
 			!muted && playerVolume === 0
@@ -1758,6 +1773,8 @@ function CoursePlayerScreen({
 							onDeleteBookmark={requestBookmarkDelete}
 							onEditBookmark={openEditBookmarkDialog}
 							onJumpToBookmark={jumpToBookmark}
+							getCurrentSeconds={getPlaybackSeconds}
+							onSeekTimestamp={seekToNoteTimestamp}
 						/>
 
 						{saveError ? (
