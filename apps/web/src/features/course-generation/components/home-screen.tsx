@@ -19,7 +19,7 @@ function HomeScreen() {
 			<section className="relative overflow-hidden">
 				<div
 					aria-hidden="true"
-					className="genko-grid absolute inset-0 [mask-image:linear-gradient(to_bottom,#000_55%,transparent)]"
+					className="genko-grid absolute inset-0 mask-[linear-gradient(to_bottom,#000_55%,transparent)]"
 				/>
 				<div className="relative mx-auto grid w-full max-w-6xl grid-cols-[minmax(0,1fr)] items-center gap-12 px-4 pt-10 pb-16 sm:px-6 sm:pt-16 lg:grid-cols-2 lg:gap-14 lg:pt-[72px] lg:pb-24">
 					<div className="grid gap-6 sm:gap-7">
