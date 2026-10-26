@@ -1357,6 +1357,9 @@ function CoursePlayerScreen({
 	) => {
 		if (event.pointerType !== "mouse") return;
 		const target = event.target;
+		// Pop-ups such as the speed menu are portaled, but React still sends
+		// their events here. They carry `data-player-controls` so that moving
+		// focus to the surface doesn't close them before the click lands.
 		if (target instanceof Element && target.closest("[data-player-controls]")) {
 			return;
 		}
