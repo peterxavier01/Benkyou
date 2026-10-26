@@ -52,6 +52,17 @@
 	}
 }
 
+/* Swipeable rows: touch users scroll by swiping, so hide the bar; mice keep it. */
+@utility touch-scrollbar-none {
+	@media (pointer: coarse) {
+		scrollbar-width: none;
+
+		&::-webkit-scrollbar {
+			display: none;
+		}
+	}
+}
+
 /* Genkō yōshi grid: entry and empty states only (see DESIGN.md). */
 @utility genko-grid {
 	background-image:

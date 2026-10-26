@@ -57,7 +57,7 @@ function WorkspacePage({
 			</header>
 			<section
 				className={cn(
-					"mx-auto grid w-full gap-4 p-3 sm:p-6",
+					"mx-auto grid w-full grid-cols-[minmax(0,1fr)] gap-4 p-3 sm:p-6",
 					maxWidthClasses[maxWidth],
 					className,
 				)}

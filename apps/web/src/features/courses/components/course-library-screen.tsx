@@ -165,7 +165,7 @@ function CourseLibraryScreen({
 					<div className="flex flex-col-reverse gap-3 lg:flex-row lg:items-center lg:justify-between">
 						<fieldset
 							aria-label="Filter notebooks"
-							className="-mx-3 m-0 flex min-w-0 gap-1.5 overflow-x-auto border-0 p-0 px-3 lg:mx-0 lg:flex-wrap lg:px-0"
+							className="-mx-3 m-0 flex min-w-0 touch-scrollbar-none gap-1.5 overflow-x-auto border-0 p-0 px-3 lg:mx-0 lg:flex-wrap lg:px-0"
 						>
 							{(Object.keys(filterLabels) as CourseLibraryFilterV1[]).map(
 								(filter) => {
