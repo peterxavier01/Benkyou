@@ -93,12 +93,20 @@ function AccountButton() {
 		);
 	}
 
+	// Signed-out learners keep private notebooks too, so they get a way in.
 	return (
-		<Button asChild variant="outline">
-			<Link to="/sign-in" search={{ redirect: "/courses" }}>
-				Sign in
-			</Link>
-		</Button>
+		<>
+			<Button asChild variant="ghost" className="hidden md:inline-flex">
+				<Link to="/courses" search={{ q: "", filter: "all" }}>
+					Your notebooks
+				</Link>
+			</Button>
+			<Button asChild variant="outline">
+				<Link to="/sign-in" search={{ redirect: "/courses" }}>
+					Sign in
+				</Link>
+			</Button>
+		</>
 	);
 }
 
@@ -138,6 +146,15 @@ function PublicMobileMenu() {
 							{item.label}
 						</Link>
 					))}
+					<Link
+						data-slot="public-nav-link"
+						to="/courses"
+						search={{ q: "", filter: "all" }}
+						className="flex min-h-12 items-center rounded-md px-3 text-base text-foreground no-underline hover:bg-muted"
+						onClick={() => setOpen(false)}
+					>
+						Your notebooks
+					</Link>
 					<a
 						data-slot="public-nav-link"
 						href={REPOSITORY_URL}
