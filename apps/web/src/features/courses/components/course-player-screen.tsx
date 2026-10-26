@@ -1744,7 +1744,7 @@ function CoursePlayerScreen({
 						onSelectChapter={selectChapter}
 					/>
 
-					<div className="order-3 mx-3 flex flex-col gap-3 lg:mx-0">
+					<div className="order-3 mx-3 mb-6 flex flex-col gap-3 lg:mx-0 lg:mb-0">
 						<LearningTabs
 							courseId={courseId}
 							chapter={selectedChapter}
