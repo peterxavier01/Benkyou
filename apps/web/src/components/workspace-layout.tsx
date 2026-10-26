@@ -43,6 +43,7 @@ const WorkspaceNavigationFlushContext =
 
 const navItems = [
 	{ icon: "notebook", label: "Notebooks", to: "/courses" },
+	{ icon: "library", label: "Shelves", to: "/shelves" },
 	{ icon: "bookmark", label: "Bookmarks", to: "/bookmarks" },
 	{ icon: "settings", label: "Settings", to: "/settings" },
 ] as const;

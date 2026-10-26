@@ -5,12 +5,13 @@ import type { MouseEvent } from "react";
 type TabItem = {
 	icon: HugeIconName;
 	label: string;
-	to: "/" | "/courses" | "/bookmarks" | "/settings";
+	to: "/" | "/courses" | "/shelves" | "/bookmarks" | "/settings";
 };
 
 const tabItems: TabItem[] = [
 	{ icon: "add", label: "New", to: "/" },
 	{ icon: "notebook", label: "Notebooks", to: "/courses" },
+	{ icon: "library", label: "Shelves", to: "/shelves" },
 	{ icon: "bookmark", label: "Bookmarks", to: "/bookmarks" },
 	{ icon: "settings", label: "Settings", to: "/settings" },
 ];
@@ -26,7 +27,7 @@ function WorkspaceTabBar({
 	return (
 		<nav
 			aria-label="App"
-			className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-border border-t bg-background/95 px-1 pt-1.5 pb-[max(env(safe-area-inset-bottom),0.5rem)] backdrop-blur supports-backdrop-filter:bg-background/90 md:hidden"
+			className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-border border-t bg-background/95 px-1 pt-1.5 pb-[max(env(safe-area-inset-bottom),0.5rem)] backdrop-blur supports-backdrop-filter:bg-background/90 md:hidden"
 		>
 			{tabItems.map((item) => {
 				const active = isActive(item.to);
