@@ -39,7 +39,7 @@ function ChapterRow({
 			data-state={state}
 			aria-current={current ? "step" : undefined}
 			className={cn(
-				"flex w-full items-center gap-3 rounded-md px-3 text-left text-foreground text-sm no-underline outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring",
+				"flex w-full min-w-0 items-center gap-3 rounded-md px-3 text-left text-foreground text-sm no-underline outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring",
 				density === "compact" ? "min-h-10" : "min-h-11",
 				current &&
 					"bg-accent font-semibold text-accent-foreground hover:bg-accent",
