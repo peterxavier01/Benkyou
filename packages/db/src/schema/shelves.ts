@@ -19,7 +19,7 @@ import {
 
 /**
  * A learner's named group of notebooks, such as a course split across
- * several videos. Shelves always belong to a signed-in user.
+ * several videos. Every shelf has an owner, signed in or anonymous.
  */
 export const shelves = pgTable(
 	"shelves",

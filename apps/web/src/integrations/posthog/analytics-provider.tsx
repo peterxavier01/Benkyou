@@ -32,7 +32,9 @@ function AnalyticsInitializer() {
 function AnalyticsIdentity() {
 	const { data: session, isPending } = authClient.useSession();
 	const identifiedUserIdRef = useRef<string | null>(null);
-	const user = session?.user;
+	// Anonymous learners have placeholder names and emails; keep PostHog's
+	// own anonymous id for them.
+	const user = session?.user.isAnonymous ? undefined : session?.user;
 
 	useEffect(() => {
 		if (isPending) {

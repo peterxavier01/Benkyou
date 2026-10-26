@@ -27,7 +27,7 @@ import { shelvesQueryOptions } from "#/features/workspace/workspace.queries";
 import { WorkspacePage } from "#components/workspace-layout";
 import { useShelfMutations } from "../use-shelf-mutations";
 import { ShelfNameDialog } from "./shelf-name-dialog";
-import { ShelfCovers, ShelvesEmpty, SignInForShelves } from "./shelf-parts";
+import { ShelfCovers, ShelvesEmpty } from "./shelf-parts";
 
 function ShelvesScreen({ initialData }: { initialData: GetShelvesResponseV1 }) {
 	const { data } = useQuery({ ...shelvesQueryOptions(), initialData });
@@ -35,12 +35,12 @@ function ShelvesScreen({ initialData }: { initialData: GetShelvesResponseV1 }) {
 	const navigate = useNavigate();
 	const [creating, setCreating] = useState(false);
 
-	const newShelfButton = data.available ? (
+	const newShelfButton = (
 		<Button type="button" onClick={() => setCreating(true)}>
 			<HugeIcon name="add" className="size-4" />
 			New shelf
 		</Button>
-	) : null;
+	);
 
 	return (
 		<WorkspacePage
@@ -48,9 +48,7 @@ function ShelvesScreen({ initialData }: { initialData: GetShelvesResponseV1 }) {
 			description="Group notebooks that belong together, like a course split across several videos."
 			action={data.shelves.length > 0 ? newShelfButton : null}
 		>
-			{!data.available ? (
-				<SignInForShelves />
-			) : data.shelves.length === 0 ? (
+			{data.shelves.length === 0 ? (
 				<ShelvesEmpty title="No shelves yet" action={newShelfButton}>
 					Make a shelf for a course split across several videos, a topic you
 					keep coming back to, or talks to watch next.
@@ -65,9 +63,7 @@ function ShelvesScreen({ initialData }: { initialData: GetShelvesResponseV1 }) {
 				</ContentPanel>
 			)}
 
-			{data.available &&
-			data.shelves.length > 0 &&
-			data.unshelved.length > 0 ? (
+			{data.shelves.length > 0 && data.unshelved.length > 0 ? (
 				<section aria-labelledby="unshelved" className="grid gap-3">
 					<div className="grid gap-0.5">
 						<h2 id="unshelved" className="font-semibold font-serif text-lg">

@@ -62,10 +62,10 @@ function DataSection({
 						label={
 							<span className="flex items-center gap-2">
 								<HugeIcon name="info" className="size-4" />
-								Not tied to an account
+								Saved in this browser
 							</span>
 						}
-						description="Notebooks made without signing in are shared with everyone else using this site without an account. Sign in to keep new notebooks private."
+						description="Notebooks you make without an account are private to this browser. Sign in or create an account to keep them on any device; they move over automatically."
 						control={
 							<Button asChild>
 								<Link to="/sign-in" search={{ redirect: "/settings" }}>

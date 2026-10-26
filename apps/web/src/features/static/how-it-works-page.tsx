@@ -37,8 +37,8 @@ const storageOptions: {
 	{
 		icon: "phone",
 		label: "No account",
-		title: "Shared on this site",
-		body: "Start right away. Notebooks made without signing in aren’t private: anyone using this site without an account can open them.",
+		title: "Private in this browser",
+		body: "Start right away. Notebooks made without signing in stay private to your browser, and move to your account when you sign in.",
 	},
 ];
 

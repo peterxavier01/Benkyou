@@ -83,9 +83,7 @@ export const getCoursePlayerData = createServerFn({ method: "POST" })
 	});
 
 export const getCourseManagementData = createServerFn({ method: "POST" })
-	.validator((input) =>
-		getCourseManagementDataRequestV1Schema.parse(input),
-	)
+	.validator((input) => getCourseManagementDataRequestV1Schema.parse(input))
 	.handler(async ({ data }): Promise<GetCourseManagementDataResponseV1> => {
 		const ownerId = await getOptionalUserId();
 		const managementData = await getCourseManagementDataRecord(
@@ -209,9 +207,7 @@ export const getLearningPreferences = createServerFn({ method: "GET" }).handler(
 );
 
 export const updateLearningPreferences = createServerFn({ method: "POST" })
-	.validator((input) =>
-		updateLearningPreferencesRequestV1Schema.parse(input),
-	)
+	.validator((input) => updateLearningPreferencesRequestV1Schema.parse(input))
 	.handler(async ({ data }): Promise<UpdateLearningPreferencesResponseV1> => {
 		const ownerId = await getOptionalUserId();
 
@@ -523,8 +519,9 @@ async function getOptionalUserId() {
 	return user?.id ?? null;
 }
 
+/** Ownerless notebooks predate anonymous identities and open for no one. */
 function canAccessCourse(courseOwnerId: string | null, userId: string | null) {
-	return courseOwnerId === userId || courseOwnerId === null;
+	return courseOwnerId !== null && courseOwnerId === userId;
 }
 
 function findChapterAtTime(

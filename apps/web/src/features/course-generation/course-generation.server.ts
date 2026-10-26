@@ -9,7 +9,10 @@ export {
 	generateCourseChapters,
 	transcriptSegmentsToText,
 } from "@benkyou/ai";
-export { getCurrentUserFromHeaders } from "@benkyou/auth/server";
+export {
+	ensureLearnerFromHeaders,
+	getCurrentUserFromHeaders,
+} from "@benkyou/auth/server";
 export {
 	cancelGenerationJob as cancelGenerationJobRecord,
 	claimGenerationJob,
@@ -20,7 +23,7 @@ export {
 	failGenerationJob,
 	getExistingCourseByProviderVideo,
 	getGenerationJobDetailRecord,
-	getSampleCourse,
+	getOrCopySampleCourse,
 	markGenerationJobTranscriptReady,
 	timeoutGenerationJob,
 } from "@benkyou/db";

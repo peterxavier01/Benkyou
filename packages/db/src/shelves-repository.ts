@@ -10,9 +10,9 @@ import { getCourseLibrary } from "./repositories";
 import { courses, shelfCourses, shelves } from "./schema";
 
 /*
- * Shelves always belong to a signed-in user, so every function here takes a
- * non-null user id and checks that the shelf, and any notebook added to it,
- * belong to that user.
+ * Shelves always belong to a user, signed in or anonymous, so every function
+ * here takes a non-null user id and checks that the shelf, and any notebook
+ * added to it, belong to that user.
  */
 
 export class ShelfLimitError extends Error {}

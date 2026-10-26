@@ -35,13 +35,22 @@ async function getUserId() {
 	return user?.id ?? null;
 }
 
-/** Shelves need an account: notebooks without an owner aren't private. */
+/** Without a user there are no shelves, so there is nothing to change. */
 async function requireUserId() {
 	const userId = await getUserId();
 	if (!userId) {
-		throw new Error("Sign in to use shelves.");
+		throw new Error("Shelf was not found.");
 	}
 	return userId;
+}
+
+/** Signed-out learners get an anonymous user the first time they save. */
+async function ensureLearnerId() {
+	const { ensureLearnerFromHeaders } = await getShelvesServer();
+	const learner = await ensureLearnerFromHeaders(
+		new Headers(getRequestHeaders()),
+	);
+	return learner.id;
 }
 
 async function loadShelf(shelfId: string, userId: string) {
@@ -69,18 +78,18 @@ export const getShelves = createServerFn({ method: "GET" }).handler(
 	async (): Promise<GetShelvesResponseV1> => {
 		const userId = await getUserId();
 		if (!userId) {
-			return { available: false, shelves: [], unshelved: [] };
+			return { shelves: [], unshelved: [] };
 		}
 		const { listShelfRecords } = await getShelvesServer();
 		const result = await listShelfRecords(userId);
-		return { available: true, ...result };
+		return result;
 	},
 );
 
 export const createShelf = createServerFn({ method: "POST" })
 	.validator((input) => createShelfRequestV1Schema.parse(input))
 	.handler(async ({ data }): Promise<CreateShelfResponseV1> => {
-		const userId = await requireUserId();
+		const userId = await ensureLearnerId();
 		const { createShelfRecord } = await getShelvesServer();
 		const shelf = await withLimitMessage(() =>
 			createShelfRecord(userId, data.name, MAX_SHELVES_PER_USER),
@@ -128,9 +137,7 @@ export const addNotebookToShelf = createServerFn({ method: "POST" })
 	});
 
 export const removeNotebookFromShelf = createServerFn({ method: "POST" })
-	.validator((input) =>
-		removeNotebookFromShelfRequestV1Schema.parse(input),
-	)
+	.validator((input) => removeNotebookFromShelfRequestV1Schema.parse(input))
 	.handler(async ({ data }): Promise<UpdateShelfNotebooksResponseV1> => {
 		const userId = await requireUserId();
 		const { removeNotebookFromShelfRecord } = await getShelvesServer();

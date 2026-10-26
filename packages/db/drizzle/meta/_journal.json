@@ -50,6 +50,13 @@
       "when": 1793010138902,
       "tag": "0006_shelves",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793028333648,
+      "tag": "0007_anonymous_users",
+      "breakpoints": true
     }
   ]
 }

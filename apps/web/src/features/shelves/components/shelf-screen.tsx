@@ -15,7 +15,7 @@ import { AddNotebookDialog } from "./add-notebook-dialog";
 import { candidatesFor, DeleteShelfButton, UpNext } from "./shelf-detail-parts";
 import { ShelfNameDialog } from "./shelf-name-dialog";
 import { ShelfNotebookRow } from "./shelf-notebook-row";
-import { ShelvesEmpty, SignInForShelves } from "./shelf-parts";
+import { ShelvesEmpty } from "./shelf-parts";
 
 function ShelfScreen({
 	shelfId,
@@ -26,14 +26,6 @@ function ShelfScreen({
 }) {
 	const { data } = useQuery({ ...shelvesQueryOptions(), initialData });
 	const entry = data.shelves.find((item) => item.shelf.id === shelfId);
-
-	if (!data.available) {
-		return (
-			<WorkspacePage title="Shelf">
-				<SignInForShelves />
-			</WorkspacePage>
-		);
-	}
 
 	if (!entry) {
 		return (

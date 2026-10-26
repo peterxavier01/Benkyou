@@ -13,12 +13,12 @@ function AccountSection({ currentUser }: { currentUser: SettingsUser }) {
 	if (!currentUser) {
 		return (
 			<SettingsGroup
-				title="You’re not signed in"
+				title="You're not signed in"
 				description="Sign in to keep your notebooks private and pick them up on any device."
 			>
 				<SettingsRow
 					label="Account"
-					description="Notebooks made without an account aren’t tied to you."
+					description="Your notebooks and shelves move to your account when you sign in."
 					control={
 						<div className="flex flex-wrap gap-2">
 							<Button asChild>

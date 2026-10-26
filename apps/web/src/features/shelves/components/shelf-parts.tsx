@@ -1,5 +1,5 @@
 import type { CourseLibraryItemDTO } from "@benkyou/types";
-import { Button, ContentPanel, HugeIcon } from "@benkyou/ui";
+import { ContentPanel, HugeIcon } from "@benkyou/ui";
 import {
 	Empty,
 	EmptyContent,
@@ -7,7 +7,6 @@ import {
 	EmptyHeader,
 	EmptyTitle,
 } from "@benkyou/ui/components/empty";
-import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { Thumbnail } from "#/features/courses/components/library/library-rows";
 
@@ -72,32 +71,4 @@ function ShelvesEmpty({
 	);
 }
 
-function SignInForShelves() {
-	return (
-		<ShelvesEmpty
-			title="Shelves need an account"
-			action={
-				<div className="flex flex-wrap justify-center gap-2">
-					<Button asChild>
-						<Link to="/sign-in" search={{ redirect: "/shelves" }}>
-							Sign in
-						</Link>
-					</Button>
-					<Button asChild variant="outline">
-						<Link
-							to="/sign-in"
-							search={{ redirect: "/shelves", mode: "sign-up" }}
-						>
-							Create an account
-						</Link>
-					</Button>
-				</div>
-			}
-		>
-			Shelves group notebooks that belong together, like a course split across
-			several videos. Sign in so your shelves stay yours.
-		</ShelvesEmpty>
-	);
-}
-
-export { ShelfCovers, ShelvesEmpty, SignInForShelves };
+export { ShelfCovers, ShelvesEmpty };

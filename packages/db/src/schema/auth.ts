@@ -19,6 +19,8 @@ export const authUser = pgTable(
 		email: text("email").notNull(),
 		emailVerified: boolean("email_verified").notNull().default(false),
 		image: text("image"),
+		/** Set by Better Auth's anonymous plugin for signed-out learners. */
+		isAnonymous: boolean("is_anonymous").default(false),
 		createdAt: createdAtColumn(),
 		updatedAt: updatedAtColumn(),
 	},

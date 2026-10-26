@@ -15,8 +15,6 @@ export interface ShelfWithNotebooksDTO {
 }
 
 export interface GetShelvesResponseV1 {
-	/** False when nobody is signed in: shelves need an account. */
-	available: boolean;
 	shelves: ShelfWithNotebooksDTO[];
 	/** The learner's notebooks that aren't on any shelf. */
 	unshelved: CourseLibraryItemDTO[];

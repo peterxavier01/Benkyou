@@ -62,7 +62,8 @@ export const createCourseFromUrl = createServerFn({ method: "POST" })
 		}
 
 		const headers = getHeaders();
-		const ownerId = await getOptionalUserId(headers);
+		const learner = await ensureLearner(headers);
+		const ownerId = learner.id;
 		const existingCourse = await getExistingCourseByProviderVideo(
 			parsedUrl.value.provider,
 			parsedUrl.value.providerVideoId,
@@ -77,7 +78,12 @@ export const createCourseFromUrl = createServerFn({ method: "POST" })
 			};
 		}
 
-		await assertGenerationRateLimit(headers, ownerId);
+		// Anonymous users are limited by IP, since clearing cookies gives a
+		// fresh anonymous user.
+		await assertGenerationRateLimit(
+			headers,
+			learner.isAnonymous ? null : learner.id,
+		);
 		const metadata = await safeFetchMetadata(
 			parsedUrl.value.providerVideoId,
 			parsedUrl.value.canonicalUrl,
@@ -501,9 +507,10 @@ export const cancelGenerationJob = createServerFn({ method: "POST" })
 		return { detail: toGenerationJobDetail(cancelled) };
 	});
 
-export const openSampleCourse = createServerFn({ method: "GET" }).handler(
+export const openSampleCourse = createServerFn({ method: "POST" }).handler(
 	async (): Promise<OpenSampleCourseResponseV1> => {
-		const sample = await getSampleCourse();
+		const learner = await ensureLearner(getHeaders());
+		const sample = await getOrCopySampleCourse(learner.id);
 
 		if (!sample) {
 			throw new Error("Sample course data has not been seeded yet.");
@@ -577,10 +584,10 @@ async function getGenerationJobDetailRecord(
 	);
 }
 
-async function getSampleCourse(
-	...args: Parameters<CourseGenerationServer["getSampleCourse"]>
+async function getOrCopySampleCourse(
+	...args: Parameters<CourseGenerationServer["getOrCopySampleCourse"]>
 ) {
-	return (await getCourseGenerationServer()).getSampleCourse(...args);
+	return (await getCourseGenerationServer()).getOrCopySampleCourse(...args);
 }
 
 async function markGenerationJobTranscriptReady(
@@ -688,6 +695,11 @@ function createDataApiExceptionDiagnostics(): YouTubeDataApiMetadataDiagnostics 
 		errorStatus: null,
 		errorReason: null,
 	};
+}
+
+async function ensureLearner(headers: Headers) {
+	const { ensureLearnerFromHeaders } = await getCourseGenerationServer();
+	return ensureLearnerFromHeaders(headers);
 }
 
 async function getOptionalUserId(headers = getHeaders()) {

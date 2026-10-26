@@ -58,8 +58,8 @@ function AuthIntroPanel() {
 				</ul>
 				<p className="flex gap-2.5 rounded-md border border-border bg-card p-3.5 text-muted-foreground text-sm leading-relaxed">
 					<HugeIcon name="info" className="mt-0.5 size-4 shrink-0" />
-					Everything already works without an account. Notebooks you made before
-					signing in stay where they are and aren’t moved to your account.
+					Everything already works without an account. Notebooks and shelves you
+					made before signing in move to your account.
 				</p>
 			</div>
 		</aside>

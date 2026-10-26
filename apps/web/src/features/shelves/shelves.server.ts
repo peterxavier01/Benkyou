@@ -1,6 +1,9 @@
 import "@tanstack/react-start/server-only";
 
-export { getCurrentUserFromHeaders } from "@benkyou/auth/server";
+export {
+	ensureLearnerFromHeaders,
+	getCurrentUserFromHeaders,
+} from "@benkyou/auth/server";
 export {
 	addNotebookToShelf as addNotebookToShelfRecord,
 	createShelf as createShelfRecord,

@@ -39,14 +39,16 @@ behind sign-in.
 
 Implementation:
 
-- Users can create or open a sample course without signing in.
-- Progress, notes, bookmarks, and preferences should work for anonymous users.
-- Anonymous learning data should use local storage first, with a versioned
-  payload format.
-- Hosted accounts can sync data after sign-in, but account sync is not required
-  to prove the first learning loop.
-- Server-created course and generation records may have a nullable owner until
-  the user signs in.
+- Users can create notebooks, open the sample, and make shelves without signing
+  in.
+- A signed-out learner gets a private anonymous user (Better Auth's anonymous
+  plugin) the first time they save something. That user owns their notebooks,
+  shelves, notes, progress, bookmarks, and preferences.
+- When the learner signs up or signs in, their data moves to the account and the
+  anonymous user is deleted.
+- Each learner gets their own copy of the seeded sample notebook.
+- Notebooks created before this change have no owner and are hidden from
+  everyone.
 
 ## 4. Initial AI Generation Path
 
