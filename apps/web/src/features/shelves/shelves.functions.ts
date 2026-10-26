@@ -78,7 +78,7 @@ export const getShelves = createServerFn({ method: "GET" }).handler(
 );
 
 export const createShelf = createServerFn({ method: "POST" })
-	.inputValidator((input) => createShelfRequestV1Schema.parse(input))
+	.validator((input) => createShelfRequestV1Schema.parse(input))
 	.handler(async ({ data }): Promise<CreateShelfResponseV1> => {
 		const userId = await requireUserId();
 		const { createShelfRecord } = await getShelvesServer();
@@ -89,7 +89,7 @@ export const createShelf = createServerFn({ method: "POST" })
 	});
 
 export const renameShelf = createServerFn({ method: "POST" })
-	.inputValidator((input) => renameShelfRequestV1Schema.parse(input))
+	.validator((input) => renameShelfRequestV1Schema.parse(input))
 	.handler(async ({ data }): Promise<RenameShelfResponseV1> => {
 		const userId = await requireUserId();
 		const { renameShelfRecord } = await getShelvesServer();
@@ -101,7 +101,7 @@ export const renameShelf = createServerFn({ method: "POST" })
 	});
 
 export const deleteShelf = createServerFn({ method: "POST" })
-	.inputValidator((input) => deleteShelfRequestV1Schema.parse(input))
+	.validator((input) => deleteShelfRequestV1Schema.parse(input))
 	.handler(async ({ data }): Promise<DeleteShelfResponseV1> => {
 		const userId = await requireUserId();
 		const { deleteShelfRecord } = await getShelvesServer();
@@ -109,7 +109,7 @@ export const deleteShelf = createServerFn({ method: "POST" })
 	});
 
 export const addNotebookToShelf = createServerFn({ method: "POST" })
-	.inputValidator((input) => addNotebookToShelfRequestV1Schema.parse(input))
+	.validator((input) => addNotebookToShelfRequestV1Schema.parse(input))
 	.handler(async ({ data }): Promise<UpdateShelfNotebooksResponseV1> => {
 		const userId = await requireUserId();
 		const { addNotebookToShelfRecord } = await getShelvesServer();
@@ -128,7 +128,7 @@ export const addNotebookToShelf = createServerFn({ method: "POST" })
 	});
 
 export const removeNotebookFromShelf = createServerFn({ method: "POST" })
-	.inputValidator((input) =>
+	.validator((input) =>
 		removeNotebookFromShelfRequestV1Schema.parse(input),
 	)
 	.handler(async ({ data }): Promise<UpdateShelfNotebooksResponseV1> => {
@@ -146,7 +146,7 @@ export const removeNotebookFromShelf = createServerFn({ method: "POST" })
 	});
 
 export const reorderShelf = createServerFn({ method: "POST" })
-	.inputValidator((input) => reorderShelfRequestV1Schema.parse(input))
+	.validator((input) => reorderShelfRequestV1Schema.parse(input))
 	.handler(async ({ data }): Promise<UpdateShelfNotebooksResponseV1> => {
 		const userId = await requireUserId();
 		const { reorderShelfRecord } = await getShelvesServer();

@@ -70,7 +70,7 @@ export const getBookmarks = createServerFn({ method: "GET" }).handler(
 );
 
 export const getCoursePlayerData = createServerFn({ method: "POST" })
-	.inputValidator((input) => getCoursePlayerDataRequestV1Schema.parse(input))
+	.validator((input) => getCoursePlayerDataRequestV1Schema.parse(input))
 	.handler(async ({ data }): Promise<GetCoursePlayerDataResponseV1> => {
 		const ownerId = await getOptionalUserId();
 		const playerData = await getCoursePlayerDataRecord(data.courseId, ownerId);
@@ -83,7 +83,7 @@ export const getCoursePlayerData = createServerFn({ method: "POST" })
 	});
 
 export const getCourseManagementData = createServerFn({ method: "POST" })
-	.inputValidator((input) =>
+	.validator((input) =>
 		getCourseManagementDataRequestV1Schema.parse(input),
 	)
 	.handler(async ({ data }): Promise<GetCourseManagementDataResponseV1> => {
@@ -101,7 +101,7 @@ export const getCourseManagementData = createServerFn({ method: "POST" })
 	});
 
 export const updateCourseMetadata = createServerFn({ method: "POST" })
-	.inputValidator((input) => updateCourseMetadataRequestV1Schema.parse(input))
+	.validator((input) => updateCourseMetadataRequestV1Schema.parse(input))
 	.handler(async ({ data }): Promise<UpdateCourseMetadataResponseV1> => {
 		const ownerId = await getOptionalUserId();
 		const course = await updateCourseMetadataRecord(data.courseId, ownerId, {
@@ -117,7 +117,7 @@ export const updateCourseMetadata = createServerFn({ method: "POST" })
 	});
 
 export const updateChapter = createServerFn({ method: "POST" })
-	.inputValidator((input) => updateChapterRequestV1Schema.parse(input))
+	.validator((input) => updateChapterRequestV1Schema.parse(input))
 	.handler(async ({ data }): Promise<UpdateChapterResponseV1> => {
 		const ownerId = await getOptionalUserId();
 		const course = await getCourseByChapter(data.chapterId, ownerId);
@@ -166,7 +166,7 @@ export const updateChapter = createServerFn({ method: "POST" })
 	});
 
 export const regenerateChapters = createServerFn({ method: "POST" })
-	.inputValidator((input) => regenerateChaptersRequestV1Schema.parse(input))
+	.validator((input) => regenerateChaptersRequestV1Schema.parse(input))
 	.handler(async ({ data }): Promise<RegenerateChaptersResponseV1> => {
 		const ownerId = await getOptionalUserId();
 		const job = await createRegenerationJobRecord(data.courseId, ownerId);
@@ -179,7 +179,7 @@ export const regenerateChapters = createServerFn({ method: "POST" })
 	});
 
 export const exportCourseMarkdown = createServerFn({ method: "POST" })
-	.inputValidator((input) => exportCourseMarkdownRequestV1Schema.parse(input))
+	.validator((input) => exportCourseMarkdownRequestV1Schema.parse(input))
 	.handler(async ({ data }): Promise<ExportCourseMarkdownResponseV1> => {
 		const ownerId = await getOptionalUserId();
 		const playerData = await getCoursePlayerDataRecord(data.courseId, ownerId);
@@ -209,7 +209,7 @@ export const getLearningPreferences = createServerFn({ method: "GET" }).handler(
 );
 
 export const updateLearningPreferences = createServerFn({ method: "POST" })
-	.inputValidator((input) =>
+	.validator((input) =>
 		updateLearningPreferencesRequestV1Schema.parse(input),
 	)
 	.handler(async ({ data }): Promise<UpdateLearningPreferencesResponseV1> => {
@@ -225,7 +225,7 @@ export const updateLearningPreferences = createServerFn({ method: "POST" })
 	});
 
 export const upsertCourseProgress = createServerFn({ method: "POST" })
-	.inputValidator((input) => upsertCourseProgressRequestV1Schema.parse(input))
+	.validator((input) => upsertCourseProgressRequestV1Schema.parse(input))
 	.handler(async ({ data }): Promise<UpsertCourseProgressResponseV1> => {
 		const ownerId = await getOptionalUserId();
 		const playerData = await getCoursePlayerDataRecord(data.courseId, ownerId);
@@ -243,7 +243,7 @@ export const upsertCourseProgress = createServerFn({ method: "POST" })
 	});
 
 export const upsertPlaybackProgress = createServerFn({ method: "POST" })
-	.inputValidator((input) => upsertPlaybackProgressRequestV1Schema.parse(input))
+	.validator((input) => upsertPlaybackProgressRequestV1Schema.parse(input))
 	.handler(async ({ data }): Promise<UpsertPlaybackProgressResponseV1> => {
 		const ownerId = await getOptionalUserId();
 
@@ -251,7 +251,7 @@ export const upsertPlaybackProgress = createServerFn({ method: "POST" })
 	});
 
 export const upsertChapterProgress = createServerFn({ method: "POST" })
-	.inputValidator((input) => upsertChapterProgressRequestV1Schema.parse(input))
+	.validator((input) => upsertChapterProgressRequestV1Schema.parse(input))
 	.handler(async ({ data }): Promise<UpsertChapterProgressResponseV1> => {
 		const ownerId = await getOptionalUserId();
 		const course =
@@ -275,7 +275,7 @@ export const upsertChapterProgress = createServerFn({ method: "POST" })
 	});
 
 export const upsertChapterNote = createServerFn({ method: "POST" })
-	.inputValidator((input) => upsertChapterNoteRequestV1Schema.parse(input))
+	.validator((input) => upsertChapterNoteRequestV1Schema.parse(input))
 	.handler(async ({ data }): Promise<UpsertChapterNoteResponseV1> => {
 		const ownerId = await getOptionalUserId();
 		const course =
@@ -303,7 +303,7 @@ export const upsertChapterNote = createServerFn({ method: "POST" })
 	});
 
 export const createBookmark = createServerFn({ method: "POST" })
-	.inputValidator((input) => createBookmarkRequestV1Schema.parse(input))
+	.validator((input) => createBookmarkRequestV1Schema.parse(input))
 	.handler(async ({ data }): Promise<CreateBookmarkResponseV1> => {
 		const ownerId = await getOptionalUserId();
 		const playerData = await getCoursePlayerDataRecord(data.courseId, ownerId);
@@ -329,7 +329,7 @@ export const createBookmark = createServerFn({ method: "POST" })
 	});
 
 export const updateBookmark = createServerFn({ method: "POST" })
-	.inputValidator((input) => updateBookmarkRequestV1Schema.parse(input))
+	.validator((input) => updateBookmarkRequestV1Schema.parse(input))
 	.handler(async ({ data }): Promise<UpdateBookmarkResponseV1> => {
 		const ownerId = await getOptionalUserId();
 		const bookmark = await updateBookmarkRecord(data.bookmarkId, ownerId, {
@@ -345,7 +345,7 @@ export const updateBookmark = createServerFn({ method: "POST" })
 	});
 
 export const deleteBookmark = createServerFn({ method: "POST" })
-	.inputValidator((input) => deleteBookmarkRequestV1Schema.parse(input))
+	.validator((input) => deleteBookmarkRequestV1Schema.parse(input))
 	.handler(async ({ data }): Promise<DeleteBookmarkResponseV1> => {
 		const ownerId = await getOptionalUserId();
 		const deleted = await deleteBookmarkRecord(data.bookmarkId, ownerId);
@@ -384,7 +384,7 @@ export async function upsertPlaybackProgressForOwner(
 }
 
 export const deleteCourse = createServerFn({ method: "POST" })
-	.inputValidator((input) => deleteCourseRequestV1Schema.parse(input))
+	.validator((input) => deleteCourseRequestV1Schema.parse(input))
 	.handler(async ({ data }): Promise<DeleteCourseResponseV1> => {
 		const ownerId = await getOptionalUserId();
 		const deleted = await softDeleteCourse(data.courseId, ownerId);

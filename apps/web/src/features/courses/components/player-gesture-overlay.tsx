@@ -121,11 +121,8 @@ function PlayerGestureOverlay({
 	);
 
 	const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
-		if (
-			!event.isPrimary ||
-			(event.pointerType !== "touch" && event.pointerType !== "pen")
-		)
-			return;
+		if (!event.isPrimary) return;
+		if (event.pointerType === "mouse" && event.button !== 0) return;
 		pointerStartRef.current = {
 			controlsHiddenAtStart: controlsHidden,
 			id: event.pointerId,
@@ -136,14 +133,14 @@ function PlayerGestureOverlay({
 	};
 
 	const handlePointerEnd = (event: ReactPointerEvent<HTMLDivElement>) => {
-		if (event.pointerType === "mouse") {
-			if (event.isPrimary && event.button === 0) onTogglePlayback();
-			return;
-		}
-
 		const start = pointerStartRef.current;
 		pointerStartRef.current = null;
 		if (!start || start.id !== event.pointerId) return;
+
+		if (event.pointerType === "mouse") {
+			if (event.button === 0) onTogglePlayback();
+			return;
+		}
 
 		const rect = event.currentTarget.getBoundingClientRect();
 		const isPlaybackControlHit =

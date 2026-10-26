@@ -53,7 +53,7 @@ function getCourseGenerationServer() {
 }
 
 export const createCourseFromUrl = createServerFn({ method: "POST" })
-	.inputValidator((input) => createCourseFromUrlRequestV1Schema.parse(input))
+	.validator((input) => createCourseFromUrlRequestV1Schema.parse(input))
 	.handler(async ({ data }): Promise<CreateCourseFromUrlResponseV1> => {
 		const parsedUrl = parseVideoUrl(data.url);
 
@@ -108,7 +108,7 @@ export const createCourseFromUrl = createServerFn({ method: "POST" })
 	});
 
 export const getGenerationJob = createServerFn({ method: "POST" })
-	.inputValidator((input) => processGenerationJobRequestV1Schema.parse(input))
+	.validator((input) => processGenerationJobRequestV1Schema.parse(input))
 	.handler(async ({ data }): Promise<GenerationJobDetailV1> => {
 		await timeoutGenerationJob(data.generationJobId, GENERATION_JOB_TIMEOUT_MS);
 		const detail = await getGenerationJobDetailRecord(data.generationJobId);
@@ -121,7 +121,7 @@ export const getGenerationJob = createServerFn({ method: "POST" })
 	});
 
 export const processGenerationJob = createServerFn({ method: "POST" })
-	.inputValidator((input) => processGenerationJobRequestV1Schema.parse(input))
+	.validator((input) => processGenerationJobRequestV1Schema.parse(input))
 	.handler(async ({ data }): Promise<ProcessGenerationJobResponseV1> => {
 		const timedOut = await timeoutGenerationJob(
 			data.generationJobId,
@@ -470,7 +470,7 @@ function isDenseShortTranscript(durationSeconds: number, segmentCount: number) {
 }
 
 export const retryGenerationJob = createServerFn({ method: "POST" })
-	.inputValidator((input) => retryGenerationJobRequestV1Schema.parse(input))
+	.validator((input) => retryGenerationJobRequestV1Schema.parse(input))
 	.handler(async ({ data }): Promise<RetryGenerationJobResponseV1> => {
 		const ownerId = await getOptionalUserId();
 		const retry = await createRetryGenerationJob(data.generationJobId, ownerId);
@@ -486,7 +486,7 @@ export const retryGenerationJob = createServerFn({ method: "POST" })
 	});
 
 export const cancelGenerationJob = createServerFn({ method: "POST" })
-	.inputValidator((input) => cancelGenerationJobRequestV1Schema.parse(input))
+	.validator((input) => cancelGenerationJobRequestV1Schema.parse(input))
 	.handler(async ({ data }): Promise<CancelGenerationJobResponseV1> => {
 		const ownerId = await getOptionalUserId();
 		const cancelled = await cancelGenerationJobRecord(
