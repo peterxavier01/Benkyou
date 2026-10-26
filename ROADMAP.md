@@ -30,9 +30,9 @@ Goal: make the first complete learning loop reliable.
 - **Shipped:** Accounts, so learning data can sync across devices.
 - **Shipped:** Saved notebooks, progress, notes, and bookmarks, with resume
   state.
-- **In progress:** Private learning without an account. Signed-out learners get
-  their own notebooks and shelves, which move to their account when they sign
-  up.
+- **Shipped:** Private learning without an account. Signed-out learners get
+  their own notebooks and shelves, which move to their account when they sign up
+  or sign in.
 - **Shipped:** Per-chapter Markdown notes with autosave and a local draft
   fallback.
 - **Shipped:** Markdown export of notes and bookmarks.
