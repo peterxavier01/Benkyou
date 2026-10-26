@@ -25,6 +25,12 @@ export const MAX_NOTE_MARKDOWN_LENGTH = 50_000;
 
 export const MAX_BOOKMARK_TITLE_LENGTH = 120;
 
+export const MAX_SHELF_NAME_LENGTH = 80;
+
+export const MAX_SHELVES_PER_USER = 100;
+
+export const MAX_NOTEBOOKS_PER_SHELF = 200;
+
 export const MAX_BOOKMARK_NOTE_LENGTH = 2_000;
 
 export const MAX_COURSE_TITLE_LENGTH = 160;
