@@ -207,7 +207,7 @@ function PublicPageIntro({
 				aria-hidden="true"
 				className="genko-grid absolute inset-0 mask-[linear-gradient(to_bottom,#000_55%,transparent)]"
 			/>
-			<div className="relative mx-auto grid w-full max-w-6xl items-center gap-10 px-4 pt-10 pb-11 sm:px-6 sm:pt-16 sm:pb-16 lg:grid-cols-[minmax(0,1fr)_auto]">
+			<div className="relative mx-auto grid w-full max-w-6xl grid-cols-[minmax(0,1fr)] items-center gap-10 px-4 pt-10 pb-11 sm:px-6 sm:pt-16 sm:pb-16 lg:grid-cols-[minmax(0,1fr)_auto]">
 				<div className="grid max-w-3xl gap-4">
 					<p className="font-medium text-[13px] text-primary">{eyebrow}</p>
 					<h1 className="text-balance font-semibold font-serif text-[38px] leading-[1.06] tracking-[-0.025em] sm:text-5xl">

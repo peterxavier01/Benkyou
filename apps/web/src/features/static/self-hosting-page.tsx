@@ -118,7 +118,7 @@ function SelfHostingPage() {
 				</ul>
 			</PublicPageIntro>
 
-			<div className="mx-auto grid w-full max-w-6xl gap-10 px-4 py-10 sm:px-6 sm:py-14 lg:grid-cols-[200px_minmax(0,1fr)] lg:gap-16">
+			<div className="mx-auto grid w-full max-w-6xl grid-cols-[minmax(0,1fr)] gap-10 px-4 py-10 sm:px-6 sm:py-14 lg:grid-cols-[200px_minmax(0,1fr)] lg:gap-16">
 				<nav
 					aria-labelledby="on-this-page"
 					className="lg:sticky lg:top-24 lg:self-start"
@@ -138,7 +138,7 @@ function SelfHostingPage() {
 					</ul>
 				</nav>
 
-				<div className="grid min-w-0 max-w-3xl gap-12 text-[15px] leading-relaxed sm:text-base">
+				<div className="grid min-w-0 max-w-3xl grid-cols-[minmax(0,1fr)] gap-12 text-[15px] leading-relaxed sm:text-base">
 					<DocSection id="overview" title="Overview">
 						<p>
 							Benkyou runs as two containers: the web app and a Postgres 16
@@ -306,7 +306,7 @@ function DocSection({
 	children: ReactNode;
 }) {
 	return (
-		<section aria-labelledby={id} className="grid gap-4">
+		<section aria-labelledby={id} className="grid grid-cols-[minmax(0,1fr)] gap-4">
 			<SectionHeading id={id} className="text-2xl sm:text-[28px]">
 				{title}
 			</SectionHeading>

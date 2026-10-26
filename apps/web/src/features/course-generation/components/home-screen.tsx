@@ -21,7 +21,7 @@ function HomeScreen() {
 					aria-hidden="true"
 					className="genko-grid absolute inset-0 [mask-image:linear-gradient(to_bottom,#000_55%,transparent)]"
 				/>
-				<div className="relative mx-auto grid w-full max-w-6xl items-center gap-12 px-4 pt-10 pb-16 sm:px-6 sm:pt-16 lg:grid-cols-2 lg:gap-14 lg:pt-[72px] lg:pb-24">
+				<div className="relative mx-auto grid w-full max-w-6xl grid-cols-[minmax(0,1fr)] items-center gap-12 px-4 pt-10 pb-16 sm:px-6 sm:pt-16 lg:grid-cols-2 lg:gap-14 lg:pt-[72px] lg:pb-24">
 					<div className="grid gap-6 sm:gap-7">
 						<span className="inline-flex h-7 w-fit items-center gap-2 rounded-full border border-border bg-card px-2.5 text-[13px] text-muted-foreground">
 							<span className="size-1.5 rounded-full bg-primary" />
@@ -92,7 +92,7 @@ function HomeScreen() {
 				aria-labelledby="home-self-host"
 				className="border-border border-y bg-muted"
 			>
-				<div className="mx-auto grid w-full max-w-6xl items-center gap-10 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-2">
+				<div className="mx-auto grid w-full max-w-6xl grid-cols-[minmax(0,1fr)] items-center gap-10 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-2">
 					<div className="grid gap-3.5">
 						<h2
 							id="home-self-host"
@@ -158,7 +158,7 @@ function HowRow({
 	children: ReactNode;
 }) {
 	return (
-		<div className="grid items-center gap-8 border-border border-t py-8 sm:py-10 lg:grid-cols-2 lg:gap-10">
+		<div className="grid grid-cols-[minmax(0,1fr)] items-center gap-8 border-border border-t py-8 sm:py-10 lg:grid-cols-2 lg:gap-10">
 			<div className="flex items-start gap-4 sm:gap-6">
 				<span className="pt-1 font-semibold font-serif text-primary text-xl tabular-nums">
 					{number}

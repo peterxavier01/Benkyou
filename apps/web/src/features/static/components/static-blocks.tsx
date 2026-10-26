@@ -66,7 +66,7 @@ function NumberedStep({
 	illustration?: ReactNode;
 }) {
 	return (
-		<section className="grid items-start gap-6 border-border border-t py-8 first:border-t-0 sm:py-12 lg:grid-cols-2 lg:gap-12">
+		<section className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 border-border border-t py-8 first:border-t-0 sm:py-12 lg:grid-cols-2 lg:gap-12">
 			<div className="grid gap-3">
 				<div className="flex items-baseline gap-3.5">
 					<span className="font-semibold font-serif text-[17px] text-primary tabular-nums sm:text-xl">

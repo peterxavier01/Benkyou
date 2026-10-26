@@ -74,7 +74,7 @@ function ChapterList({
 	className?: string;
 }) {
 	return (
-		<div className={cn("grid gap-0.5", className)}>
+		<div className={cn("grid grid-cols-[minmax(0,1fr)] gap-0.5", className)}>
 			{chapters.map((chapter) => (
 				<ChapterRow key={chapter.index} asChild {...chapter} density="compact">
 					<div>
