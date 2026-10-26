@@ -86,7 +86,7 @@ function AccountButton() {
 	if (session?.user) {
 		return (
 			<Button asChild variant="outline">
-				<Link to="/courses" search={{ q: "", filter: "all" }}>
+				<Link to="/notebooks" search={{ q: "", filter: "all" }}>
 					Your notebooks
 				</Link>
 			</Button>
@@ -97,12 +97,12 @@ function AccountButton() {
 	return (
 		<>
 			<Button asChild variant="ghost" className="hidden md:inline-flex">
-				<Link to="/courses" search={{ q: "", filter: "all" }}>
+				<Link to="/notebooks" search={{ q: "", filter: "all" }}>
 					Your notebooks
 				</Link>
 			</Button>
 			<Button asChild variant="outline">
-				<Link to="/sign-in" search={{ redirect: "/courses" }}>
+				<Link to="/sign-in" search={{ redirect: "/notebooks" }}>
 					Sign in
 				</Link>
 			</Button>
@@ -148,7 +148,7 @@ function PublicMobileMenu() {
 					))}
 					<Link
 						data-slot="public-nav-link"
-						to="/courses"
+						to="/notebooks"
 						search={{ q: "", filter: "all" }}
 						className="flex min-h-12 items-center rounded-md px-3 text-base text-foreground no-underline hover:bg-muted"
 						onClick={() => setOpen(false)}
@@ -174,7 +174,11 @@ function PublicFooter() {
 		<footer className="border-border border-t">
 			<div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 sm:flex-row sm:items-center sm:justify-between sm:px-6">
 				<div className="grid gap-1.5">
-					<BrandLogo subtitle={null} className="[&_svg]:size-7" />
+					<BrandLogo
+						to="/"
+						subtitle={null}
+						className="justify-self-start [&_svg]:size-7"
+					/>
 					<p className="text-muted-foreground text-[13px]">
 						Study notebooks for long videos.
 					</p>
