@@ -128,7 +128,14 @@ function formatTimeLeft(percent: number, durationSeconds: number | null) {
 		: null;
 	const label = formatLength(remaining);
 
-	return label ? `${label} left` : `${safePercent}%`;
+	if (label) {
+		return `${label} left`;
+	}
+
+	// Without the video's length, show progress. Keep it between 1 and 99 so
+	// an unfinished notebook never reads as 0% or 100%.
+	const wholePercent = Math.min(99, Math.max(1, Math.round(safePercent)));
+	return `${wholePercent}% watched`;
 }
 
 function formatRelativeDay(value: string, now = new Date()) {

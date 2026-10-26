@@ -112,6 +112,12 @@ describe("formatters", () => {
 		expect(formatTimeLeft(100, 3600)).toBe("Done");
 	});
 
+	it("falls back to a whole percent watched without a length", () => {
+		expect(formatTimeLeft(45.86312563840654, null)).toBe("46% watched");
+		expect(formatTimeLeft(0.2, null)).toBe("1% watched");
+		expect(formatTimeLeft(99.7, null)).toBe("99% watched");
+	});
+
 	it("uses relative days", () => {
 		const now = new Date(2026, 9, 25, 12);
 		expect(formatRelativeDay(new Date(2026, 9, 25, 8).toISOString(), now)).toBe(
