@@ -15,6 +15,7 @@ import { useForm } from "@tanstack/react-form";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import type { z } from "zod";
+import { useResetSessionData } from "#/integrations/better-auth/use-reset-session-data";
 import { trackAnalyticsEvent } from "#/integrations/posthog/analytics";
 
 type AuthMode = "sign-in" | "sign-up";
@@ -36,6 +37,7 @@ const defaultValues = {
 
 function AuthForm({ redirectTo, initialMode = "sign-in" }: AuthFormProps) {
 	const navigate = useNavigate();
+	const resetSessionData = useResetSessionData();
 	const [mode, setMode] = useState<AuthMode>(initialMode);
 	const [authError, setAuthError] = useState<string | null>(null);
 
@@ -96,6 +98,7 @@ function AuthForm({ redirectTo, initialMode = "sign-in" }: AuthFormProps) {
 			trackAnalyticsEvent(
 				mode === "sign-in" ? "sign_in_succeeded" : "sign_up_succeeded",
 			);
+			await resetSessionData();
 			await navigate({ href: redirectTo || "/" });
 		},
 	});

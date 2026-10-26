@@ -2,12 +2,14 @@ import { authClient } from "@benkyou/auth/client";
 import { Button } from "@benkyou/ui";
 import { Link, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
+import { useResetSessionData } from "#/integrations/better-auth/use-reset-session-data";
 import { trackAnalyticsEvent } from "#/integrations/posthog/analytics";
 import { SettingsGroup, SettingsRow } from "./settings-parts";
 import type { SettingsUser } from "./settings-types";
 
 function AccountSection({ currentUser }: { currentUser: SettingsUser }) {
 	const router = useRouter();
+	const resetSessionData = useResetSessionData();
 	const [signingOut, setSigningOut] = useState(false);
 
 	if (!currentUser) {
@@ -65,6 +67,7 @@ function AccountSection({ currentUser }: { currentUser: SettingsUser }) {
 								await authClient.signOut();
 								trackAnalyticsEvent("sign_out_succeeded");
 								await router.navigate({ to: "/" });
+								await resetSessionData();
 							}}
 						>
 							{signingOut ? "Signing out…" : "Sign out"}

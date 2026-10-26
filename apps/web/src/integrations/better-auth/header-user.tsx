@@ -12,10 +12,12 @@ import {
 import { Link, useRouter, useRouterState } from "@tanstack/react-router";
 import { trackAnalyticsEvent } from "#/integrations/posthog/analytics";
 import { useHydratedSession } from "./use-hydrated-session";
+import { useResetSessionData } from "./use-reset-session-data";
 
 export default function BetterAuthHeader() {
 	const { data: session, isPending } = useHydratedSession();
 	const router = useRouter();
+	const resetSessionData = useResetSessionData();
 	const pathname = useRouterState({
 		select: (state) => state.location.pathname,
 	});
@@ -81,9 +83,10 @@ export default function BetterAuthHeader() {
 					<DropdownMenuSeparator />
 					<DropdownMenuItem
 						onSelect={() => {
-							void authClient.signOut().then(() => {
+							void authClient.signOut().then(async () => {
 								trackAnalyticsEvent("sign_out_succeeded");
-								void router.navigate({ to: "/" });
+								await router.navigate({ to: "/" });
+								await resetSessionData();
 							});
 						}}
 					>
