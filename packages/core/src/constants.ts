@@ -2,7 +2,9 @@ import type { VideoProvider } from "@benkyou/types";
 
 export const PRODUCT_NAME = "Benkyou";
 
-export const CORE_PROMISE = "Turn long videos into focused study workspaces.";
+export const CORE_PROMISE = "Study long videos. Don’t just watch them.";
+
+export const REPOSITORY_URL = "https://github.com/peterxavier01/Benkyou";
 
 export const SUPPORTED_VIDEO_PROVIDERS = [
 	"youtube",
@@ -22,6 +24,12 @@ export const DEFAULT_NOTE_AUTOSAVE_DEBOUNCE_MS = 800;
 export const MAX_NOTE_MARKDOWN_LENGTH = 50_000;
 
 export const MAX_BOOKMARK_TITLE_LENGTH = 120;
+
+export const MAX_SHELF_NAME_LENGTH = 80;
+
+export const MAX_SHELVES_PER_USER = 100;
+
+export const MAX_NOTEBOOKS_PER_SHELF = 200;
 
 export const MAX_BOOKMARK_NOTE_LENGTH = 2_000;
 

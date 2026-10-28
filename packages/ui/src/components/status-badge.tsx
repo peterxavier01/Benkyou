@@ -10,7 +10,7 @@ const statusBadgeVariants = cva(
 		variants: {
 			tone: {
 				neutral: "border-border bg-muted text-muted-foreground",
-				info: "border-secondary/70 bg-secondary text-secondary-foreground",
+				info: "border-info/30 bg-info/10 text-info",
 				success: "border-primary/25 bg-primary/10 text-primary",
 				warning:
 					"border-[oklch(0.78_0.1_95)] bg-[oklch(0.95_0.037_95)] text-[oklch(0.42_0.08_95)]",

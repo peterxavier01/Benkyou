@@ -75,7 +75,7 @@ export type AiGeneratedCourseV1 = z.infer<typeof aiGeneratedCourseV1Schema>;
 export type AiGeneratedChapterV1 = z.infer<typeof aiGeneratedChapterV1Schema>;
 
 export const EDUCATIONAL_SUITABILITY_REJECTION_MESSAGE =
-	"This video does not look like educational content, so Benkyou cannot turn it into a course.";
+	"This video does not look like educational content, so Benkyou cannot turn it into a notebook.";
 
 export const educationalSuitabilityResultV1Schema = z.object({
 	verdict: z.enum(["educational", "non_educational", "ambiguous"]),
@@ -514,7 +514,7 @@ function getCreatorTimestampSkipReason(input: {
 	return "fewer_than_two_parseable_chapters";
 }
 
-function parseTimestamp(timestamp: string): number | null {
+export function parseTimestamp(timestamp: string): number | null {
 	const parts = timestamp.split(":").map((part) => Number.parseInt(part, 10));
 
 	if (
@@ -584,18 +584,18 @@ export function buildGenerationTimeline(
 	return [
 		{
 			key: "metadata",
-			label: "Video metadata",
+			label: "Find the video",
 			status: getStepStatus({
 				completed: metadataReady || processing || completed || failed,
 				failed: failedStep === "metadata",
 				processing: job.status === "queued" && !metadataReady,
 			}),
 			description:
-				"Read the source details and prepare a private study workspace shell.",
+				"Read the video’s title, length and description.",
 		},
 		{
 			key: "transcript",
-			label: "Captions",
+			label: "Read the captions",
 			status: getStepStatus({
 				completed: transcriptReady,
 				failed: failedStep === "transcript",
@@ -603,11 +603,11 @@ export function buildGenerationTimeline(
 					processing && metadataReady && !transcriptReady && !chaptersReady,
 				skipped: transcriptSkipped,
 			}),
-			description: "Extract YouTube captions for chapter generation.",
+			description: "Fetch the YouTube captions that chapters are written from.",
 		},
 		{
 			key: "chapters",
-			label: "Chapter outline",
+			label: "Write chapters",
 			status: getStepStatus({
 				completed: chaptersReady,
 				failed: failedStep === "chapters",
@@ -616,17 +616,18 @@ export function buildGenerationTimeline(
 					(transcriptReady || transcriptSkipped) &&
 					!chaptersReady,
 			}),
-			description: "Generate and validate the chapter outline.",
+			description:
+				"Use the creator’s timestamps, or write chapters from the captions.",
 		},
 		{
 			key: "player",
-			label: "Player prep",
+			label: "Save your notebook",
 			status: getStepStatus({
 				completed: playerReady,
 				failed: failedStep === "player",
 				processing: processing && chaptersReady && !playerReady,
 			}),
-			description: "Save chapters so the study workspace can open.",
+			description: "Save the chapters so the notebook can open.",
 		},
 	];
 }

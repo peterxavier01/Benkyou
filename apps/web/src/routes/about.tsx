@@ -1,10 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { AboutPage } from "#/features/static/static-pages";
+import { AboutPage } from "#/features/static/about-page";
 import { buildSeoHead, buildWebPageJsonLd } from "#lib/seo";
 
-const title = "About Benkyou | Focused study from long-form video";
+const title = "About Benkyou | Study notebooks for long videos";
 const description =
-	"Learn how Benkyou helps self-directed learners turn tutorials, lectures, walkthroughs, and talks into focused study workspaces.";
+	"Why Benkyou exists, what it is and isn’t, and the principles behind it: a free, open-source study layer for tutorials, lectures and talks.";
 
 export const Route = createFileRoute("/about")({
 	head: () =>

@@ -1,32 +1,71 @@
 ---
+# GENERATED from packages/ui/src/tokens/tokens.ts — do not edit by hand.
 name: Benkyou
 colors:
-  background: "#f7f9fb"
-  foreground: "#191c1e"
-  card: "#fbfcfd"
-  muted: "#eef2f4"
-  muted-foreground: "#53615a"
-  border: "#d5dfd9"
-  primary: "#007a58"
-  primary-foreground: "#f5fff8"
-  accent: "#e8f4ef"
-  accent-foreground: "#143d30"
-  destructive: "#ba1a1a"
+  light:
+    background: "#f9f6f2" # oklch(0.975 0.006 85)
+    foreground: "#1d1a15" # oklch(0.22 0.01 85)
+    card: "#fdfcfa" # oklch(0.992 0.003 85)
+    muted: "#f0ede8" # oklch(0.948 0.008 85)
+    muted-foreground: "#615d56" # oklch(0.48 0.012 85)
+    border: "#dddad5" # oklch(0.89 0.008 85)
+    input: "#89867f" # oklch(0.62 0.01 85)
+    primary: "#00734b" # oklch(0.49 0.112 161)
+    primary-foreground: "#f5fef7" # oklch(0.988 0.012 152)
+    accent: "#dbf2e5" # oklch(0.94 0.03 161)
+    accent-foreground: "#004a2f" # oklch(0.36 0.08 161)
+    mark: "#f2af48" # oklch(0.8 0.14 75)
+    mark-tint: "#fcedcd" # oklch(0.95 0.045 85)
+    mark-ink: "#845011" # oklch(0.48 0.1 65)
+    success: "#3a732c" # oklch(0.5 0.12 140)
+    warning: "#905211" # oklch(0.5 0.11 60)
+    info: "#1f689d" # oklch(0.5 0.11 245)
+    destructive: "#be2323" # oklch(0.52 0.19 27)
+  dark:
+    background: "#151410" # oklch(0.19 0.008 85)
+    foreground: "#eae7e2" # oklch(0.93 0.008 85)
+    card: "#1f1d18" # oklch(0.23 0.009 85)
+    muted: "#292621" # oklch(0.27 0.01 85)
+    muted-foreground: "#a7a49e" # oklch(0.72 0.01 85)
+    border: "#35332d" # oklch(0.32 0.01 85)
+    input: "#77746e" # oklch(0.56 0.01 85)
+    primary: "#53bc8b" # oklch(0.72 0.122 161)
+    primary-foreground: "#05160d" # oklch(0.18 0.03 161)
+    accent: "#173526" # oklch(0.3 0.045 161)
+    accent-foreground: "#badeca" # oklch(0.87 0.047 161)
+    mark: "#f2af48" # oklch(0.8 0.14 75)
+    mark-tint: "#422f13" # oklch(0.32 0.05 75)
+    mark-ink: "#edc47d" # oklch(0.84 0.1 80)
+    success: "#7bb76e" # oklch(0.72 0.12 140)
+    warning: "#e8a95c" # oklch(0.78 0.12 70)
+    info: "#6dabdf" # oklch(0.72 0.1 245)
+    destructive: "#e77469" # oklch(0.69 0.145 27)
 typography:
-  family: Inter
-  h1: "32px / 1.15 / 650"
-  h2: "22px / 1.25 / 650"
-  h3: "16px / 1.35 / 600"
-  body: "14px / 1.55 / 400"
-  label: "12px / 1.2 / 600"
+  sans: Inter
+  serif: Source Serif 4
+  jp: Noto Serif JP (mark and 済 stamp only)
+  display: "serif 600 · 64px / 1.02"
+  title: "serif 600 · 32px / 1.15"
+  heading: "sans 600 · 18px / 1.3"
+  subheading: "sans 600 · 14px / 1.4"
+  body: "sans 400 · 14px / 1.5"
+  label: "sans 500 · 12px / 1.3"
+  prose: "serif 400 · 17px / 1.65"
 rounded:
-  control: 4px
-  surface: 8px
+  sm: 2px
+  md: 4px
+  lg: 8px
+  xl: 12px
+motion:
+  fast: 120ms
+  base: 200ms
+  ease: "cubic-bezier(0.16, 1, 0.3, 1)"
 spacing:
   unit: 4px
-  page-mobile: 12px
+  page-mobile: 16px
   page-desktop: 24px
   content-max: 1280px
+  prose-measure: 68ch
 ---
 
 ## Brand Direction
@@ -36,9 +75,14 @@ organized, focused, and useful immediately. The UI serves the study task. It
 should not feel like a marketing SaaS page, a video entertainment app, or noisy
 gamified edtech.
 
-Use restrained color, precise spacing, strong text hierarchy, and familiar
-product patterns. The surface should feel closer to Linear, Stripe, Notion, and
-Raycast than to a landing page template.
+Benkyou feels like a well-kept study notebook: warm paper, ink, one teal for
+what to do next, and amber for what the learner marked. Use restrained color,
+precise spacing, strong text hierarchy, and familiar product patterns.
+
+The user-facing noun is **notebook** (one per video); collections are
+**shelves**. Avoid "workspace", "surface", "recoverable", and "local-first" in
+UI copy; say "saved on this device" instead. Those terms belong on the
+self-hosting page.
 
 ## Layout Families
 
@@ -103,13 +147,40 @@ and player-side tools. Do not wrap every page section in a bordered card.
 
 ## Visual Rules
 
-Keep the palette restrained: tinted neutrals plus teal for primary action,
-current state, progress, and success. Avoid decorative gradients, glass effects,
-oversized hero treatments inside the app, and repeated identical card grids.
+All values live in `packages/ui/src/tokens/tokens.ts`. The frontmatter above
+and `packages/ui/src/styles/tokens.css` are generated from it; `pnpm check`
+fails if they drift or if a contrast pair drops below WCAG AA.
 
-Use 8px rounded surfaces and 4px controls unless a shadcn component already
-defines a better accessible shape. Prefer borders and tonal layers over shadows;
-reserve shadows for floating elements.
+**Color marks action and attention; shape marks state.**
+
+- Neutrals use one warm hue. Never introduce a second neutral hue.
+- Teal (`primary`) is for the one primary action per view, links, the
+  playhead and played portion, and the current chapter (`accent` tint).
+- Amber (`mark`) is only for things the learner marked: bookmarks and
+  highlights.
+- Chapter states are told apart by shape: empty circle (not started), partial
+  ring (in progress), filled teal play disc (now playing), ink 済 stamp
+  (completed). Completed is ink, not green.
+- Status colors (`success`, `warning`, `info`, `destructive`) always ship
+  with an icon. `success` is close to teal in hue, so the icon carries meaning.
+- Control borders use `input` (≥ 3:1). `border` is for decorative dividers
+  only. Focus is a solid `ring`, never translucent.
+- Avoid decorative gradients, glass effects, oversized hero treatments inside
+  the app, and repeated identical card grids. The genkō grid (`grid`) appears
+  only on the entry page and empty states.
+
+Radius: 2px chips, 4px controls, 8px panels, 12px page-level cards. Prefer
+borders and tonal layers over shadows; `shadow-raised` for popovers and menus,
+`shadow-overlay` for dialogs. Motion is 120ms (`--duration-fast`) or 200ms
+(`--duration-base`) with `ease-out`, and zero under reduced motion.
+
+## Typography
+
+Inter (`font-sans`) runs the interface. Source Serif 4 (`font-serif`) carries
+notes, the entry headline, notebook titles, and major empty states. Notes use
+`text-prose` (17px / 1.65) capped at `--prose-measure` (68ch). Every time,
+duration, and count uses `tabular-nums`. Noto Serif JP is loaded for three
+glyphs only: 勉 in the mark, and 済 in the completed stamp.
 
 Text hierarchy should be compact and confident. Use large type only on the entry
 workspace and major empty states. Inner tool pages use smaller headings and

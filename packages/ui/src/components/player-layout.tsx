@@ -36,7 +36,7 @@ function PlayerVideoFrame({
 		<div
 			data-slot="player-video-frame"
 			className={cn(
-				"aspect-video overflow-hidden rounded-lg border border-border bg-card",
+				"relative aspect-video overflow-hidden rounded-lg border border-border bg-card",
 				className,
 			)}
 			{...props}

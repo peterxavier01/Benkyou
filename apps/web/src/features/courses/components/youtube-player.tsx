@@ -308,7 +308,7 @@ function YouTubePlayer({
 		<div
 			ref={containerRef}
 			className="size-full"
-			title="YouTube course player"
+			title="YouTube video player"
 		/>
 	);
 }

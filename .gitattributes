@@ -1,0 +1,3 @@
+# Keep LF everywhere so Biome and the design-token check behave the same on
+# Windows checkouts as they do in CI.
+* text=auto eol=lf

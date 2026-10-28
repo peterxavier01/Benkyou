@@ -5,6 +5,8 @@ export * from "./course-management";
 export * from "./course-workspace";
 export * from "./export";
 export * from "./generation";
+export * from "./note-markdown";
 export * from "./preferences";
 export * from "./progress";
+export * from "./shelves";
 export * from "./video-url";

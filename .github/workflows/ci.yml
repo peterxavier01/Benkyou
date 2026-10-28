@@ -1,0 +1,157 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  # Never cancel a main run: it may be mid-migration.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: 22
+  TURBO_TELEMETRY_DISABLED: 1
+
+jobs:
+  quality:
+    name: Lint, format & types
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # Biome lint + format for web; design-token drift, lint and types for ui;
+      # types for the remaining packages.
+      - name: Check
+        run: pnpm check
+      - name: Format (ui)
+        run: pnpm --filter @benkyou/ui exec biome format src
+      - name: Type check
+        run: pnpm check-types
+
+  test:
+    name: Tests & migrations
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        # Throwaway container reachable only from this job, so trust auth
+        # avoids keeping a password in the repo.
+        env:
+          POSTGRES_USER: benkyou
+          POSTGRES_DB: benkyou_test
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U benkyou -d benkyou_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://benkyou@localhost:5432/benkyou_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Apply migrations to a fresh database
+        run: pnpm --filter @benkyou/db db:migrate
+      - name: Check migration journal
+        run: pnpm --filter @benkyou/db db:check
+      - name: Check schema matches committed migrations
+        run: |
+          pnpm --filter @benkyou/db exec drizzle-kit generate --config=drizzle.config.ts
+          if [ -n "$(git status --porcelain packages/db/drizzle)" ]; then
+            git status --porcelain packages/db/drizzle
+            echo "::error::Schema changed without a migration. Run 'pnpm --filter @benkyou/db db:generate' and commit the result."
+            exit 1
+          fi
+
+      - name: Test
+        run: pnpm test
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build
+        run: pnpm build
+
+  docker:
+    name: Docker image
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          tags: benkyou-web:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy to production
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [quality, test, build, docker]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Secrets live on this environment; add required reviewers there to gate
+    # every production deploy behind a manual approval.
+    environment: production
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # Migrations run before the new code ships, so it never meets an old schema.
+      - name: Apply migrations to production
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: pnpm --filter @benkyou/db db:migrate
+
+      - name: Trigger deploy
+        env:
+          DEPLOY_HOOK_URL: ${{ secrets.DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$DEPLOY_HOOK_URL" ]; then
+            echo "::notice::DEPLOY_HOOK_URL is not set; skipping the deploy trigger."
+            exit 0
+          fi
+          curl --fail --silent --show-error --max-time 60 -X POST "$DEPLOY_HOOK_URL"

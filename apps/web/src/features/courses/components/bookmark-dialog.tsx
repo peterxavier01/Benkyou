@@ -77,7 +77,7 @@ function BookmarkDialog({
 					</DialogTitle>
 					<DialogDescription>
 						{formatTimestamp(timestampSeconds)}
-						{chapter ? ` in ${chapter.title}` : " in this course"}
+						{chapter ? ` in ${chapter.title}` : " in this notebook"}
 					</DialogDescription>
 				</DialogHeader>
 

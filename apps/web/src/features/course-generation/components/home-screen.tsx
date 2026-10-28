@@ -1,149 +1,179 @@
-import { CORE_PROMISE } from "@benkyou/core";
-import { ContentPanel, HugeIcon, Progress, StatusBadge } from "@benkyou/ui";
-
-import { AppHeader } from "#components/app-header";
-import { PublicFooter } from "#components/public-trust-links";
-import BetterAuthHeader from "../../../integrations/better-auth/header-user";
+import { CORE_PROMISE, REPOSITORY_URL } from "@benkyou/core";
+import { Button, HugeIcon } from "@benkyou/ui";
+import { Link } from "@tanstack/react-router";
+import type { ReactNode } from "react";
+import {
+	ChaptersIllustration,
+	NotebookPreview,
+	NoteIllustration,
+	Prompt,
+	ResumeIllustration,
+	TerminalBlock,
+} from "#components/notebook-illustrations";
+import { PublicPage } from "#components/public-site";
 import { NewCourseForm } from "./new-course-form";
-
-const workspacePreview = {
-	chapters: [
-		{ time: "00:00", title: "Project setup and goals", active: true },
-		{ time: "12:40", title: "Core concept walkthrough", active: false },
-		{ time: "28:15", title: "Practice checkpoint", active: false },
-	],
-	note: "Compare the chapter summary with my own implementation before moving on.",
-	bookmark: "18:32",
-};
 
 function HomeScreen() {
 	return (
-		<main className="flex min-h-dvh flex-col bg-background text-foreground">
-			<AppHeader action={<BetterAuthHeader />} />
-
-			<section className="mx-auto grid w-full max-w-7xl flex-1 items-start gap-6 p-3 sm:p-6 lg:grid-cols-[minmax(0,1fr)_410px] lg:gap-8">
-				<div className="flex min-h-[500px] items-center px-1 py-8 sm:px-4 lg:min-h-[560px]">
-					<div className="max-w-3xl">
-						<StatusBadge className="px-4 py-0.5" tone="success">
-							Open Beta
-						</StatusBadge>
-						<h1 className="mt-5 max-w-2xl font-semibold text-3xl leading-tight tracking-normal sm:text-5xl">
+		<PublicPage>
+			<section className="relative overflow-hidden">
+				<div
+					aria-hidden="true"
+					className="genko-grid absolute inset-0 mask-[linear-gradient(to_bottom,#000_55%,transparent)]"
+				/>
+				<div className="relative mx-auto grid w-full max-w-6xl grid-cols-[minmax(0,1fr)] items-center gap-12 px-4 pt-10 pb-16 sm:px-6 sm:pt-16 lg:grid-cols-2 lg:gap-14 lg:pt-[72px] lg:pb-24">
+					<div className="grid gap-6 sm:gap-7">
+						<span className="inline-flex h-7 w-fit items-center gap-2 rounded-full border border-border bg-card px-2.5 text-[13px] text-muted-foreground">
+							<span className="size-1.5 rounded-full bg-primary" />
+							Open beta · Free and open source
+						</span>
+						<h1 className="text-balance font-semibold font-serif text-[40px] leading-[1.04] tracking-[-0.025em] sm:text-[56px] lg:text-[64px] lg:leading-[1.02]">
 							{CORE_PROMISE}
 						</h1>
-						<p className="mt-5 max-w-2xl text-base text-muted-foreground leading-7">
-							Paste a tutorial, lecture, talk, or walkthrough. Benkyou turns it
-							into a recoverable study surface with chapters, Markdown notes,
-							bookmarks, and progress that survives the next session.
+						<p className="max-w-[520px] text-pretty text-base text-muted-foreground leading-relaxed sm:text-lg">
+							Paste a YouTube link. Benkyou gives it chapters, notes, bookmarks
+							and progress, and keeps them right where you left them.
 						</p>
-
-						<NewCourseForm />
-
-						<div className="mt-8 max-w-2xl border-border border-t pt-5">
-							<div className="flex items-start gap-3">
-								<span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md border border-border bg-background text-primary">
-									<HugeIcon name="playCircle" className="size-4" />
-								</span>
-								<div className="min-w-0">
-									<h2 className="font-semibold text-base leading-6">
-										Video platforms are built for watching. Benkyou is built for
-										studying.
-									</h2>
-									<p className="mt-2 text-muted-foreground text-sm leading-6">
-										YouTube and other video platforms supply the source
-										material. Benkyou gives the videos you care about a study
-										system for organizing, resuming, and reviewing what matters.
-									</p>
-								</div>
-							</div>
-						</div>
+						<NewCourseForm id="hero-url" showHelp />
 					</div>
+					<NotebookPreview />
 				</div>
-
-				<ContentPanel className="p-0">
-					<div className="flex items-start justify-between gap-4">
-						<div className="flex items-center gap-2 px-5 pt-5">
-							<HugeIcon name="bookOpenCheck" className="size-5 text-primary" />
-							<h2 className="font-semibold text-base">Study workspace</h2>
-						</div>
-						<span className="px-5 pt-5 text-muted-foreground text-xs">
-							Preview
-						</span>
-					</div>
-					<div className="mt-5 border-border border-y bg-muted/25 px-5 py-4">
-						<div className="space-y-2">
-							<div className="mb-2 flex items-center justify-between text-sm">
-								<span className="font-medium">Sample course</span>
-								<span className="text-muted-foreground">Resume at 42%</span>
-							</div>
-							<Progress value={42} />
-						</div>
-					</div>
-					<div className="space-y-5 p-5">
-						<div>
-							<div className="mb-2 flex items-center gap-2 text-muted-foreground text-xs">
-								<HugeIcon name="list" className="size-4" />
-								<span>Chapters</span>
-							</div>
-							<ul className="space-y-1.5 text-sm">
-								{workspacePreview.chapters.map((chapter) => (
-									<li
-										key={chapter.title}
-										className={
-											chapter.active
-												? "rounded-md border border-primary/25 bg-primary/10 px-3 py-2"
-												: "rounded-md border border-border bg-muted/25 px-3 py-2"
-										}
-									>
-										<div className="flex items-center justify-between gap-3">
-											<span className="font-medium">{chapter.title}</span>
-											<span className="shrink-0 text-muted-foreground text-xs">
-												{chapter.time}
-											</span>
-										</div>
-									</li>
-								))}
-							</ul>
-						</div>
-
-						<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-							<div className="rounded-lg border border-border bg-muted/30 p-3">
-								<div className="mb-2 flex items-center gap-2 text-muted-foreground text-xs">
-									<HugeIcon name="note" className="size-4" />
-									<span>Latest note</span>
-								</div>
-								<p className="text-sm leading-6">{workspacePreview.note}</p>
-							</div>
-							<div className="rounded-lg border border-border bg-muted/30 p-3">
-								<div className="mb-2 flex items-center justify-between gap-3">
-									<div className="flex items-center gap-2 text-muted-foreground text-xs">
-										<HugeIcon name="bookmark" className="size-4" />
-										<span>Saved bookmark</span>
-									</div>
-									<StatusBadge tone="info" className="px-2">
-										Auto-save
-									</StatusBadge>
-								</div>
-								<p className="text-sm leading-6">
-									Resume from {workspacePreview.bookmark} with notes and
-									progress intact.
-								</p>
-							</div>
-						</div>
-						<ul className="flex flex-wrap gap-2 text-xs">
-							{["Chapters", "Notes", "Bookmarks", "Progress"].map((step) => (
-								<li
-									key={step}
-									className="min-w-[6.5rem] flex-1 rounded-md bg-accent px-2 py-1.5 text-center font-medium text-accent-foreground"
-								>
-									{step}
-								</li>
-							))}
-						</ul>
-					</div>
-				</ContentPanel>
 			</section>
-			<PublicFooter />
-		</main>
+
+			<section
+				aria-labelledby="home-how"
+				className="mx-auto w-full max-w-6xl px-4 py-16 sm:px-6 sm:py-24"
+			>
+				<div className="grid max-w-[780px] gap-4 pb-8 sm:pb-10">
+					<h2
+						id="home-how"
+						className="text-balance font-semibold font-serif text-3xl leading-[1.1] tracking-[-0.02em] sm:text-[44px]"
+					>
+						YouTube is built for watching. Benkyou is built for studying.
+					</h2>
+					<p className="text-base text-muted-foreground leading-relaxed sm:text-[17px]">
+						Long tutorials, lectures and talks are some of the best teaching on
+						the internet. A video player just isn’t a place to learn from them.
+					</p>
+				</div>
+				<HowRow
+					number="01"
+					title="Chapters for every video"
+					illustration={<ChaptersIllustration />}
+				>
+					Benkyou uses the creator’s timestamps when a video has them, and
+					writes chapters from the captions when it doesn’t. You can edit any of
+					them.
+				</HowRow>
+				<HowRow
+					number="02"
+					title="Notes and bookmarks in one place"
+					illustration={<NoteIllustration />}
+				>
+					Write Markdown notes for each chapter and bookmark the moments worth
+					coming back to. A bookmark takes you back to the exact second.
+				</HowRow>
+				<HowRow
+					number="03"
+					title="Pick up where you left off"
+					illustration={<ResumeIllustration />}
+				>
+					Your position and progress save as you study. Come back next week,
+					press Resume, and you’re back in the right chapter.
+				</HowRow>
+				<p className="border-border border-t pt-8 text-sm">
+					<Link to="/how-it-works" className="font-medium">
+						See how it works, step by step
+					</Link>
+				</p>
+			</section>
+
+			<section
+				aria-labelledby="home-self-host"
+				className="border-border border-y bg-muted"
+			>
+				<div className="mx-auto grid w-full max-w-6xl grid-cols-[minmax(0,1fr)] items-center gap-10 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-2">
+					<div className="grid gap-3.5">
+						<h2
+							id="home-self-host"
+							className="font-semibold font-serif text-3xl leading-tight tracking-[-0.015em] sm:text-4xl"
+						>
+							Yours to run.
+						</h2>
+						<p className="max-w-[480px] text-base text-muted-foreground leading-relaxed">
+							Benkyou is MIT-licensed and self-hostable. One Docker Compose
+							command runs the app and its database on your own server, with
+							analytics off by default.
+						</p>
+						<div className="flex flex-wrap gap-3 pt-1.5">
+							<Button asChild variant="outline" className="h-10 bg-card px-4">
+								<Link to="/self-hosting">Self-hosting guide</Link>
+							</Button>
+							<Button asChild variant="ghost" className="h-10">
+								<a href={REPOSITORY_URL}>
+									<HugeIcon name="github" className="size-4" />
+									View the source
+								</a>
+							</Button>
+						</div>
+					</div>
+					<TerminalBlock>
+						<Prompt />
+						cp .env.example .env
+						{"\n"}
+						<Prompt />
+						docker compose up --build
+					</TerminalBlock>
+				</div>
+			</section>
+
+			<section aria-labelledby="home-cta" className="relative overflow-hidden">
+				<div
+					aria-hidden="true"
+					className="genko-grid absolute inset-0 opacity-70"
+				/>
+				<div className="relative mx-auto flex w-full max-w-6xl flex-col items-center gap-6 px-4 py-16 text-center sm:px-6 sm:py-24">
+					<h2
+						id="home-cta"
+						className="max-w-[680px] text-balance font-semibold font-serif text-3xl leading-tight tracking-[-0.02em] sm:text-[40px]"
+					>
+						Got a four-hour tutorial sitting in a tab?
+					</h2>
+					<NewCourseForm id="cta-url" className="text-left" />
+				</div>
+			</section>
+		</PublicPage>
+	);
+}
+
+function HowRow({
+	number,
+	title,
+	illustration,
+	children,
+}: {
+	number: string;
+	title: string;
+	illustration: ReactNode;
+	children: ReactNode;
+}) {
+	return (
+		<div className="grid grid-cols-[minmax(0,1fr)] items-center gap-8 border-border border-t py-8 sm:py-10 lg:grid-cols-2 lg:gap-10">
+			<div className="flex items-start gap-4 sm:gap-6">
+				<span className="pt-1 font-semibold font-serif text-primary text-xl tabular-nums">
+					{number}
+				</span>
+				<div className="grid max-w-[440px] gap-2.5">
+					<h3 className="font-semibold font-serif text-2xl leading-tight tracking-[-0.01em] sm:text-[28px]">
+						{title}
+					</h3>
+					<p className="text-base text-muted-foreground leading-relaxed">
+						{children}
+					</p>
+				</div>
+			</div>
+			<div className="min-w-0">{illustration}</div>
+		</div>
 	);
 }
 
