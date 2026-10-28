@@ -306,7 +306,10 @@ function DocSection({
 	children: ReactNode;
 }) {
 	return (
-		<section aria-labelledby={id} className="grid grid-cols-[minmax(0,1fr)] gap-4">
+		<section
+			aria-labelledby={id}
+			className="grid grid-cols-[minmax(0,1fr)] gap-4"
+		>
 			<SectionHeading id={id} className="text-2xl sm:text-[28px]">
 				{title}
 			</SectionHeading>

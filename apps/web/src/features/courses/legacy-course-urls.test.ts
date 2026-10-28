@@ -10,9 +10,7 @@ describe("toNotebookUrl", () => {
 		expect(toNotebookUrl("/courses/abc?chapter=c1#notes")).toBe(
 			"/notebooks/abc?chapter=c1#notes",
 		);
-		expect(toNotebookUrl("/courses/abc/manage")).toBe(
-			"/notebooks/abc/manage",
-		);
+		expect(toNotebookUrl("/courses/abc/manage")).toBe("/notebooks/abc/manage");
 		expect(toNotebookUrl("/courses/new/job-1")).toBe("/notebooks/new/job-1");
 	});
 
