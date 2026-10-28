@@ -52,6 +52,7 @@ function PlayerMobileSettings({
 			</DrawerTrigger>
 			<DrawerContent
 				className="overflow-hidden"
+				data-player-controls
 				portalContainer={portalContainer}
 			>
 				<DrawerHeader className="shrink-0 text-left">

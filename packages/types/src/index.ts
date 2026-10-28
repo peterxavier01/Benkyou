@@ -430,3 +430,4 @@ export interface LocalPreferencesPayloadV1 {
 	preferences: LearningPreferencesDTO;
 	updatedAt: string;
 }
+export * from "./shelves";

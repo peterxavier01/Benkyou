@@ -24,7 +24,6 @@ import {
 	gte,
 	inArray,
 	isNull,
-	or,
 	sql,
 } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
@@ -168,14 +167,13 @@ function toIso(value: Date | string | null): string | null {
 	return value instanceof Date ? value.toISOString() : value;
 }
 
+/*
+ * Every learner, signed out or not, has a user id. Rows without an owner come
+ * from before signed-out learners got an anonymous identity; they were shared
+ * by everyone, so they now match no one.
+ */
 function userMatches(column: PgColumn, userId: UserId) {
-	return userId === null ? isNull(column) : eq(column, userId);
-}
-
-function accessibleCourseOwner(column: PgColumn, userId: UserId) {
-	return userId === null
-		? isNull(column)
-		: or(eq(column, userId), isNull(column));
+	return userId === null ? sql`false` : eq(column, userId);
 }
 
 export async function consumeCourseGenerationRateLimit(
@@ -500,7 +498,7 @@ export async function createCourseFromUrlRecord(
 					.values({
 						videoId: videoRow.id,
 						ownerId: input.ownerId,
-						title: input.title ?? `YouTube course ${input.providerVideoId}`,
+						title: input.title ?? `YouTube video ${input.providerVideoId}`,
 						description: input.description,
 						visibility: "private",
 					})
@@ -836,7 +834,7 @@ export async function getBookmarks(
 		.where(
 			and(
 				userMatches(bookmarks.userId, userId),
-				accessibleCourseOwner(courses.ownerId, userId),
+				userMatches(courses.ownerId, userId),
 				isNull(bookmarks.deletedAt),
 				isNull(courses.deletedAt),
 			),
@@ -1435,6 +1433,76 @@ export async function getSampleCourse(): Promise<CourseDTO | null> {
 		.limit(1);
 
 	return row ? mapCourse(row.course) : null;
+}
+
+/**
+ * The seeded sample has no owner and only serves as a template. Each learner
+ * gets their own copy of it, so their notes and progress stay private.
+ */
+export async function getOrCopySampleCourse(
+	ownerId: string,
+): Promise<CourseDTO | null> {
+	const sample = await getSampleCourse();
+	if (!sample) {
+		return null;
+	}
+
+	return db.transaction(async (tx) => {
+		const [existing] = await tx
+			.select()
+			.from(courses)
+			.where(
+				and(
+					eq(courses.videoId, sample.videoId),
+					eq(courses.ownerId, ownerId),
+					isNull(courses.deletedAt),
+				),
+			)
+			.orderBy(desc(courses.updatedAt))
+			.limit(1);
+		if (existing) {
+			return mapCourse(existing);
+		}
+
+		const [copy] = await tx
+			.insert(courses)
+			.values({
+				videoId: sample.videoId,
+				ownerId,
+				title: sample.title,
+				description: sample.description,
+				visibility: "private",
+			})
+			.returning();
+		const chapters = await tx
+			.select()
+			.from(courseChapters)
+			.where(eq(courseChapters.courseId, sample.id))
+			.orderBy(asc(courseChapters.orderIndex));
+		if (chapters.length > 0) {
+			await tx.insert(courseChapters).values(
+				chapters.map((chapter) => ({
+					courseId: copy.id,
+					title: chapter.title,
+					summary: chapter.summary,
+					orderIndex: chapter.orderIndex,
+					startSeconds: chapter.startSeconds,
+					endSeconds: chapter.endSeconds,
+				})),
+			);
+		}
+		const now = new Date();
+		await tx.insert(courseGenerationJobs).values({
+			courseId: copy.id,
+			status: "completed",
+			transcriptSource: "sample",
+			retryable: false,
+			completedAt: now,
+			rawOutput: { copiedFromSample: sample.id, chapterCount: chapters.length },
+		});
+
+		return mapCourse(copy);
+	});
 }
 
 export async function softDeleteCourse(

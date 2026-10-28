@@ -40,6 +40,13 @@ test("repository helpers upsert learning data into DTO-compatible course data", 
 		name: "Repository User",
 		email: `${userId}@example.com`,
 	});
+	const learnerId = `repository-learner-${randomUUID()}`;
+	await database.insert(schema.authUser).values({
+		id: learnerId,
+		name: "Anonymous",
+		email: `${learnerId}@anonymous.benkyou.invalid`,
+		isAnonymous: true,
+	});
 	const userRateLimitKey = `user:${userId}`;
 	const ipRateLimitKey = `ip:127.0.0.${Math.floor(Math.random() * 200) + 1}`;
 	const anonymousRateLimitKey = `anonymous:${randomUUID()}`;
@@ -423,7 +430,7 @@ test("repository helpers upsert learning data into DTO-compatible course data", 
 			.insert(schema.courses)
 			.values({
 				videoId: video.id,
-				ownerId: null,
+				ownerId: learnerId,
 				title: "Repository Test Course",
 				visibility: "private",
 			})
@@ -452,16 +459,16 @@ test("repository helpers upsert learning data into DTO-compatible course data", 
 			})
 			.returning();
 
-		await modules.upsertCourseProgress(null, course.id, {
+		await modules.upsertCourseProgress(learnerId, course.id, {
 			resumeSeconds: 45,
 			completionPercent: 50,
 			occurredAt: new Date("2026-05-14T12:00:00.000Z"),
 		});
-		await modules.upsertChapterProgress(null, firstChapter.id, {
+		await modules.upsertChapterProgress(learnerId, firstChapter.id, {
 			watchedSeconds: 55,
 			completed: true,
 		});
-		await modules.upsertPlaybackProgress(null, {
+		await modules.upsertPlaybackProgress(learnerId, {
 			courseId: course.id,
 			resumeSeconds: 20,
 			completionPercent: 10,
@@ -474,14 +481,14 @@ test("repository helpers upsert learning data into DTO-compatible course data", 
 				},
 			],
 		});
-		await modules.upsertPlaybackProgress(null, {
+		await modules.upsertPlaybackProgress(learnerId, {
 			courseId: course.id,
 			resumeSeconds: 30,
 			completionPercent: 20,
 			occurredAt: new Date("2026-05-14T12:00:30.000Z"),
 			chapters: [],
 		});
-		await modules.upsertPlaybackProgress(null, {
+		await modules.upsertPlaybackProgress(learnerId, {
 			courseId: course.id,
 			resumeSeconds: 25,
 			completionPercent: 25,
@@ -489,13 +496,13 @@ test("repository helpers upsert learning data into DTO-compatible course data", 
 			chapters: [],
 		});
 		const initialNote = await modules.upsertChapterNote(
-			null,
+			learnerId,
 			firstChapter.id,
 			"A durable note.",
 		);
 		assert.equal(
 			await modules.upsertChapterNoteIfCurrent({
-				userId: null,
+				userId: learnerId,
 				chapterId: firstChapter.id,
 				markdown: "A stale write.",
 				expectedUpdatedAt: null,
@@ -503,7 +510,7 @@ test("repository helpers upsert learning data into DTO-compatible course data", 
 			null,
 		);
 		const currentNote = await modules.upsertChapterNoteIfCurrent({
-			userId: null,
+			userId: learnerId,
 			chapterId: firstChapter.id,
 			markdown: "A durable note.",
 			expectedUpdatedAt: initialNote.updatedAt,
@@ -511,21 +518,25 @@ test("repository helpers upsert learning data into DTO-compatible course data", 
 		assert.equal(currentNote?.markdown, "A durable note.");
 
 		const bookmark = await modules.createBookmark({
-			userId: null,
+			userId: learnerId,
 			courseId: course.id,
 			chapterId: firstChapter.id,
 			timestampSeconds: 32,
 			title: "Important timestamp",
 		});
 
-		const updatedBookmark = await modules.updateBookmark(bookmark.id, null, {
-			title: "Updated timestamp",
-			note: "Worth revisiting.",
-		});
+		const updatedBookmark = await modules.updateBookmark(
+			bookmark.id,
+			learnerId,
+			{
+				title: "Updated timestamp",
+				note: "Worth revisiting.",
+			},
+		);
 
 		assert.equal(updatedBookmark?.title, "Updated timestamp");
 
-		const data = await modules.getCoursePlayerData(course.id, null);
+		const data = await modules.getCoursePlayerData(course.id, learnerId);
 
 		assert.equal(data?.video.id, video.id);
 		assert.deepEqual(
@@ -539,7 +550,7 @@ test("repository helpers upsert learning data into DTO-compatible course data", 
 		assert.equal(data?.notes[0]?.markdown, "A durable note.");
 		assert.equal(data?.bookmarks[0]?.title, "Updated timestamp");
 
-		const bookmarks = await modules.getBookmarks(null);
+		const bookmarks = await modules.getBookmarks(learnerId);
 		const listedBookmark = bookmarks.find(
 			(item) => item.bookmark.id === bookmark.id,
 		);
@@ -561,29 +572,33 @@ test("repository helpers upsert learning data into DTO-compatible course data", 
 			timestampSeconds: 70,
 			title: "Signed in sample timestamp",
 		});
+		// A bookmark on someone else's notebook stays hidden.
 		assert.equal(
 			(await modules.getBookmarks(userId)).some(
 				(item) => item.bookmark.id === signedInSampleBookmark.id,
 			),
-			true,
+			false,
 		);
 		assert.equal(
 			await modules.deleteBookmark(signedInSampleBookmark.id, userId),
 			true,
 		);
 
-		assert.equal(await modules.deleteBookmark(bookmark.id, null), true);
+		assert.equal(await modules.deleteBookmark(bookmark.id, learnerId), true);
 
-		const dataAfterDelete = await modules.getCoursePlayerData(course.id, null);
+		const dataAfterDelete = await modules.getCoursePlayerData(
+			course.id,
+			learnerId,
+		);
 		assert.equal(dataAfterDelete?.bookmarks.length, 0);
 		assert.equal(
-			(await modules.getBookmarks(null)).some(
+			(await modules.getBookmarks(learnerId)).some(
 				(item) => item.bookmark.id === bookmark.id,
 			),
 			false,
 		);
 
-		const library = await modules.getCourseLibrary(null);
+		const library = await modules.getCourseLibrary(learnerId);
 		assert.equal(
 			library.some((item) => item.course.id === course.id),
 			true,
@@ -599,30 +614,60 @@ test("repository helpers upsert learning data into DTO-compatible course data", 
 			}),
 			null,
 		);
-		const updatedCourse = await modules.updateCourseMetadata(course.id, null, {
-			title: "Managed title",
-			description: "Managed description",
-		});
+		const updatedCourse = await modules.updateCourseMetadata(
+			course.id,
+			learnerId,
+			{
+				title: "Managed title",
+				description: "Managed description",
+			},
+		);
 		assert.equal(updatedCourse?.title, "Managed title");
-		const updatedChapter = await modules.updateChapter(firstChapter.id, null, {
-			title: "Managed chapter",
-			summary: "Managed summary",
-			startSeconds: 0,
-			endSeconds: 55,
-		});
+		const updatedChapter = await modules.updateChapter(
+			firstChapter.id,
+			learnerId,
+			{
+				title: "Managed chapter",
+				summary: "Managed summary",
+				startSeconds: 0,
+				endSeconds: 55,
+			},
+		);
 		assert.equal(updatedChapter?.title, "Managed chapter");
 		const managementData = await modules.getCourseManagementData(
 			course.id,
-			null,
+			learnerId,
 		);
 		assert.equal(managementData?.chapters[0]?.title, "Managed chapter");
-		assert.equal(await modules.softDeleteCourse(course.id, null), true);
+		assert.equal(await modules.softDeleteCourse(course.id, learnerId), true);
 
-		const libraryAfterDelete = await modules.getCourseLibrary(null);
+		const libraryAfterDelete = await modules.getCourseLibrary(learnerId);
 		assert.equal(
 			libraryAfterDelete.some((item) => item.course.id === course.id),
 			false,
 		);
+
+		// Notebooks from before anonymous identities have no owner and were
+		// shared by every signed-out learner. They're now hidden from everyone.
+		const [ownerless] = await database
+			.insert(schema.courses)
+			.values({ videoId: video.id, ownerId: null, title: "Ownerless" })
+			.returning();
+		extraCourseIds.push(ownerless.id);
+		for (const viewer of [null, userId, learnerId]) {
+			assert.equal(
+				(await modules.getCourseLibrary(viewer)).some(
+					(item) => item.course.id === ownerless.id,
+				),
+				false,
+			);
+			assert.equal(
+				await modules.updateCourseMetadata(ownerless.id, viewer, {
+					title: "Blocked",
+				}),
+				null,
+			);
+		}
 	} finally {
 		if (courseId) {
 			await database
@@ -643,6 +688,6 @@ test("repository helpers upsert learning data into DTO-compatible course data", 
 		}
 		await database
 			.delete(schema.authUser)
-			.where(eq(schema.authUser.id, userId));
+			.where(inArray(schema.authUser.id, [userId, learnerId]));
 	}
 });

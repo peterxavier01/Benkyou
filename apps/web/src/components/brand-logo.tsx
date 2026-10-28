@@ -1,5 +1,5 @@
 import { PRODUCT_NAME } from "@benkyou/core";
-import { cn } from "@benkyou/ui";
+import { BrandMark, cn } from "@benkyou/ui";
 import { Link } from "@tanstack/react-router";
 import type { MouseEventHandler, ReactNode } from "react";
 
@@ -14,22 +14,19 @@ type BrandLogoProps = {
 function BrandLogo({
 	className,
 	onClick,
-	subtitle = "Learning workspace",
+	subtitle = "Study notebooks",
 	showText = true,
 	to,
 }: BrandLogoProps) {
 	const content = (
 		<>
-			<div className="flex size-10 shrink-0 items-center justify-center">
-				<img
-					src="/logo.png"
-					alt={showText ? "" : `${PRODUCT_NAME} logo`}
-					className="block size-full object-contain"
-				/>
-			</div>
+			<BrandMark
+				className="size-9"
+				title={showText ? undefined : `${PRODUCT_NAME} logo`}
+			/>
 			{showText ? (
 				<span className="min-w-0 group-data-[collapsible=icon]:hidden">
-					<span className="block truncate font-semibold text-[15px] text-current leading-5 tracking-normal">
+					<span className="block truncate font-semibold font-serif text-[19px] text-current lowercase leading-6 tracking-[-0.015em]">
 						{PRODUCT_NAME}
 					</span>
 					{subtitle ? (
@@ -45,6 +42,7 @@ function BrandLogo({
 	if (to) {
 		return (
 			<Link
+				data-slot="brand-logo"
 				to={to}
 				className={cn(
 					"inline-flex min-w-0 items-center gap-2 rounded-lg text-foreground no-underline outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0",

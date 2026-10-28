@@ -5,8 +5,8 @@ import { buildNoIndexHead } from "#lib/seo";
 export const Route = createFileRoute("/_workspace")({
 	head: () =>
 		buildNoIndexHead(
-			"Learning workspace | Benkyou",
-			"Private Benkyou workspace for courses, notes, bookmarks, settings, and generation progress.",
+			"Benkyou",
+			"Your Benkyou notebooks, notes, bookmarks and settings.",
 		),
 	component: WorkspaceRoute,
 });

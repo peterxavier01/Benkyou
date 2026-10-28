@@ -4,7 +4,7 @@ import { buildSeoHead, buildWebPageJsonLd } from "#lib/seo";
 
 const title = "Terms | Benkyou";
 const description =
-	"Review Benkyou's acceptable-use boundaries for personal study workspaces, external video sources, and AI-generated course material.";
+	"Review Benkyou's acceptable-use boundaries for personal study workspaces, external video sources, and AI-generated study material.";
 
 export const Route = createFileRoute("/terms")({
 	head: () =>

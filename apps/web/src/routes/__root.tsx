@@ -52,8 +52,8 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 function NotFoundScreen() {
 	return (
 		<AppRecoveryScreen
-			title="Page not found"
-			description="This route does not point to a Benkyou screen. Return to your library, create a course, or review the project context."
+			title="This page isn’t here"
+			description="The link may be incomplete, or the notebook may have been deleted or saved on another device that isn’t signed in."
 		/>
 	);
 }

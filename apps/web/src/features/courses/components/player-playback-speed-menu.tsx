@@ -45,6 +45,7 @@ function PlayerPlaybackSpeedMenu({
 			<DropdownMenuContent
 				align="start"
 				className="w-32"
+				data-player-controls
 				portalContainer={portalContainer}
 			>
 				<DropdownMenuLabel>Speed</DropdownMenuLabel>

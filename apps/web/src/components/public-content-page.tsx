@@ -1,9 +1,6 @@
-import { PRODUCT_NAME } from "@benkyou/core";
-import { Button, ContentPanel, cn, HugeIcon, StatusBadge } from "@benkyou/ui";
-import { Link } from "@tanstack/react-router";
+import { ContentPanel, cn, HugeIcon } from "@benkyou/ui";
 import type { ReactNode } from "react";
-import { AppHeader } from "#components/app-header";
-import { PublicFooter, PublicTrustLinks } from "#components/public-trust-links";
+import { PublicPage, PublicPageIntro } from "#components/public-site";
 
 type PublicContentPageProps = {
 	children: ReactNode;
@@ -19,11 +16,7 @@ type PublicSectionProps = {
 	title: ReactNode;
 };
 
-type PublicMetadataRowProps = {
-	label: ReactNode;
-	value: ReactNode;
-};
-
+/** Long-form text page, used for Privacy and Terms. */
 function PublicContentPage({
 	children,
 	description,
@@ -31,49 +24,14 @@ function PublicContentPage({
 	title,
 }: PublicContentPageProps) {
 	return (
-		<main className="flex min-h-dvh flex-col bg-background text-foreground">
-			<AppHeader
-				action={
-					<div className="hidden items-center gap-3 sm:flex">
-						<PublicTrustLinks />
-						<Button asChild size="sm">
-							<Link to="/">Start studying</Link>
-						</Button>
-					</div>
-				}
-				subtitle="Trust and project context"
-			/>
-
-			<section className="mx-auto grid w-full max-w-5xl flex-1 content-start gap-5 px-3 py-6 sm:px-6 lg:py-10">
-				<div className="grid gap-4 border-border border-b pb-6">
-					<StatusBadge tone="info" className="w-fit px-3 py-0.5">
-						{eyebrow}
-					</StatusBadge>
-					<div className="grid gap-3">
-						<h1 className="max-w-3xl font-semibold text-3xl leading-tight tracking-normal sm:text-4xl">
-							{title}
-						</h1>
-						<p className="max-w-3xl text-base text-muted-foreground leading-7">
-							{description}
-						</p>
-					</div>
-					<div className="flex flex-wrap gap-2">
-						<Button asChild>
-							<Link to="/">Start studying</Link>
-						</Button>
-						<Button asChild variant="outline">
-							<Link to="/courses" search={{ q: "", filter: "all" }}>
-								Open library
-							</Link>
-						</Button>
-					</div>
-				</div>
-
+		<PublicPage>
+			<PublicPageIntro eyebrow={eyebrow} title={title}>
+				{description}
+			</PublicPageIntro>
+			<div className="mx-auto grid w-full max-w-3xl gap-4 px-4 py-10 sm:px-6 sm:py-14">
 				{children}
-			</section>
-
-			<PublicFooter />
-		</main>
+			</div>
+		</PublicPage>
 	);
 }
 
@@ -84,52 +42,32 @@ function PublicSection({
 	title,
 }: PublicSectionProps) {
 	return (
-		<ContentPanel className={cn("p-4 sm:p-5", className)}>
+		<ContentPanel className={cn("p-5 sm:p-6", className)}>
 			<div className="grid gap-3">
 				<div>
-					<h2 className="font-semibold text-lg tracking-normal">{title}</h2>
+					<h2 className="font-semibold font-serif text-xl">{title}</h2>
 					{description ? (
-						<p className="mt-1 max-w-3xl text-muted-foreground text-sm leading-6">
+						<p className="mt-1 text-muted-foreground text-sm leading-6">
 							{description}
 						</p>
 					) : null}
 				</div>
-				<div className="grid gap-3 text-sm leading-6">{children}</div>
+				<div className="grid gap-3 text-[15px] leading-relaxed">{children}</div>
 			</div>
 		</ContentPanel>
 	);
 }
 
-function PublicMetadataRow({ label, value }: PublicMetadataRowProps) {
-	return (
-		<div className="grid gap-1 border-border border-t py-3 first:border-t-0 sm:grid-cols-[180px_minmax(0,1fr)]">
-			<dt className="min-w-0 wrap-break-word font-medium text-foreground">
-				{label}
-			</dt>
-			<dd className="min-w-0 text-muted-foreground">{value}</dd>
-		</div>
-	);
-}
-
 function PublicCallout({ children }: { children: ReactNode }) {
 	return (
-		<div className="flex gap-3 rounded-lg border border-border bg-muted/35 p-3">
-			<div className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md border border-border bg-background text-primary">
-				<HugeIcon name="checkmarkCircle" className="size-4" />
-			</div>
+		<div className="flex gap-2.5 rounded-md bg-muted p-3.5">
+			<HugeIcon
+				name="info"
+				className="mt-0.5 size-4 shrink-0 text-muted-foreground"
+			/>
 			<p className="text-muted-foreground text-sm leading-6">{children}</p>
 		</div>
 	);
 }
 
-function ProductName() {
-	return <>{PRODUCT_NAME}</>;
-}
-
-export {
-	ProductName,
-	PublicCallout,
-	PublicContentPage,
-	PublicMetadataRow,
-	PublicSection,
-};
+export { PublicCallout, PublicContentPage, PublicSection };

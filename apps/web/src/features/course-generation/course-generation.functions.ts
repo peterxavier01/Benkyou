@@ -53,7 +53,7 @@ function getCourseGenerationServer() {
 }
 
 export const createCourseFromUrl = createServerFn({ method: "POST" })
-	.inputValidator((input) => createCourseFromUrlRequestV1Schema.parse(input))
+	.validator((input) => createCourseFromUrlRequestV1Schema.parse(input))
 	.handler(async ({ data }): Promise<CreateCourseFromUrlResponseV1> => {
 		const parsedUrl = parseVideoUrl(data.url);
 
@@ -62,7 +62,8 @@ export const createCourseFromUrl = createServerFn({ method: "POST" })
 		}
 
 		const headers = getHeaders();
-		const ownerId = await getOptionalUserId(headers);
+		const learner = await ensureLearner(headers);
+		const ownerId = learner.id;
 		const existingCourse = await getExistingCourseByProviderVideo(
 			parsedUrl.value.provider,
 			parsedUrl.value.providerVideoId,
@@ -77,7 +78,12 @@ export const createCourseFromUrl = createServerFn({ method: "POST" })
 			};
 		}
 
-		await assertGenerationRateLimit(headers, ownerId);
+		// Anonymous users are limited by IP, since clearing cookies gives a
+		// fresh anonymous user.
+		await assertGenerationRateLimit(
+			headers,
+			learner.isAnonymous ? null : learner.id,
+		);
 		const metadata = await safeFetchMetadata(
 			parsedUrl.value.providerVideoId,
 			parsedUrl.value.canonicalUrl,
@@ -89,7 +95,7 @@ export const createCourseFromUrl = createServerFn({ method: "POST" })
 			sourceUrl: data.url,
 			canonicalUrl: parsedUrl.value.canonicalUrl,
 			title:
-				metadata?.title ?? `YouTube course ${parsedUrl.value.providerVideoId}`,
+				metadata?.title ?? `YouTube video ${parsedUrl.value.providerVideoId}`,
 			channelName: metadata?.channelName,
 			channelUrl: metadata?.channelUrl,
 			thumbnailUrl:
@@ -108,7 +114,7 @@ export const createCourseFromUrl = createServerFn({ method: "POST" })
 	});
 
 export const getGenerationJob = createServerFn({ method: "POST" })
-	.inputValidator((input) => processGenerationJobRequestV1Schema.parse(input))
+	.validator((input) => processGenerationJobRequestV1Schema.parse(input))
 	.handler(async ({ data }): Promise<GenerationJobDetailV1> => {
 		await timeoutGenerationJob(data.generationJobId, GENERATION_JOB_TIMEOUT_MS);
 		const detail = await getGenerationJobDetailRecord(data.generationJobId);
@@ -121,7 +127,7 @@ export const getGenerationJob = createServerFn({ method: "POST" })
 	});
 
 export const processGenerationJob = createServerFn({ method: "POST" })
-	.inputValidator((input) => processGenerationJobRequestV1Schema.parse(input))
+	.validator((input) => processGenerationJobRequestV1Schema.parse(input))
 	.handler(async ({ data }): Promise<ProcessGenerationJobResponseV1> => {
 		const timedOut = await timeoutGenerationJob(
 			data.generationJobId,
@@ -470,7 +476,7 @@ function isDenseShortTranscript(durationSeconds: number, segmentCount: number) {
 }
 
 export const retryGenerationJob = createServerFn({ method: "POST" })
-	.inputValidator((input) => retryGenerationJobRequestV1Schema.parse(input))
+	.validator((input) => retryGenerationJobRequestV1Schema.parse(input))
 	.handler(async ({ data }): Promise<RetryGenerationJobResponseV1> => {
 		const ownerId = await getOptionalUserId();
 		const retry = await createRetryGenerationJob(data.generationJobId, ownerId);
@@ -486,7 +492,7 @@ export const retryGenerationJob = createServerFn({ method: "POST" })
 	});
 
 export const cancelGenerationJob = createServerFn({ method: "POST" })
-	.inputValidator((input) => cancelGenerationJobRequestV1Schema.parse(input))
+	.validator((input) => cancelGenerationJobRequestV1Schema.parse(input))
 	.handler(async ({ data }): Promise<CancelGenerationJobResponseV1> => {
 		const ownerId = await getOptionalUserId();
 		const cancelled = await cancelGenerationJobRecord(
@@ -501,12 +507,13 @@ export const cancelGenerationJob = createServerFn({ method: "POST" })
 		return { detail: toGenerationJobDetail(cancelled) };
 	});
 
-export const openSampleCourse = createServerFn({ method: "GET" }).handler(
+export const openSampleCourse = createServerFn({ method: "POST" }).handler(
 	async (): Promise<OpenSampleCourseResponseV1> => {
-		const sample = await getSampleCourse();
+		const learner = await ensureLearner(getHeaders());
+		const sample = await getOrCopySampleCourse(learner.id);
 
 		if (!sample) {
-			throw new Error("Sample course data has not been seeded yet.");
+			throw new Error("The sample notebook hasn’t been set up yet.");
 		}
 
 		return { courseId: sample.id };
@@ -577,10 +584,10 @@ async function getGenerationJobDetailRecord(
 	);
 }
 
-async function getSampleCourse(
-	...args: Parameters<CourseGenerationServer["getSampleCourse"]>
+async function getOrCopySampleCourse(
+	...args: Parameters<CourseGenerationServer["getOrCopySampleCourse"]>
 ) {
-	return (await getCourseGenerationServer()).getSampleCourse(...args);
+	return (await getCourseGenerationServer()).getOrCopySampleCourse(...args);
 }
 
 async function markGenerationJobTranscriptReady(
@@ -690,6 +697,11 @@ function createDataApiExceptionDiagnostics(): YouTubeDataApiMetadataDiagnostics 
 	};
 }
 
+async function ensureLearner(headers: Headers) {
+	const { ensureLearnerFromHeaders } = await getCourseGenerationServer();
+	return ensureLearnerFromHeaders(headers);
+}
+
 async function getOptionalUserId(headers = getHeaders()) {
 	const { getCurrentUserFromHeaders } = await getCourseGenerationServer();
 	const user = await getCurrentUserFromHeaders(headers);
@@ -716,7 +728,7 @@ async function assertGenerationRateLimit(
 
 	if (!result.allowed) {
 		throw new Error(
-			`Course generation is limited to ${result.limit} attempts per ${Math.round(
+			`Notebook creation is limited to ${result.limit} attempts per ${Math.round(
 				windowMs / 60 / 60 / 1000,
 			)} hours. Try again later.`,
 		);
@@ -931,7 +943,7 @@ function getRecord(value: unknown) {
 
 function toUserSafeGenerationFailure(error: unknown) {
 	if (error instanceof Error && error.message.includes("AI_API_KEY")) {
-		return "Course generation is not configured yet.";
+		return "Notebook creation isn’t set up yet.";
 	}
 
 	if (isYouTubeTranscriptFetchError(error)) {

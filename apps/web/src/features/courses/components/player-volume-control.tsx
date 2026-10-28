@@ -45,6 +45,7 @@ function PlayerVolumeControl({
 			<PopoverContent
 				align="start"
 				className="w-52 p-3"
+				data-player-controls
 				portalContainer={portalContainer}
 			>
 				<div className="flex items-center justify-between gap-3">

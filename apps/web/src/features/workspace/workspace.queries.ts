@@ -8,6 +8,7 @@ import {
 	getCoursePlayerData,
 	getLearningPreferences,
 } from "#/features/courses/course-workspace.functions";
+import { getShelves } from "#/features/shelves/shelves.functions";
 
 const WORKSPACE_STALE_TIME_MS = 60 * 1000;
 const PREFERENCES_STALE_TIME_MS = 5 * 60 * 1000;
@@ -22,6 +23,7 @@ export const workspaceQueryKeys = {
 	currentUser: ["current-user"] as const,
 	generationJob: (jobId: string) => ["generation-job", jobId] as const,
 	learningPreferences: ["learning-preferences"] as const,
+	shelves: ["shelves"] as const,
 };
 
 export function bookmarksQueryOptions() {
@@ -80,5 +82,13 @@ export function learningPreferencesQueryOptions() {
 		queryKey: workspaceQueryKeys.learningPreferences,
 		queryFn: () => getLearningPreferences(),
 		staleTime: PREFERENCES_STALE_TIME_MS,
+	});
+}
+
+export function shelvesQueryOptions() {
+	return queryOptions({
+		queryKey: workspaceQueryKeys.shelves,
+		queryFn: () => getShelves(),
+		staleTime: WORKSPACE_STALE_TIME_MS,
 	});
 }

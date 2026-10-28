@@ -8,6 +8,7 @@
 		"db:check": "drizzle-kit check --config=drizzle.config.ts",
 		"db:migrate": "tsx scripts/migrate.ts",
 		"db:seed": "tsx scripts/seed.ts",
+		"db:prune-anonymous": "tsx scripts/prune-anonymous.ts",
 		"db:studio": "drizzle-kit studio --config=drizzle.config.ts",
 		"test": "tsx --test src/**/*.test.ts",
 		"check-types": "tsc --noEmit"

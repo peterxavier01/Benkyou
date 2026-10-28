@@ -11,10 +11,13 @@ import {
 } from "@benkyou/ui";
 import { Link, useRouter, useRouterState } from "@tanstack/react-router";
 import { trackAnalyticsEvent } from "#/integrations/posthog/analytics";
+import { useHydratedSession } from "./use-hydrated-session";
+import { useResetSessionData } from "./use-reset-session-data";
 
 export default function BetterAuthHeader() {
-	const { data: session, isPending } = authClient.useSession();
+	const { data: session, isPending } = useHydratedSession();
 	const router = useRouter();
+	const resetSessionData = useResetSessionData();
 	const pathname = useRouterState({
 		select: (state) => state.location.pathname,
 	});
@@ -66,9 +69,9 @@ export default function BetterAuthHeader() {
 					</DropdownMenuLabel>
 					<DropdownMenuSeparator className="sm:hidden" />
 					<DropdownMenuItem asChild>
-						<Link to="/courses" search={{ q: "", filter: "all" }}>
+						<Link to="/notebooks" search={{ q: "", filter: "all" }}>
 							<HugeIcon name="library" className="size-4" />
-							<span>Courses</span>
+							<span>Notebooks</span>
 						</Link>
 					</DropdownMenuItem>
 					<DropdownMenuItem asChild>
@@ -80,9 +83,10 @@ export default function BetterAuthHeader() {
 					<DropdownMenuSeparator />
 					<DropdownMenuItem
 						onSelect={() => {
-							void authClient.signOut().then(() => {
+							void authClient.signOut().then(async () => {
 								trackAnalyticsEvent("sign_out_succeeded");
-								void router.navigate({ to: "/" });
+								await router.navigate({ to: "/" });
+								await resetSessionData();
 							});
 						}}
 					>
@@ -97,8 +101,8 @@ export default function BetterAuthHeader() {
 		<div className="flex items-center gap-2">
 			{!isCoursesPath(pathname) ? (
 				<Button asChild variant="ghost" size="sm">
-					<Link to="/courses" search={{ q: "", filter: "all" }}>
-						Courses
+					<Link to="/notebooks" search={{ q: "", filter: "all" }}>
+						Notebooks
 					</Link>
 				</Button>
 			) : null}
@@ -117,5 +121,5 @@ export default function BetterAuthHeader() {
 }
 
 function isCoursesPath(pathname: string) {
-	return pathname === "/courses" || pathname.startsWith("/courses/");
+	return pathname === "/notebooks" || pathname.startsWith("/notebooks/");
 }

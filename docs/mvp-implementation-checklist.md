@@ -226,7 +226,7 @@ Goal: let a learner submit a YouTube URL and see course generation progress.
 - [x] Upsert video metadata.
 - [x] Create course with sensible initial title and private visibility.
 - [x] Create queued generation job.
-- [x] Redirect to `/courses/new/:jobId`.
+- [x] Redirect to `/notebooks/new/:jobId`.
 - [x] Handle duplicate video submissions for the same user.
 - [x] Add "Try sample course" path that creates or opens seeded sample data.
 
@@ -254,7 +254,7 @@ Goal: let a learner submit a YouTube URL and see course generation progress.
 
 ### Generation Status UI
 
-- [x] Build `/courses/new/:jobId`.
+- [x] Build `/notebooks/new/:jobId`.
 - [x] Show detected video preview.
 - [x] Show status badge: queued, processing, completed, failed, cancelled.
 - [x] Show generation timeline: metadata, transcript, chapters, player prep.
@@ -262,7 +262,7 @@ Goal: let a learner submit a YouTube URL and see course generation progress.
 - [x] Enable "Open course" only when completed.
 - [x] Enable retry when failed.
 - [x] Enable "Use another URL" on unrecoverable errors.
-- [x] Enable "Keep working in background" to go to `/courses`.
+- [x] Enable "Keep working in background" to go to `/notebooks`.
 
 ### Done When
 
@@ -288,7 +288,7 @@ Goal: give learners a reliable place to resume, search, and manage courses.
 
 ### Library UI
 
-- [x] Build `/courses`.
+- [x] Build `/notebooks`.
 - [x] Add compact app header with create course action.
 - [x] Add filter tabs.
 - [x] Add search input.
@@ -325,7 +325,7 @@ and progress in one focused workspace.
 
 ### Player UI
 
-- [x] Build `/courses/:courseId`.
+- [x] Build `/notebooks/:courseId`.
 - [x] Add course header with title, source metadata, progress, and manage link.
 - [x] Add video player region with stable aspect ratio.
 - [x] Add chapter sidebar with: title, time range, completion state, active
@@ -424,7 +424,7 @@ manage learner data.
 
 ### Course Management UI
 
-- [x] Build `/courses/:courseId/manage`.
+- [x] Build `/notebooks/:courseId/manage`.
 - [x] Add editable metadata form.
 - [x] Add source video details.
 - [x] Add chapter table.
@@ -513,8 +513,8 @@ Goal: verify the MVP behaves like a serious learning tool before release.
 ### Responsive QA
 
 - [x] Verify `/` at mobile, tablet, and desktop sizes.
-- [x] Verify `/courses` at mobile, tablet, and desktop sizes.
-- [x] Verify `/courses/:courseId` at mobile, tablet, and desktop sizes.
+- [x] Verify `/notebooks` at mobile, tablet, and desktop sizes.
+- [x] Verify `/notebooks/:courseId` at mobile, tablet, and desktop sizes.
 - [x] Verify notes and bookmark modals on small screens.
 - [x] Confirm text never overlaps controls or overflows buttons.
 
@@ -562,17 +562,19 @@ Goal: verify the MVP behaves like a serious learning tool before release.
 
 ## Route Implementation Checklist
 
+> Notebook routes moved from `/courses` to `/notebooks`; old `/courses` URLs redirect.
+
 - [x] `/` - new course entry.
 - [x] `/sign-in` - sign-in and local continuation.
 - [ ] `/sign-in/sent` - magic link confirmation if using magic links.
 - [ ] `/auth/callback` - auth callback if required by provider setup.
-- [x] `/courses` - course library.
-- [x] `/courses/new/:jobId` - generation status.
-- [x] `/courses/:courseId` - course player.
-- [ ] `/courses/:courseId/focus` - distraction-free player if included in MVP.
-- [x] `/courses/:courseId/manage` - course metadata and chapter management.
-- [x] `/courses/:courseId/chapters/:chapterId` - chapter deep link.
-- [x] `/courses/:courseId/bookmarks/:bookmarkId` - bookmark deep link.
+- [x] `/notebooks` - course library.
+- [x] `/notebooks/new/:jobId` - generation status.
+- [x] `/notebooks/:courseId` - course player.
+- [ ] `/notebooks/:courseId/focus` - distraction-free player if included in MVP.
+- [x] `/notebooks/:courseId/manage` - course metadata and chapter management.
+- [x] `/notebooks/:courseId/chapters/:chapterId` - chapter deep link.
+- [x] `/notebooks/:courseId/bookmarks/:bookmarkId` - bookmark deep link.
 - [x] `/bookmarks` - global bookmarks.
 - [x] `/settings` - account, preferences, export.
 - [x] `/about` - mission and project context.
