@@ -47,10 +47,12 @@ jobs:
     services:
       postgres:
         image: postgres:16-alpine
+        # Throwaway container reachable only from this job, so trust auth
+        # avoids keeping a password in the repo.
         env:
           POSTGRES_USER: benkyou
-          POSTGRES_PASSWORD: benkyou
           POSTGRES_DB: benkyou_test
+          POSTGRES_HOST_AUTH_METHOD: trust
         ports:
           - 5432:5432
         options: >-
@@ -59,7 +61,7 @@ jobs:
           --health-timeout 5s
           --health-retries 10
     env:
-      DATABASE_URL: postgres://benkyou:benkyou@localhost:5432/benkyou_test
+      DATABASE_URL: postgres://benkyou@localhost:5432/benkyou_test
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
