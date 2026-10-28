@@ -8,7 +8,8 @@ on:
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Never cancel a main run: it may be mid-migration.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 permissions:
   contents: read
@@ -117,3 +118,40 @@ jobs:
           tags: benkyou-web:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy to production
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [quality, test, build, docker]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Secrets live on this environment; add required reviewers there to gate
+    # every production deploy behind a manual approval.
+    environment: production
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # Migrations run before the new code ships, so it never meets an old schema.
+      - name: Apply migrations to production
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: pnpm --filter @benkyou/db db:migrate
+
+      - name: Trigger deploy
+        env:
+          DEPLOY_HOOK_URL: ${{ secrets.DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$DEPLOY_HOOK_URL" ]; then
+            echo "::notice::DEPLOY_HOOK_URL is not set; skipping the deploy trigger."
+            exit 0
+          fi
+          curl --fail --silent --show-error --max-time 60 -X POST "$DEPLOY_HOOK_URL"
